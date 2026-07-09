@@ -1,6 +1,6 @@
 # TANREN Project State(Single Source of Truth)
 
-最終更新: 2026-07-10 / 更新者: PM
+最終更新: 2026-07-10 / 更新者: Engineer(Phase 0完了報告)
 
 ---
 
@@ -18,14 +18,14 @@
 
 ## 2. 現在フェーズ
 
-**Phase 0(未着手)** — 次アクション: Eiichiがリポジトリを作成し、Claude Codeに `docs/engineering/instructions/2026-07-10_phase0_scaffold.md` を渡す
+**Phase 0(実装完了・デプロイ待ち)** — 次アクション: EiichiがVercelでリポジトリをインポートしデプロイ→実機確認(手順: `docs/engineering/handoffs/2026-07-10_phase0.md` の【Eiichiアクション】参照)。完了後PMがPhase 1指示書を作成
 
 ## 3. WBS
 
 ### Phase 0: 基盤(目安: Claude Code 1セッション)
-- [ ] 0-1 GitHubリポジトリ作成(Eiichi・5分)
-- [ ] 0-2 Vite+React+TS+Tailwind+PWA scaffold(Engineer)
-- [ ] 0-3 Dexie.js セットアップ+データモデル定義(Engineer)
+- [x] 0-1 GitHubリポジトリ作成(Eiichi・5分)
+- [x] 0-2 Vite+React+TS+Tailwind+PWA scaffold(Engineer)→ handoff: `2026-07-10_phase0.md`
+- [x] 0-3 Dexie.js セットアップ+データモデル定義(Engineer)→ 同上
 - [ ] 0-4 Vercel連携・デプロイ確認(Eiichi 10分+Engineer)
 
 ### Phase 1: MVP「今日から使える」(目安: 2-3セッション)🔴
