@@ -6,18 +6,18 @@
 
 ## 目的
 
-TETSU(家トレコーチPWA)の開発基盤を作り、Vercelで空アプリが表示される状態まで持っていく。
+TANREN(家トレコーチPWA)の開発基盤を作り、Vercelで空アプリが表示される状態まで持っていく。
 
 ## 前提(必読)
 
 1. リポジトリルートの `CLAUDE.md`
 2. `docs/pm/01_requirements.md`(特に §3 技術スタック、§7 データモデル)
-3. `docs/pm/tetsu_project_state.md`
+3. `docs/pm/tanren_project_state.md`
 
 ## 要件
 
 1. Vite + React + TypeScript + Tailwind CSS でscaffold
-2. vite-plugin-pwa 導入(manifest: 名称"TETSU"、テーマカラーは仮でOK、standalone表示)
+2. vite-plugin-pwa 導入(manifest: 名称"TANREN"、テーマカラーは仮でOK、standalone表示)
 3. Dexie.js 導入。要件§7のデータモデルをスキーマ定義(profiles / goals / equipment / exercises / sessions / session_exercises / sets / photos / body_stats / injuries)
 4. `src/engine/` ディレクトリを作成し、空のエンジンモジュール雛形+Vitestセットアップ(サンプルテスト1本がgreenであること)
 5. ルーティング雛形: ホーム / 今日のトレ / ログ / 設定 の4タブ(中身は仮でOK、モバイル下部タブナビ)

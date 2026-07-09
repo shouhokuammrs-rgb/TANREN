@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+html {
+  /* トレ中の誤ダブルタップでズームしない */
+  touch-action: manipulation;
+}

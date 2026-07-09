@@ -1,6 +1,6 @@
-# TETSU Project State(Single Source of Truth)
+# TANREN Project State(Single Source of Truth)
 
-最終更新: 2026-07-10 / 更新者: PM
+最終更新: 2026-07-10 / 更新者: Engineer(Phase 0完了報告)
 
 ---
 
@@ -9,7 +9,7 @@
 | 役割 | 担当 | 連携方法 |
 |------|------|----------|
 | **Owner** | Eiichi | 重要判断のみ。橋渡し作業はしない |
-| **PM** | Claude(Web/App版・tetsu-pmスキル) | 要件・WBS・レビュー・指示書作成。コードは書かない |
+| **PM** | Claude(Web/App版・tanren-pmスキル) | 要件・WBS・レビュー・指示書作成。コードは書かない |
 | **Engineer** | Claude Code | 実装・テスト。`docs/engineering/` 経由で指示を受ける |
 | **Designer** | Claude(Web版デザイン機能/Artifacts) | Phase 4で本格参加。`docs/design/` 経由 |
 | **QA** | Claude Code(実装とは別セッション) | Phase完了ごとにレビュー観点書ベースで検証 |
@@ -18,14 +18,14 @@
 
 ## 2. 現在フェーズ
 
-**Phase 0(未着手)** — 次アクション: Eiichiがリポジトリを作成し、Claude Codeに `docs/engineering/instructions/2026-07-10_phase0_scaffold.md` を渡す
+**Phase 0(実装完了・デプロイ待ち)** — 次アクション: EiichiがVercelでリポジトリをインポートしデプロイ→実機確認(手順: `docs/engineering/handoffs/2026-07-10_phase0.md` の【Eiichiアクション】参照)。完了後PMがPhase 1指示書を作成
 
 ## 3. WBS
 
 ### Phase 0: 基盤(目安: Claude Code 1セッション)
-- [ ] 0-1 GitHubリポジトリ作成(Eiichi・5分)
-- [ ] 0-2 Vite+React+TS+Tailwind+PWA scaffold(Engineer)
-- [ ] 0-3 Dexie.js セットアップ+データモデル定義(Engineer)
+- [x] 0-1 GitHubリポジトリ作成(Eiichi・5分)
+- [x] 0-2 Vite+React+TS+Tailwind+PWA scaffold(Engineer)→ handoff: `2026-07-10_phase0.md`
+- [x] 0-3 Dexie.js セットアップ+データモデル定義(Engineer)→ 同上
 - [ ] 0-4 Vercel連携・デプロイ確認(Eiichi 10分+Engineer)
 
 ### Phase 1: MVP「今日から使える」(目安: 2-3セッション)🔴
@@ -51,13 +51,14 @@
 ### Phase 4: デザイン磨き込み(Designer参加)
 - [ ] 4-1 デザイン方針策定(PM→Designer仕様書)
 - [ ] 4-2 UIリファイン適用(Engineer)
-- [ ] 4-3 正式名称決定(DEC-001)
+- [x] 4-3 正式名称決定(DEC-001)→ TANREN に決定(前倒しで完了)
 
 ## 4. 意思決定記録
 
 | DEC# | 内容 | 決定者 | 日付 |
 |------|------|--------|------|
 | DEC-000 | PWA+ローカル保存+ルールベースエンジン(API回避)で構築 | Eiichi | 2026-07-10 |
+| DEC-001 | 正式プロダクト名を **TANREN(鍛錬)** に決定(旧仮称: TETSU)。docs含め全置換済み | Eiichi | 2026-07-10 |
 
 ## 5. オープン課題
 
@@ -72,4 +73,4 @@
 - 完了報告: `docs/engineering/handoffs/YYYY-MM-DD_<topic>.md`
 - セッションログ: `docs/pm/session-logs/YYYY-MM-DD_session-N.md`
 - 微修正は ISS-XXX として本ファイルに起票→PMが指示書化→Engineerが対応(Eiichiは「ここ微妙」と言うだけでOK)
-- 詳細は `docs/skills/tetsu-pm/SKILL.md` 参照
+- 詳細は `docs/skills/tanren-pm/SKILL.md` 参照
