@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import TabBar from './components/TabBar'
 import HomePage from './pages/HomePage'
 import WorkoutPage from './pages/WorkoutPage'
+import ActiveWorkoutPage from './pages/ActiveWorkoutPage'
 import LogPage from './pages/LogPage'
+import LogDetailPage from './pages/LogDetailPage'
 import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
@@ -13,7 +15,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/workout" element={<WorkoutPage />} />
+          <Route path="/workout/active" element={<ActiveWorkoutPage />} />
           <Route path="/log" element={<LogPage />} />
+          <Route path="/log/:id" element={<LogDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

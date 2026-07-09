@@ -1,5 +1,9 @@
-// 回復モデル(要件F-04-1)の雛形。UI非依存の純関数のみ置く。
-// Phase 1でボリューム(直近セッションのセット数×強度)による補正を追加する。
+// 回復モデル(要件F-04-1)。UI非依存の純関数のみ置く。
+
+import { VOLUME_RECOVERY_FACTORS } from '../constants/engine'
+import { recoveryHoursFor } from '../constants/recovery'
+import type { MuscleGroup } from '../db/types'
+import type { EngineContext } from './types'
 
 /**
  * 筋フレッシュネス(0-100%)を算出する。
@@ -17,4 +21,32 @@ export function calcFreshness(elapsedHours: number, recoveryHours: number): numb
   }
   const ratio = elapsedHours / recoveryHours
   return Math.min(100, Math.round(ratio * 100))
+}
+
+/** 直近セッションのボリューム(完了セット数)で基準回復時間を補正する(F-04-1「経過時間×ボリューム」) */
+export function effectiveRecoveryHours(muscle: MuscleGroup, lastSetCount: number): number {
+  const entry = VOLUME_RECOVERY_FACTORS.find((f) => lastSetCount <= f.maxSets)
+  const factor = entry ? entry.factor : 1
+  return recoveryHoursFor(muscle) * factor
+}
+
+/** 全部位のフレッシュネス(0-100%)を算出する。刺激履歴のない部位は100% */
+export function muscleFreshnessMap(ctx: EngineContext): Record<MuscleGroup, number> {
+  const map: Record<MuscleGroup, number> = {
+    chest: 100,
+    back: 100,
+    shoulders: 100,
+    arms: 100,
+    legs: 100,
+    abs: 100,
+    glutes: 100,
+  }
+  for (const stimulus of ctx.muscleStimuli) {
+    const elapsedHours = Math.max(0, (ctx.now.getTime() - stimulus.at.getTime()) / 3_600_000)
+    map[stimulus.muscle] = calcFreshness(
+      elapsedHours,
+      effectiveRecoveryHours(stimulus.muscle, stimulus.setCount),
+    )
+  }
+  return map
 }
