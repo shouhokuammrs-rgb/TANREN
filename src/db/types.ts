@@ -19,6 +19,16 @@ export type EquipmentType = 'dumbbell' | 'bench' | 'bodyweight' | 'other'
 
 export type MovementType = 'compound' | 'isolation'
 
+/** 動作パターン。ピクトグラムの分類と筋力キャリブレーションの換算単位(ISS-001/002) */
+export type MovementPattern =
+  | 'horizontal_press'
+  | 'vertical_press'
+  | 'row'
+  | 'hinge'
+  | 'squat'
+  | 'isolation'
+  | 'core'
+
 export type SessionStatus = 'planned' | 'in_progress' | 'completed' | 'aborted'
 
 export type Condition = 'great' | 'normal' | 'tired'
@@ -71,9 +81,14 @@ export interface Exercise {
   primaryMuscle: MuscleGroup
   muscleGroups: MuscleGroup[]
   movementType: MovementType
+  movementPattern: MovementPattern
   requiredEquipment: EquipmentType[]
   repRangeMin: number
   repRangeMax: number
+  /** フォームのコツ(2-3点・各1行以内。トレ中に片手で読める簡潔さ優先) */
+  formCues: string[]
+  /** よくあるミス(1点・1行以内) */
+  commonMistake: string
   /** ベンチ必須種目の推奨角度(°)。器具設定の角度範囲内かの判定に使う */
   benchAngleDeg?: number
   /** 初回提案重量 = 体重 × この係数(ダンベル1個あたり)。保守的な値にする */
@@ -141,6 +156,16 @@ export interface BodyStat {
   weightKg?: number
   bodyFatPct?: number
   note?: string
+}
+
+/** 筋力の目安(ISS-002)。基準種目の実績から推定1RMを算出し初期重量提案に使う */
+export interface StrengthMark {
+  id?: number
+  /** 基準種目ID(constants/strength.ts の REF_LIFTS) */
+  refLiftId: string
+  weightKg: number
+  reps: number
+  recordedAt: Date
 }
 
 export interface Injury {

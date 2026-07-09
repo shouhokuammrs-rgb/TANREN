@@ -1,4 +1,4 @@
-import type { Condition, Exercise, MuscleGroup } from '../db/types'
+import type { Condition, Exercise, MovementPattern, MuscleGroup } from '../db/types'
 
 /** 過去ログ1セット分の実績 */
 export interface SetPerformance {
@@ -38,6 +38,8 @@ export interface EngineContext {
   muscleStimuli: MuscleStimulus[]
   /** 有効な痛み・違和感フラグの部位(メニューから自動回避) */
   activeInjuries: MuscleGroup[]
+  /** 筋力キャリブレーション由来のパターン別基準1RM(ISS-002)。未入力なら省略可 */
+  patternBase1Rm?: Partial<Record<MovementPattern, number>>
 }
 
 export interface MenuRequest {

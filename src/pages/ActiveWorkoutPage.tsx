@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
 import Modal from '../components/Modal'
 import Stepper from '../components/Stepper'
 import TimerOverlay from '../components/TimerOverlay'
@@ -20,7 +21,7 @@ import {
   updateSessionNote,
   type Workout,
 } from '../db/queries'
-import type { MuscleGroup, SetRecord } from '../db/types'
+import type { Exercise, MuscleGroup, SetRecord } from '../db/types'
 import { snapToSteps } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -39,6 +40,7 @@ export default function ActiveWorkoutPage() {
   const [drafts, setDrafts] = useState<Map<number, Draft>>(new Map())
   const [timerSec, setTimerSec] = useState<number | null>(null)
   const [finishOpen, setFinishOpen] = useState(false)
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   const [autoTimer] = useLocalSetting('autoStartTimer', true)
   const [dumbbellSteps, setDumbbellSteps] = useState<number[]>([])
 
@@ -120,12 +122,20 @@ export default function ActiveWorkoutPage() {
                 isCurrent ? 'bg-slate-900 ring-2 ring-orange-500' : 'bg-slate-900/60'
               }`}
             >
-              <div className="flex items-baseline justify-between">
-                <p className="font-semibold">{entry.exercise.name}</p>
+              {/* 種目名タップで詳細シート(ISS-001) */}
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-baseline justify-between text-left"
+                onClick={() => setDetailExercise(entry.exercise)}
+              >
+                <p className="font-semibold">
+                  {entry.exercise.name}
+                  <span className="ml-1.5 text-xs text-slate-500">ⓘ</span>
+                </p>
                 <span className="text-xs text-slate-500">
                   {MUSCLE_GROUP_LABELS[entry.exercise.primaryMuscle]}
                 </span>
-              </div>
+              </button>
 
               <ul className="mt-2 space-y-2">
                 {entry.sets.map((set) => {
@@ -255,6 +265,10 @@ export default function ActiveWorkoutPage() {
       >
         {WORKOUT_COPY.interrupt}
       </button>
+
+      {detailExercise && (
+        <ExerciseDetailSheet exercise={detailExercise} onClose={() => setDetailExercise(null)} />
+      )}
 
       {timerSec !== null && <TimerOverlay initialSec={timerSec} onDone={() => setTimerSec(null)} />}
 

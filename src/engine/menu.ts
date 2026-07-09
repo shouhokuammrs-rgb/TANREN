@@ -33,6 +33,7 @@ export function prescriptionFor(exercise: Exercise, ctx: EngineContext): Prescri
     ctx.lastPerformance.get(exercise.id!),
     ctx.bodyWeightKg,
     ctx.dumbbellStepsKg,
+    ctx.patternBase1Rm ?? {},
   )
   return {
     sets: DEFAULT_SETS,

@@ -37,6 +37,42 @@ export const MOVEMENT_TYPE_LABELS = {
   isolation: 'アイソレーション',
 } as const
 
+export const MOVEMENT_PATTERN_LABELS = {
+  horizontal_press: '水平プレス',
+  vertical_press: '垂直プレス',
+  row: 'ロウ(引く)',
+  hinge: 'ヒンジ(股関節)',
+  squat: 'スクワット',
+  isolation: 'アイソレーション',
+  core: '体幹',
+} as const
+
+export const DETAIL_COPY = {
+  primary: '主働',
+  secondary: '補助',
+  benchAngle: (deg: number) => `ベンチ角度 ${deg}°`,
+  repRange: (min: number, max: number) => `推奨 ${min}〜${max}レップ`,
+  cues: 'フォームのコツ',
+  mistake: 'よくあるミス',
+}
+
+export const STRENGTH_COPY = {
+  section: '筋力の目安',
+  hint: 'ジムでの実績などを入れると、初めての種目の重量提案が実力に合います(いつでも更新可)',
+  empty: '未入力(初期提案は体重比の控えめな値になります)',
+  add: '筋力の目安を追加',
+  addTitle: '筋力の目安を入力',
+  refLift: '基準種目',
+  weight: '重量(kg)',
+  reps: 'レップ数',
+  est1Rm: (kg: number) => `推定1RM ${kg}kg`,
+  save: '登録',
+  delete: '削除',
+  invalid: '重量とレップ数を正しく入力してください',
+  mark: (weight: number, reps: number) => `${weight}kg × ${reps}回`,
+  calibrationNote: '初回の提案は目安です。キツければ迷わず下げてOK(実績から次回以降が調整されます)',
+}
+
 export const SESSION_STATUS_LABELS = {
   planned: '計画',
   in_progress: '実施中',

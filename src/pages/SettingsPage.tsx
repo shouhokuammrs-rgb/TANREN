@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import Modal from '../components/Modal'
 import { db } from '../db/db'
-import { resolveInjury, updateEquipment } from '../db/queries'
+import { addStrengthMark, deleteStrengthMark, resolveInjury, updateEquipment } from '../db/queries'
 import type { Equipment } from '../db/types'
 import {
   EQUIPMENT_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
   SETTINGS_COPY,
+  STRENGTH_COPY,
   formatDate,
 } from '../constants/copy'
+import { REF_LIFTS } from '../constants/strength'
+import { epley1Rm } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 
 function equipmentDetail(eq: Equipment): string | null {
@@ -75,6 +78,8 @@ export default function SettingsPage() {
         })}
       </ul>
 
+      <StrengthSection />
+
       <h2 className="mt-6 text-sm font-semibold text-slate-400">{SETTINGS_COPY.timerSection}</h2>
       <label className="mt-2 flex h-14 items-center justify-between rounded-xl bg-slate-900 px-4">
         <span className="text-sm">{SETTINGS_COPY.timerAutoStart}</span>
@@ -127,6 +132,128 @@ export default function SettingsPage() {
         <BenchEditor equipment={editing} onClose={() => setEditing(null)} />
       )}
     </section>
+  )
+}
+
+/** 筋力の目安(ISS-002)。基準種目の実績から初期重量提案をキャリブレーションする */
+function StrengthSection() {
+  const marks = useLiveQuery(() => db.strength_marks.orderBy('recordedAt').reverse().toArray())
+  const [adding, setAdding] = useState(false)
+  const refById = new Map(REF_LIFTS.map((r) => [r.id, r]))
+
+  return (
+    <>
+      <h2 className="mt-6 text-sm font-semibold text-slate-400">{STRENGTH_COPY.section}</h2>
+      <p className="mt-1 text-xs text-slate-500">{STRENGTH_COPY.hint}</p>
+      <ul className="mt-2 space-y-2">
+        {marks?.length === 0 && (
+          <li className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+            {STRENGTH_COPY.empty}
+          </li>
+        )}
+        {marks?.map((mark) => (
+          <li
+            key={mark.id}
+            className="flex items-center justify-between rounded-xl bg-slate-900 p-4"
+          >
+            <div>
+              <p className="text-sm font-semibold">
+                {refById.get(mark.refLiftId)?.name ?? mark.refLiftId}
+              </p>
+              <p className="text-xs text-slate-400">
+                {STRENGTH_COPY.mark(mark.weightKg, mark.reps)}・
+                {STRENGTH_COPY.est1Rm(Math.round(epley1Rm(mark.weightKg, mark.reps) * 10) / 10)}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="h-11 rounded-lg bg-slate-800 px-4 text-xs text-slate-300 active:bg-slate-700"
+              onClick={() => void deleteStrengthMark(mark.id!)}
+            >
+              {STRENGTH_COPY.delete}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="mt-2 h-12 w-full rounded-xl border border-dashed border-slate-600 text-sm text-slate-300 active:bg-slate-800"
+        onClick={() => setAdding(true)}
+      >
+        + {STRENGTH_COPY.add}
+      </button>
+      {adding && <StrengthMarkModal onClose={() => setAdding(false)} />}
+    </>
+  )
+}
+
+function StrengthMarkModal({ onClose }: { onClose: () => void }) {
+  const [refLiftId, setRefLiftId] = useState(REF_LIFTS[0].id)
+  const [weight, setWeight] = useState('')
+  const [reps, setReps] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  return (
+    <Modal title={STRENGTH_COPY.addTitle} onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <p className="mb-1 text-xs font-semibold text-slate-400">{STRENGTH_COPY.refLift}</p>
+          <div className="grid grid-cols-1 gap-1.5">
+            {REF_LIFTS.map((lift) => (
+              <button
+                key={lift.id}
+                type="button"
+                onClick={() => setRefLiftId(lift.id)}
+                className={`h-11 rounded-lg px-3 text-left text-sm font-semibold ${
+                  refLiftId === lift.id ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {lift.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <label className="flex-1 text-xs text-slate-400">
+            {STRENGTH_COPY.weight}
+            <input
+              type="number"
+              inputMode="decimal"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+            />
+          </label>
+          <label className="flex-1 text-xs text-slate-400">
+            {STRENGTH_COPY.reps}
+            <input
+              type="number"
+              inputMode="numeric"
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
+              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+            />
+          </label>
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        <button
+          type="button"
+          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600"
+          onClick={async () => {
+            const w = Number(weight)
+            const r = Number(reps)
+            if (!Number.isFinite(w) || w <= 0 || !Number.isInteger(r) || r <= 0 || r > 30) {
+              setError(STRENGTH_COPY.invalid)
+              return
+            }
+            await addStrengthMark({ refLiftId, weightKg: w, reps: r })
+            onClose()
+          }}
+        >
+          {STRENGTH_COPY.save}
+        </button>
+      </div>
+    </Modal>
   )
 }
 

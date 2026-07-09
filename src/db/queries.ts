@@ -16,15 +16,16 @@ import type {
   MenuRequest,
   MuscleStimulus,
 } from '../engine/types'
-import { prAttemptWeightKg } from '../engine'
+import { patternBase1RmFrom, prAttemptWeightKg } from '../engine'
 
 /** エンジン入力のスナップショットを組み立てる */
 export async function loadEngineContext(now = new Date()): Promise<EngineContext> {
-  const [profile, equipment, exercises, injuries] = await Promise.all([
+  const [profile, equipment, exercises, injuries, strengthMarks] = await Promise.all([
     db.profiles.orderBy('id').first(),
     db.equipment.where('isActive').equals(1).toArray(),
     db.exercises.toArray(),
     db.injuries.where('isActive').equals(1).toArray(),
+    db.strength_marks.toArray(),
   ])
 
   const dumbbell = equipment.find((e) => e.type === 'dumbbell')
@@ -88,7 +89,21 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     lastPerformance,
     muscleStimuli: [...stimulusByMuscle.values()],
     activeInjuries: [...new Set(injuries.map((i) => i.bodyPart))],
+    patternBase1Rm: patternBase1RmFrom(strengthMarks),
   }
+}
+
+/** 筋力の目安の登録(ISS-002) */
+export async function addStrengthMark(input: {
+  refLiftId: string
+  weightKg: number
+  reps: number
+}): Promise<void> {
+  await db.strength_marks.add({ ...input, recordedAt: new Date() })
+}
+
+export async function deleteStrengthMark(id: number): Promise<void> {
+  await db.strength_marks.delete(id)
 }
 
 /** 直近の完了セッションの「次回への申し送り」(ヒヤリング画面に表示する) */

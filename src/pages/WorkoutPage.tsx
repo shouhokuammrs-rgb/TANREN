@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
 import Modal from '../components/Modal'
 import {
   CONDITION_LABELS,
@@ -7,6 +8,7 @@ import {
   MENU_COPY,
   MOVEMENT_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
+  STRENGTH_COPY,
   formatDate,
 } from '../constants/copy'
 import {
@@ -24,6 +26,7 @@ import {
   prescriptionFor,
 } from '../engine'
 import type { EngineContext, GeneratedMenu, MenuItem, MenuRequest } from '../engine/types'
+import { useLocalSetting } from '../hooks/useLocalSetting'
 
 const TIME_OPTIONS = [15, 30, 45, 60, 90]
 const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
@@ -43,6 +46,9 @@ export default function WorkoutPage() {
   const [muscles, setMuscles] = useState<MuscleGroup[]>([])
   const [handover, setHandover] = useState<string | undefined>()
   const [picker, setPicker] = useState<{ mode: 'swap' | 'add'; itemIndex?: number } | null>(null)
+  const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
+  // 初回生成時のみ「提案は目安」の注意を出す(ISS-002)
+  const [calibNoteShown, setCalibNoteShown] = useLocalSetting('calibrationNoteShown', false)
 
   useEffect(() => {
     void (async () => {
@@ -253,6 +259,11 @@ export default function WorkoutPage() {
       </div>
 
       <p className="text-xs text-slate-400">{menu.rationale}</p>
+      {!calibNoteShown && menu.items.length > 0 && (
+        <p className="rounded-lg bg-slate-800 p-2 text-xs text-slate-300">
+          💡 {STRENGTH_COPY.calibrationNote}
+        </p>
+      )}
       {menu.warnings.map((w) => (
         <p key={w} className="rounded-lg bg-yellow-500/10 p-2 text-xs text-yellow-400">
           ⚠️ {w}
@@ -271,9 +282,15 @@ export default function WorkoutPage() {
           return (
             <li key={`${item.exerciseId}-${index}`} className="rounded-xl bg-slate-900 p-4">
               <div className="flex items-start justify-between gap-2">
-                <div>
+                {/* 種目名タップで詳細シート(ISS-001) */}
+                <button
+                  type="button"
+                  className="min-h-11 flex-1 text-left"
+                  onClick={() => setDetailExercise(ex)}
+                >
                   <p className="font-semibold">
                     {ex.name}
+                    <span className="ml-1.5 text-xs text-slate-500">ⓘ</span>
                     {item.isPrAttempt && (
                       <span className="ml-2 rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                         {MENU_COPY.prBadge}
@@ -283,7 +300,7 @@ export default function WorkoutPage() {
                   <p className="mt-0.5 text-xs text-slate-500">
                     {MUSCLE_GROUP_LABELS[ex.primaryMuscle]}・{MOVEMENT_TYPE_LABELS[ex.movementType]}
                   </p>
-                </div>
+                </button>
                 <div className="text-right text-sm">
                   <p className="font-bold text-orange-400">
                     {item.suggestedWeightKg !== undefined
@@ -331,6 +348,7 @@ export default function WorkoutPage() {
         disabled={menu.items.length === 0}
         onClick={async () => {
           await startSession(menu, request, ctx.dumbbellStepsKg)
+          setCalibNoteShown(true)
           navigate('/workout/active')
         }}
         className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600 disabled:opacity-40"
@@ -344,6 +362,10 @@ export default function WorkoutPage() {
       >
         {MENU_COPY.regenerate}
       </button>
+
+      {detailExercise && (
+        <ExerciseDetailSheet exercise={detailExercise} onClose={() => setDetailExercise(null)} />
+      )}
 
       {picker && (
         <Modal

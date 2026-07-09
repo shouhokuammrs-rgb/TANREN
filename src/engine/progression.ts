@@ -2,7 +2,8 @@
 // レップ上限到達→次の重量ステップへ増量してレップ下限から再開。初回種目は保守的に開始。
 
 import { DEFAULT_INITIAL_WEIGHT_FACTOR } from '../constants/engine'
-import type { Exercise } from '../db/types'
+import type { Exercise, MovementPattern } from '../db/types'
+import { calibratedWeightKg } from './calibration'
 import type { ExerciseHistoryEntry } from './types'
 
 /**
@@ -22,15 +23,20 @@ export function snapToSteps(desiredKg: number, stepsKg: number[], mode: 'down' |
   return above ?? sorted[sorted.length - 1]
 }
 
-/** 初回種目の保守的初期重量。自重種目はundefined */
+/**
+ * 初回種目の保守的初期重量。自重種目はundefined。
+ * 優先順(ISS-002): 筋力キャリブレーション値 > 体重比デフォルト。いずれも下方向スナップ
+ */
 export function initialWeightKg(
   exercise: Exercise,
   bodyWeightKg: number,
   stepsKg: number[],
+  patternBase1Rm: Partial<Record<MovementPattern, number>> = {},
 ): number | undefined {
   if (!exercise.requiredEquipment.includes('dumbbell')) return undefined
+  const calibrated = calibratedWeightKg(exercise, patternBase1Rm)
   const factor = exercise.initialWeightFactor ?? DEFAULT_INITIAL_WEIGHT_FACTOR
-  return snapToSteps(bodyWeightKg * factor, stepsKg, 'down')
+  return snapToSteps(calibrated ?? bodyWeightKg * factor, stepsKg, 'down')
 }
 
 export interface WeightRepsSuggestion {
@@ -50,6 +56,7 @@ export function suggestWeightReps(
   last: ExerciseHistoryEntry | undefined,
   bodyWeightKg: number,
   stepsKg: number[],
+  patternBase1Rm: Partial<Record<MovementPattern, number>> = {},
 ): WeightRepsSuggestion {
   const usesDumbbell = exercise.requiredEquipment.includes('dumbbell')
   const { repRangeMin, repRangeMax } = exercise
@@ -57,7 +64,9 @@ export function suggestWeightReps(
   const recordedSets = last?.sets.filter((s) => s.reps !== undefined) ?? []
   if (recordedSets.length === 0) {
     return {
-      weightKg: usesDumbbell ? initialWeightKg(exercise, bodyWeightKg, stepsKg) : undefined,
+      weightKg: usesDumbbell
+        ? initialWeightKg(exercise, bodyWeightKg, stepsKg, patternBase1Rm)
+        : undefined,
       reps: repRangeMin,
     }
   }

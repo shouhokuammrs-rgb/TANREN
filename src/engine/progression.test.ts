@@ -11,11 +11,14 @@ const dumbbellPress: Exercise = {
   primaryMuscle: 'chest',
   muscleGroups: ['chest'],
   movementType: 'compound',
+  movementPattern: 'horizontal_press',
   requiredEquipment: ['dumbbell', 'bench'],
   repRangeMin: 6,
   repRangeMax: 12,
   initialWeightFactor: 0.22,
   isActive: 1,
+  formCues: [],
+  commonMistake: '',
 }
 
 const pushup: Exercise = {
@@ -24,10 +27,13 @@ const pushup: Exercise = {
   primaryMuscle: 'chest',
   muscleGroups: ['chest'],
   movementType: 'compound',
+  movementPattern: 'horizontal_press',
   requiredEquipment: ['bodyweight'],
   repRangeMin: 10,
   repRangeMax: 20,
   isActive: 1,
+  formCues: [],
+  commonMistake: '',
 }
 
 function history(sets: { weightKg?: number; reps: number; achieved: boolean }[]): ExerciseHistoryEntry {

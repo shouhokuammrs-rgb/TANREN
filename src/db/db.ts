@@ -10,6 +10,7 @@ import type {
   Session,
   SessionExercise,
   SetRecord,
+  StrengthMark,
 } from './types'
 import { seedInitialData } from './seed'
 
@@ -24,6 +25,7 @@ export type TanrenDB = Dexie & {
   photos: EntityTable<Photo, 'id'>
   body_stats: EntityTable<BodyStat, 'id'>
   injuries: EntityTable<Injury, 'id'>
+  strength_marks: EntityTable<StrengthMark, 'id'>
 }
 
 export const db = new Dexie('tanren') as TanrenDB
@@ -40,6 +42,11 @@ db.version(1).stores({
   photos: '++id, takenAt, pose',
   body_stats: '++id, measuredAt',
   injuries: '++id, bodyPart, isActive',
+})
+
+// v2: 筋力の目安(ISS-002)。既存テーブルは引き継がれる
+db.version(2).stores({
+  strength_marks: '++id, refLiftId, recordedAt',
 })
 
 // 毎回のopen時に空テーブルへシード投入する(初回起動+リリース後のマスタ追加の両方に対応)
