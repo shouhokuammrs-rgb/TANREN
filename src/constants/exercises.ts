@@ -103,6 +103,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   },
   {
     name: 'デクラインプッシュアップ',
+    searchKeyword: '足上げ腕立て伏せ やり方',
     primaryMuscle: 'chest',
     muscleGroups: ['chest', 'shoulders', 'arms'],
     movementType: 'compound',
@@ -118,6 +119,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   // ===== 背中 =====
   {
     name: 'ワンハンドダンベルロウ',
+    searchKeyword: 'ワンハンドロウ フォーム',
     primaryMuscle: 'back',
     muscleGroups: ['back', 'arms'],
     movementType: 'compound',
@@ -148,6 +150,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   },
   {
     name: 'チェストサポーテッドロウ',
+    searchKeyword: 'インクラインベンチ ダンベルロウ フォーム',
     primaryMuscle: 'back',
     muscleGroups: ['back', 'arms'],
     movementType: 'compound',
@@ -209,6 +212,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   },
   {
     name: 'バックエクステンション',
+    searchKeyword: 'スーパーマン 背筋 自重 やり方',
     primaryMuscle: 'back',
     muscleGroups: ['back', 'glutes'],
     movementType: 'isolation',
@@ -224,6 +228,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   // ===== 肩 =====
   {
     name: 'シーテッドショルダープレス',
+    searchKeyword: 'ダンベルショルダープレス フォーム',
     primaryMuscle: 'shoulders',
     muscleGroups: ['shoulders', 'arms'],
     movementType: 'compound',
@@ -339,6 +344,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   },
   {
     name: 'ライイングトライセプスエクステンション',
+    searchKeyword: 'ダンベル トライセプスエクステンション フォーム',
     primaryMuscle: 'arms',
     muscleGroups: ['arms'],
     movementType: 'isolation',
@@ -471,6 +477,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   },
   {
     name: '自重スクワット',
+    searchKeyword: 'スクワット 正しいフォーム',
     primaryMuscle: 'legs',
     muscleGroups: ['legs', 'glutes'],
     movementType: 'compound',
@@ -485,6 +492,7 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   // ===== 尻 =====
   {
     name: 'ダンベルヒップスラスト',
+    searchKeyword: 'ヒップスラスト ダンベル やり方',
     primaryMuscle: 'glutes',
     muscleGroups: ['glutes', 'legs'],
     movementType: 'compound',
