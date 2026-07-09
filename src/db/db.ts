@@ -42,5 +42,5 @@ db.version(1).stores({
   injuries: '++id, bodyPart, isActive',
 })
 
-// 初回DB作成時のみ実行される
-db.on('populate', () => seedInitialData(db))
+// 毎回のopen時に空テーブルへシード投入する(初回起動+リリース後のマスタ追加の両方に対応)
+db.on('ready', () => seedInitialData(db), true)

@@ -13,7 +13,7 @@ export const INITIAL_EQUIPMENT: Omit<Equipment, 'id'>[] = [
     quantity: 2,
     weightStepsKg: DUMBBELL_STEPS_KG,
     isActive: 1,
-    note: '重量ステップは仮設定(DEC-002: 実物確認後に編集)',
+    note: '重量ステップは設定画面の編集ウィザードで実物に合わせて調整可能',
   },
   {
     name: 'アジャスタブルベンチ',

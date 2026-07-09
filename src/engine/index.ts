@@ -1,5 +1,23 @@
 // メニュー生成エンジン(UI非依存の純関数群)
-export { calcFreshness } from './freshness'
+export { calcFreshness, effectiveRecoveryHours, muscleFreshnessMap } from './freshness'
 export { intervalSecFor, purposeForReps } from './interval'
-export { generateMenu } from './menu'
-export type { GeneratedMenu, MenuItem, MenuRequest } from './menu'
+export { initialWeightKg, snapToSteps, suggestWeightReps } from './progression'
+export { candidatesByMuscle, isExerciseAvailable, muscleCountForTime, selectMuscles } from './selection'
+export {
+  alternativesFor,
+  estimatedMinutes,
+  generateMenu,
+  itemDurationSec,
+  prAttemptWeightKg,
+  prescriptionFor,
+} from './menu'
+export type {
+  EngineContext,
+  ExerciseHistoryEntry,
+  GeneratedMenu,
+  MenuItem,
+  MenuRequest,
+  MuscleStimulus,
+  Prescription,
+  SetPerformance,
+} from './types'

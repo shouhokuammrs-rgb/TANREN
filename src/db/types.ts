@@ -74,6 +74,10 @@ export interface Exercise {
   requiredEquipment: EquipmentType[]
   repRangeMin: number
   repRangeMax: number
+  /** ベンチ必須種目の推奨角度(°)。器具設定の角度範囲内かの判定に使う */
+  benchAngleDeg?: number
+  /** 初回提案重量 = 体重 × この係数(ダンベル1個あたり)。保守的な値にする */
+  initialWeightFactor?: number
   isActive: DbBool
   note?: string
 }
@@ -83,6 +87,10 @@ export interface Session {
   startedAt: Date
   endedAt?: Date
   status: SessionStatus
+  /** このセッションで対象にした部位(履歴一覧の表示用) */
+  muscles?: MuscleGroup[]
+  /** セッション全体のメモ */
+  sessionNote?: string
   /** その日のヒヤリング: 使える時間(分) */
   availableMinutes?: number
   condition?: Condition
@@ -114,6 +122,8 @@ export interface SetRecord {
   actualReps?: number
   /** 提案重量・レップに対する達成フラグ(次回提案に直結) */
   achieved?: boolean
+  /** 絶好調時のPR挑戦セット */
+  isPrAttempt?: boolean
   completedAt?: Date
 }
 

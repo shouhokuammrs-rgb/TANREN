@@ -1,0 +1,73 @@
+import type { Condition, Exercise, MuscleGroup } from '../db/types'
+
+/** 過去ログ1セット分の実績 */
+export interface SetPerformance {
+  weightKg?: number
+  reps?: number
+  achieved?: boolean
+}
+
+/** 種目ごとの直近実績 */
+export interface ExerciseHistoryEntry {
+  exerciseId: number
+  performedAt: Date
+  sets: SetPerformance[]
+}
+
+/** 部位ごとの直近刺激(回復モデルの入力) */
+export interface MuscleStimulus {
+  muscle: MuscleGroup
+  at: Date
+  /** そのセッションで対象部位に入った完了セット数(回復時間のボリューム補正に使う) */
+  setCount: number
+}
+
+/** エンジンへの入力スナップショット。DBアクセスはUI層で済ませ、エンジンは純関数に保つ */
+export interface EngineContext {
+  now: Date
+  bodyWeightKg: number
+  /** 使用可能なダンベル重量の刻み(昇順)。空なら自重種目のみ */
+  dumbbellStepsKg: number[]
+  /** ベンチがない場合はundefined */
+  bench?: { minAngleDeg: number; maxAngleDeg: number }
+  /** 有効な種目マスタ */
+  exercises: Exercise[]
+  /** 種目ID→直近実績 */
+  lastPerformance: Map<number, ExerciseHistoryEntry>
+  /** 部位ごとの直近刺激(なければその部位は完全回復扱い) */
+  muscleStimuli: MuscleStimulus[]
+  /** 有効な痛み・違和感フラグの部位(メニューから自動回避) */
+  activeInjuries: MuscleGroup[]
+}
+
+export interface MenuRequest {
+  /** 今日使える時間(分): 15 / 30 / 45 / 60 / 90 */
+  availableMinutes: number
+  /** 鍛えたい部位。空配列は「おまかせ」 */
+  targetMuscles: MuscleGroup[]
+  condition: Condition
+}
+
+/** 1種目分の処方(セット・重量・レップ・インターバル) */
+export interface Prescription {
+  sets: number
+  suggestedReps: number
+  /** 自重種目はundefined。ダンベル種目は必ず器具設定の刻みの値 */
+  suggestedWeightKg?: number
+  intervalSec: number
+  /** 絶好調時: 最終セットをPR挑戦(次の重量ステップ)にする */
+  isPrAttempt?: boolean
+}
+
+export interface MenuItem extends Prescription {
+  exerciseId: number
+}
+
+export interface GeneratedMenu {
+  items: MenuItem[]
+  muscles: MuscleGroup[]
+  /** 部位選択の根拠などの説明文 */
+  rationale: string
+  warnings: string[]
+  estimatedMinutes: number
+}
