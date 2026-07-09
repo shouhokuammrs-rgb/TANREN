@@ -56,6 +56,20 @@ export const DETAIL_COPY = {
   mistake: 'よくあるミス',
 }
 
+export const VIDEO_COPY = {
+  section: '動画',
+  search: '動画を探す',
+  searchSuffix: 'フォーム やり方',
+  register: 'この動画を登録',
+  urlPlaceholder: 'YouTubeのURLをペースト',
+  add: '登録',
+  invalidUrl: 'YouTubeのURLとして認識できませんでした',
+  limitReached: '登録は3件までです。不要な動画を削除してください',
+  offline: 'オンラインで視聴可',
+  remove: '動画を削除',
+  playLabel: (n: number) => `動画${n}を再生`,
+}
+
 export const STRENGTH_COPY = {
   section: '筋力の目安',
   hint: 'ジムでの実績などを入れると、初めての種目の重量提案が実力に合います(いつでも更新可)',

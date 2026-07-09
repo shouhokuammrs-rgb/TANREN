@@ -316,6 +316,31 @@ export async function updateEquipment(
   await db.equipment.update(equipmentId, patch)
 }
 
+/** 種目への動画登録上限(ISS-003) */
+export const MAX_VIDEOS_PER_EXERCISE = 3
+
+/**
+ * 種目にYouTube動画を登録する(ISS-003)。
+ * 重複は無視。上限超過はfalseを返す(呼び出し側でエラー表示)
+ */
+export async function addExerciseVideo(exerciseId: number, videoId: string): Promise<boolean> {
+  const exercise = await db.exercises.get(exerciseId)
+  if (!exercise) return false
+  const current = exercise.youtubeVideoIds ?? []
+  if (current.includes(videoId)) return true
+  if (current.length >= MAX_VIDEOS_PER_EXERCISE) return false
+  await db.exercises.update(exerciseId, { youtubeVideoIds: [...current, videoId] })
+  return true
+}
+
+export async function removeExerciseVideo(exerciseId: number, videoId: string): Promise<void> {
+  const exercise = await db.exercises.get(exerciseId)
+  if (!exercise) return
+  await db.exercises.update(exerciseId, {
+    youtubeVideoIds: (exercise.youtubeVideoIds ?? []).filter((id) => id !== videoId),
+  })
+}
+
 /** 痛みフラグの解除(設定画面から) */
 export async function resolveInjury(injuryId: number): Promise<void> {
   await db.injuries.update(injuryId, { isActive: 0 })

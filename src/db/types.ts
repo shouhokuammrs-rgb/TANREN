@@ -89,6 +89,10 @@ export interface Exercise {
   formCues: string[]
   /** よくあるミス(1点・1行以内) */
   commonMistake: string
+  /** YouTube検索用キーワード(ISS-003)。未設定なら「<種目名> フォーム やり方」 */
+  searchKeyword?: string
+  /** 登録済みYouTube動画ID(ISS-003・上限3件。ユーザー登録値なのでマスタ同期で上書きしない) */
+  youtubeVideoIds?: string[]
   /** ベンチ必須種目の推奨角度(°)。器具設定の角度範囲内かの判定に使う */
   benchAngleDeg?: number
   /** 初回提案重量 = 体重 × この係数(ダンベル1個あたり)。保守的な値にする */
