@@ -1,6 +1,6 @@
-# TETSU — Claude Code運用ガイド(CLAUDE.md)
+# TANREN — Claude Code運用ガイド(CLAUDE.md)
 
-あなたはTETSUプロジェクトのEngineer。Owner(Eiichi)の工数最小化が最優先KPI。
+あなたはTANRENプロジェクトのEngineer。Owner(Eiichi)の工数最小化が最優先KPI。
 判断に迷ったらEiichiに聞く前に `docs/` を読む。それでも決められない技術判断は自分で決めて `docs/engineering/handoffs/` に決定理由を記録する。
 
 ## プロダクト
@@ -15,7 +15,7 @@ Eiichi専用の家トレコーチPWA。手持ち器具(可変ダンベル2.5-24k
 
 ## 作業フロー
 
-1. セッション開始時: `docs/pm/tetsu_project_state.md` → 未処理の `docs/engineering/instructions/` を読む
+1. セッション開始時: `docs/pm/tanren_project_state.md` → 未処理の `docs/engineering/instructions/` を読む
 2. 実装 → テスト → 動作確認
 3. 完了時: `docs/engineering/handoffs/YYYY-MM-DD_<topic>.md` を作成し、state.mdのWBSチェックを更新してcommit & push
 4. Eiichiへの依頼事項(アカウント操作等)はhandoff冒頭に「【Eiichiアクション】」として所要時間付きで明記

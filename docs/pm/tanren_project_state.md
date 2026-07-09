@@ -1,4 +1,4 @@
-# TETSU Project State(Single Source of Truth)
+# TANREN Project State(Single Source of Truth)
 
 最終更新: 2026-07-10 / 更新者: PM
 
@@ -9,7 +9,7 @@
 | 役割 | 担当 | 連携方法 |
 |------|------|----------|
 | **Owner** | Eiichi | 重要判断のみ。橋渡し作業はしない |
-| **PM** | Claude(Web/App版・tetsu-pmスキル) | 要件・WBS・レビュー・指示書作成。コードは書かない |
+| **PM** | Claude(Web/App版・tanren-pmスキル) | 要件・WBS・レビュー・指示書作成。コードは書かない |
 | **Engineer** | Claude Code | 実装・テスト。`docs/engineering/` 経由で指示を受ける |
 | **Designer** | Claude(Web版デザイン機能/Artifacts) | Phase 4で本格参加。`docs/design/` 経由 |
 | **QA** | Claude Code(実装とは別セッション) | Phase完了ごとにレビュー観点書ベースで検証 |
@@ -51,13 +51,14 @@
 ### Phase 4: デザイン磨き込み(Designer参加)
 - [ ] 4-1 デザイン方針策定(PM→Designer仕様書)
 - [ ] 4-2 UIリファイン適用(Engineer)
-- [ ] 4-3 正式名称決定(DEC-001)
+- [x] 4-3 正式名称決定(DEC-001)→ TANREN に決定(前倒しで完了)
 
 ## 4. 意思決定記録
 
 | DEC# | 内容 | 決定者 | 日付 |
 |------|------|--------|------|
 | DEC-000 | PWA+ローカル保存+ルールベースエンジン(API回避)で構築 | Eiichi | 2026-07-10 |
+| DEC-001 | 正式プロダクト名を **TANREN(鍛錬)** に決定(旧仮称: TETSU)。docs含め全置換済み | Eiichi | 2026-07-10 |
 
 ## 5. オープン課題
 
@@ -72,4 +73,4 @@
 - 完了報告: `docs/engineering/handoffs/YYYY-MM-DD_<topic>.md`
 - セッションログ: `docs/pm/session-logs/YYYY-MM-DD_session-N.md`
 - 微修正は ISS-XXX として本ファイルに起票→PMが指示書化→Engineerが対応(Eiichiは「ここ微妙」と言うだけでOK)
-- 詳細は `docs/skills/tetsu-pm/SKILL.md` 参照
+- 詳細は `docs/skills/tanren-pm/SKILL.md` 参照
