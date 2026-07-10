@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TabBar from './components/TabBar'
 import { STORAGE_COPY } from './constants/copy'
-import { PRODUCTION_URL, isPreviewHost } from './utils/env'
+import { isPreviewHost, productionUrl } from './utils/env'
 import HomePage from './pages/HomePage'
 import WorkoutPage from './pages/WorkoutPage'
 import ActiveWorkoutPage from './pages/ActiveWorkoutPage'
@@ -13,15 +13,17 @@ import SummaryPage from './pages/SummaryPage'
 import PhotosPage from './pages/PhotosPage'
 
 export default function App() {
+  // ISS-010: 本番ホストはVITE_PROD_HOSTから取得。未設定なら警告無効(偽陽性防止)
   const onPreviewHost = isPreviewHost(window.location.hostname)
+  const prodUrl = productionUrl()
 
   return (
     <div className="min-h-dvh text-ink">
       {/* プレビューURL警告(ISS-009-2): 一時URLでの記録を防ぐ */}
-      {onPreviewHost && (
+      {onPreviewHost && prodUrl && (
         <div className="bg-adjusting/15 px-4 py-2 text-center text-xs text-adjusting">
           ⚠️ {STORAGE_COPY.previewWarning}{' '}
-          <a href={PRODUCTION_URL} className="font-bold underline">
+          <a href={prodUrl} className="font-bold underline">
             {STORAGE_COPY.previewLink}
           </a>
         </div>

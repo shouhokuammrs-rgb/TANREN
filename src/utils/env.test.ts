@@ -1,22 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { isPreviewHost, PRODUCTION_HOST } from './env'
+import { isPreviewHost, productionUrl } from './env'
 import { shouldRemindExport } from './backup'
 
-describe('isPreviewHost(ISS-009-2)', () => {
-  it('本番ホストはプレビュー扱いしない', () => {
-    expect(isPreviewHost(PRODUCTION_HOST)).toBe(false)
+// 本番ホストはビルド時環境変数のため、テストは値を明示して判定ロジックを固定する(ISS-010)
+const PROD = 'tanren-lake.vercel.app'
+
+describe('isPreviewHost(ISS-009-2 / ISS-010)', () => {
+  it('本番ドメイン自身は警告しない(偽陽性ケース)', () => {
+    expect(isPreviewHost(PROD, PROD)).toBe(false)
   })
 
-  it('本番以外の*.vercel.appはプレビュー', () => {
-    expect(isPreviewHost('tanren-git-feature-x.vercel.app')).toBe(true)
-    expect(isPreviewHost('tanren-abc123.vercel.app')).toBe(true)
+  it('プレビューURLでは警告する(偽陰性ケース)', () => {
+    expect(isPreviewHost('tanren-git-feature-x.vercel.app', PROD)).toBe(true)
+    expect(isPreviewHost('tanren-abc123-team.vercel.app', PROD)).toBe(true)
+  })
+
+  it('本番ホスト未設定なら常に警告しない(ISS-010: 無効化)', () => {
+    expect(isPreviewHost('tanren-git-feature-x.vercel.app', undefined)).toBe(false)
+    expect(isPreviewHost('anything.vercel.app', undefined)).toBe(false)
   })
 
   it('開発環境・他ドメインは対象外', () => {
-    expect(isPreviewHost('localhost')).toBe(false)
-    expect(isPreviewHost('example.com')).toBe(false)
+    expect(isPreviewHost('localhost', PROD)).toBe(false)
+    expect(isPreviewHost('example.com', PROD)).toBe(false)
     // 似せた別ドメインも対象外(末尾一致のみ)
-    expect(isPreviewHost('vercel.app.example.com')).toBe(false)
+    expect(isPreviewHost('vercel.app.example.com', PROD)).toBe(false)
+  })
+})
+
+describe('productionUrl', () => {
+  it('ホスト設定時はURL、未設定はundefined', () => {
+    expect(productionUrl(PROD)).toBe(`https://${PROD}/`)
+    expect(productionUrl(undefined)).toBeUndefined()
   })
 })
 
