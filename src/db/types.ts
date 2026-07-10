@@ -35,6 +35,9 @@ export type Condition = 'great' | 'normal' | 'tired'
 
 export type PhotoPose = 'front' | 'side' | 'back'
 
+/** 食事タイミング(ISS-007) */
+export type MealTiming = 'before' | 'within1h' | 'after2h'
+
 // IndexedDBはbooleanをインデックスできないため、フラグは 0 | 1 で持つ
 export type DbBool = 0 | 1
 
@@ -113,6 +116,13 @@ export interface Session {
   /** その日のヒヤリング: 使える時間(分) */
   availableMinutes?: number
   condition?: Condition
+  /** コンディション詳細(ISS-007・任意入力): 就寝時刻 'HH:mm' */
+  sleepStart?: string
+  /** 起床時刻 'HH:mm' */
+  sleepEnd?: string
+  /** 睡眠時間(時間・自動計算) */
+  sleepHours?: number
+  mealTiming?: MealTiming
   /** セッション全体のRPE(1-10) */
   rpe?: number
   /** 体調メモ(睡眠・食事・気分など) */
@@ -141,6 +151,8 @@ export interface SetRecord {
   actualReps?: number
   /** 提案重量・レップに対する達成フラグ(次回提案に直結) */
   achieved?: boolean
+  /** 「限界でした」フラグ(ISS-004): RPE10相当。次回はこの重量で増やさず様子を見る */
+  atFailure?: boolean
   /** 絶好調時のPR挑戦セット */
   isPrAttempt?: boolean
   completedAt?: Date

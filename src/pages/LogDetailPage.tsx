@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   FINISH_COPY,
+  HEARING_COPY,
   LOG_COPY,
+  MEAL_TIMING_LABELS,
   MUSCLE_GROUP_LABELS,
   SESSION_STATUS_LABELS,
   WORKOUT_COPY,
   formatDate,
 } from '../constants/copy'
-import { loadWorkout, updateSessionNotes } from '../db/queries'
+import { deleteSession, loadWorkout, updateSessionNotes } from '../db/queries'
 
 export default function LogDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const sessionId = Number(id)
   // undefined=読込中 / null=存在しない を区別する
   const workout = useLiveQuery(async () => (await loadWorkout(sessionId)) ?? null, [sessionId])
@@ -86,6 +89,16 @@ export default function LogDetailPage() {
       </ul>
 
       <div className="space-y-2 rounded-xl bg-slate-900 p-4 text-sm">
+        {session.sleepStart && session.sleepEnd && session.sleepHours !== undefined && (
+          <p className="text-slate-300">
+            🌙 {LOG_COPY.sleepLine(session.sleepStart, session.sleepEnd, session.sleepHours)}
+          </p>
+        )}
+        {session.mealTiming && (
+          <p className="text-slate-300">
+            🍚 {HEARING_COPY.mealLabel}: {MEAL_TIMING_LABELS[session.mealTiming]}
+          </p>
+        )}
         {session.rpe !== undefined && (
           <p>
             <span className="text-slate-500">{LOG_COPY.rpeLabel}: </span>
@@ -130,6 +143,20 @@ export default function LogDetailPage() {
           />
         )}
       </div>
+
+      {/* ISS-008: 削除(ボタン→確認ダイアログの二段確認) */}
+      <button
+        type="button"
+        className="h-12 w-full rounded-xl border border-red-500/40 text-sm font-semibold text-red-400 active:bg-red-500/10"
+        onClick={async () => {
+          if (window.confirm(LOG_COPY.deleteConfirm)) {
+            await deleteSession(session.id!)
+            navigate('/log', { replace: true })
+          }
+        }}
+      >
+        {LOG_COPY.deleteSession}
+      </button>
     </section>
   )
 }

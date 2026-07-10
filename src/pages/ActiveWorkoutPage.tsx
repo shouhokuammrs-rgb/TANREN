@@ -93,12 +93,23 @@ export default function ActiveWorkoutPage() {
     setDrafts((prev) => new Map(prev).set(setId, draft))
   }
 
-  const completeSet = async (set: SetRecord, intervalSec?: number) => {
-    unlockAudio() // ユーザー操作内でAudioContextを有効化(iOS対策)
+  const completeSet = async (set: SetRecord, intervalSec?: number, atFailure = false) => {
+    unlockAudio() // タップのたびにAudioContextの復帰を試みる(ISS-005)
+    // ワークアウト全体の最終セットならタイマーを起動せず終了フォームへ直行(ISS-006)
+    const isLastSetOfWorkout =
+      workout!.entries.flatMap((e) => e.sets).filter((s) => s.completedAt === undefined).length === 1
     const draft = draftFor(set)
-    await recordSet(set.id!, { actualWeightKg: draft.weightKg, actualReps: draft.reps })
+    await recordSet(set.id!, {
+      actualWeightKg: draft.weightKg,
+      actualReps: draft.reps,
+      atFailure,
+    })
     await reload()
-    if (autoTimer && intervalSec) setTimerSec(intervalSec)
+    if (isLastSetOfWorkout) {
+      setFinishOpen(true)
+    } else if (autoTimer && intervalSec) {
+      setTimerSec(intervalSec)
+    }
   }
 
   const weightStep = (current: number, direction: 1 | -1): number => {
@@ -168,16 +179,28 @@ export default function ActiveWorkoutPage() {
                       </div>
 
                       {done ? (
-                        <div className="mt-1 flex items-center justify-between">
+                        // 達成=緑 / 未達=黄で即フィードバック(未達は失敗ではなく調整材料のトーン: ISS-004)
+                        <div
+                          className={`mt-1 flex items-center justify-between rounded-md px-2 py-1 ${
+                            set.achieved ? 'bg-green-500/10' : 'bg-yellow-500/10'
+                          }`}
+                        >
                           <span className="text-sm font-semibold">
                             {set.actualWeightKg !== undefined ? `${set.actualWeightKg}kg × ` : ''}
                             {set.actualReps}
                             {WORKOUT_COPY.repsUnit}
                             <span
-                              className={`ml-2 text-xs ${set.achieved ? 'text-green-400' : 'text-yellow-400'}`}
+                              className={`ml-2 text-xs font-bold ${
+                                set.achieved ? 'text-green-400' : 'text-yellow-300'
+                              }`}
                             >
-                              {set.achieved ? '○' : '△'}
+                              {set.achieved ? WORKOUT_COPY.achievedLabel : WORKOUT_COPY.missedLabel}
                             </span>
+                            {set.atFailure && (
+                              <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-300">
+                                {WORKOUT_COPY.atFailureLabel}
+                              </span>
+                            )}
                           </span>
                           <button
                             type="button"
@@ -191,8 +214,8 @@ export default function ActiveWorkoutPage() {
                           </button>
                         </div>
                       ) : (
-                        <div className="mt-1 flex items-end justify-between gap-2">
-                          <div className="flex gap-2">
+                        <div className="mt-1 space-y-1.5">
+                          <div className="flex justify-center gap-3">
                             {set.suggestedWeightKg !== undefined && (
                               <Stepper
                                 label={WORKOUT_COPY.weightUnit}
@@ -208,13 +231,22 @@ export default function ActiveWorkoutPage() {
                               step={(cur, dir) => Math.max(0, cur + dir)}
                             />
                           </div>
-                          <button
-                            type="button"
-                            className="h-11 flex-1 rounded-lg bg-orange-500 text-sm font-bold text-white active:bg-orange-600"
-                            onClick={() => completeSet(set, set.intervalSec)}
-                          >
-                            {WORKOUT_COPY.done}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="h-11 flex-[2] rounded-lg bg-orange-500 text-sm font-bold text-white active:bg-orange-600"
+                              onClick={() => completeSet(set, set.intervalSec)}
+                            >
+                              {WORKOUT_COPY.done}
+                            </button>
+                            <button
+                              type="button"
+                              className="h-11 flex-1 rounded-lg bg-slate-700/60 text-xs font-semibold text-red-300 active:bg-slate-700"
+                              onClick={() => completeSet(set, set.intervalSec, true)}
+                            >
+                              🔥 {WORKOUT_COPY.atFailure}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </li>

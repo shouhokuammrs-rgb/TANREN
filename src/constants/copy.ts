@@ -117,7 +117,19 @@ export const HEARING_COPY = {
   minutesSuffix: '分',
   handoverTitle: '前回からの申し送り',
   generating: 'メニュー生成中…',
+  // ISS-007: コンディション詳細(任意・折りたたみ)
+  detailSection: '今日のコンディション詳細(スキップ可)',
+  sleepStart: '就寝時刻',
+  sleepEnd: '起床時刻',
+  sleepHours: (h: number) => `睡眠 ${h.toFixed(1)}時間`,
+  mealLabel: '食事',
 }
+
+export const MEAL_TIMING_LABELS = {
+  before: '食前',
+  within1h: '食後1時間以内',
+  after2h: '食後2時間以上',
+} as const
 
 export const MENU_COPY = {
   title: '今日のメニュー',
@@ -144,7 +156,13 @@ export const WORKOUT_COPY = {
   setLabel: (n: number) => `セット${n}`,
   suggested: (weight: string, reps: string) => `目標 ${weight} × ${reps}`,
   prSet: 'PR挑戦セット',
-  done: '完了',
+  // 提案値がデフォルト入力済み→±修正して記録するモデル(ISS-004)
+  done: '記録',
+  atFailure: '限界でした',
+  achievedLabel: '達成',
+  // 未達は調整材料であり失敗ではないトーン(ISS-004)
+  missedLabel: '調整中',
+  atFailureLabel: '限界',
   undo: '取り消し',
   exerciseNotePlaceholder: '種目メモ(フォームの気づきなど)',
   sessionNotePlaceholder: 'セッション全体のメモ',
@@ -172,6 +190,7 @@ export const TIMER_COPY = {
   finished: '次のセットへ!',
   skip: 'スキップ',
   secondsSuffix: '秒',
+  soundSuspended: '音が停止中。タップで有効化(終了は点滅でも知らせます)',
 }
 
 export const LOG_COPY = {
@@ -191,6 +210,10 @@ export const LOG_COPY = {
   saved: '保存しました',
   backToList: '一覧へ戻る',
   notFound: 'セッションが見つかりません',
+  sleepLine: (start: string, end: string, hours: number) =>
+    `睡眠 ${start}〜${end}(${hours.toFixed(1)}時間)`,
+  deleteSession: 'このセッションを削除',
+  deleteConfirm: 'このセッションを削除しますか?元に戻せません',
 }
 
 export const SETTINGS_COPY = {

@@ -4,6 +4,7 @@ import { db } from './db'
 import type {
   Condition,
   Exercise,
+  MealTiming,
   MuscleGroup,
   Session,
   SessionExercise,
@@ -60,6 +61,7 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
             weightKg: s.actualWeightKg ?? s.suggestedWeightKg,
             reps: s.actualReps,
             achieved: s.achieved,
+            atFailure: s.atFailure,
           })),
         })
       }
@@ -112,11 +114,42 @@ export async function loadLastHandoverNote(): Promise<string | undefined> {
   return sessions.find((s) => s.status === 'completed' && s.handoverNote)?.handoverNote
 }
 
+/** 前回の就寝・起床時刻(ISS-007: 時刻ピッカーのデフォルト値に使う) */
+export async function loadLastSleepTimes(): Promise<{ sleepStart?: string; sleepEnd?: string }> {
+  const sessions = await db.sessions.orderBy('startedAt').reverse().toArray()
+  const last = sessions.find((s) => s.sleepStart && s.sleepEnd)
+  return { sleepStart: last?.sleepStart, sleepEnd: last?.sleepEnd }
+}
+
+/** セッションを関連レコードごと完全削除する(ISS-008)。エンジンは残存ログから再計算される */
+export async function deleteSession(sessionId: number): Promise<void> {
+  await db.transaction('rw', [db.sessions, db.session_exercises, db.sets], async () => {
+    const sessionExercises = await db.session_exercises
+      .where('sessionId')
+      .equals(sessionId)
+      .toArray()
+    for (const se of sessionExercises) {
+      await db.sets.where('sessionExerciseId').equals(se.id!).delete()
+    }
+    await db.session_exercises.where('sessionId').equals(sessionId).delete()
+    await db.sessions.delete(sessionId)
+  })
+}
+
+/** コンディション詳細(ISS-007・任意) */
+export interface ConditionDetail {
+  sleepStart?: string
+  sleepEnd?: string
+  sleepHours?: number
+  mealTiming?: MealTiming
+}
+
 /** 生成メニューからin_progressセッションを作成し、sessionIdを返す */
 export async function startSession(
   menu: GeneratedMenu,
   request: MenuRequest,
   dumbbellStepsKg: number[],
+  conditionDetail: ConditionDetail = {},
 ): Promise<number> {
   return db.transaction('rw', [db.sessions, db.session_exercises, db.sets], async () => {
     const sessionId = (await db.sessions.add({
@@ -125,6 +158,10 @@ export async function startSession(
       muscles: menu.muscles,
       availableMinutes: request.availableMinutes,
       condition: request.condition,
+      sleepStart: conditionDetail.sleepStart,
+      sleepEnd: conditionDetail.sleepEnd,
+      sleepHours: conditionDetail.sleepHours,
+      mealTiming: conditionDetail.mealTiming,
     })) as number
 
     for (const [order, item] of menu.items.entries()) {
@@ -188,7 +225,7 @@ export async function loadWorkout(sessionId: number): Promise<Workout | undefine
 
 export async function recordSet(
   setId: number,
-  actual: { actualWeightKg?: number; actualReps: number },
+  actual: { actualWeightKg?: number; actualReps: number; atFailure?: boolean },
 ): Promise<void> {
   const set = await db.sets.get(setId)
   if (!set) return
@@ -201,6 +238,7 @@ export async function recordSet(
     actualWeightKg: actual.actualWeightKg,
     actualReps: actual.actualReps,
     achieved,
+    atFailure: actual.atFailure || undefined,
     completedAt: new Date(),
   })
 }
@@ -210,6 +248,7 @@ export async function undoSet(setId: number): Promise<void> {
     actualWeightKg: undefined,
     actualReps: undefined,
     achieved: undefined,
+    atFailure: undefined,
     completedAt: undefined,
   })
 }
