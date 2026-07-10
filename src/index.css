@@ -1,40 +1,161 @@
 @import 'tailwindcss';
 
 /*
- * デザイントークン(Phase 4 Part 2の下準備)。
- * 方針書 docs/design/specs/2026-07-10_design_direction.md の「鍛冶場」トークン指針に沿って
- * 現行の実値をセマンティック名で定数化した。Part 2で全コンポーネントをこのトークンへ移行し、
- * 正式なデザイン仕様書が来たらこのブロックの値だけを差し替える。
- * 生成されるユーティリティ例: bg-surface-raised / text-ink-muted / bg-forge / rounded-card
+ * デザイントークン(Phase 4 Part 2)。
+ * 正: docs/design/specs/2026-07-10_design_spec_v1.md(§0 PM補記が最優先)
+ * §1 カラー12色+セマンティック4色(ISS-004系ステータス専用) / §2 角丸4段 / §3 タイポ3書体
  */
 @theme {
-  /* 背景3段(暗がりのレイヤー構造: base / raised / overlay) */
-  --color-surface-base: #020617; /* 現行 slate-950 */
-  --color-surface-raised: #0f172a; /* 現行 slate-900(カード) */
-  --color-surface-overlay: #1e293b; /* 現行 slate-800(入力・チップ) */
+  /* ===== 炉心パレット(§1) ===== */
+  --color-forge-black: #0b0907; /* 基本背景 */
+  --color-ember-glow: #2a1006; /* 背景ラジアル(熱だまり) */
+  --color-line-ember: #3a2213; /* 罫線・カード枠 */
+  --color-molten: #ff5c1a; /* プライマリ(CTA・進捗・完了ドット) */
+  --color-molten-bright: #ff7a33; /* hover・強調ラベル */
+  --color-gold: #ffb300; /* グラデ起点。PR演出のみ */
+  --color-deep-red: #d8321a; /* グラデ終点 */
+  --color-text-hot: #ffe3cc; /* ヒーロー数字 */
+  --color-ink: #f5efe8; /* 見出し(原文: text) */
+  --color-ink-mid: #d9cfc6; /* 本文・副ボタン(原文: text-mid) */
+  --color-accent-dim: #b06a3e; /* 単位・サブ数値ラベル */
+  --color-ink-dim: #8a5a3c; /* キャプション・メタ情報(原文: text-dim) */
 
-  /* 溶鉄オレンジ(行動と熱=達成のみに使う)。輝度変化: glow=強調 / press=押下 */
-  --color-forge: #f97316; /* 現行 orange-500 */
-  --color-forge-glow: #fb923c; /* 現行 orange-400 */
-  --color-forge-press: #ea580c; /* 現行 orange-600 */
+  /* 派生(仕様の定番スタイルから): カード地・区切り線・タブ非アクティブ */
+  --color-ember-tint: rgb(255 92 26 / 0.06); /* カード背景 rgba(255,92,26,.06) */
+  --color-line-soft: #241812; /* サマリー種目リストの区切り(§5) */
+  --color-tab-idle: #6b5a4c; /* タブ非アクティブ(§5) */
 
-  /* テキスト3役 */
-  --color-ink: #f1f5f9; /* 見出し・主数値(現行 slate-100) */
-  --color-ink-muted: #94a3b8; /* 本文補助(現行 slate-400) */
-  --color-ink-faint: #64748b; /* 弱い注釈(現行 slate-500) */
+  /* ===== セマンティック4色(§0-4: ステータス表示専用・Part 1から継続) ===== */
+  --color-achieved: #4ade80;
+  --color-adjusting: #fde047;
+  --color-destructive: #f87171;
+  --color-info: #3987e5;
 
-  /* セマンティック: 達成=緑 / 調整中=黄 / 破壊=赤 / 情報=青 */
-  --color-achieved: #4ade80; /* 現行 green-400 */
-  --color-adjusting: #fde047; /* 現行 yellow-300 */
-  --color-destructive: #f87171; /* 現行 red-400 */
-  --color-info: #3987e5; /* チャートの基準青と統一 */
+  /* ===== 角丸4段(§2) ===== */
+  --radius-chip: 6px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+  --radius-screen: 28px;
 
-  /* 角丸スケール: カード / コントロール(ボタン・入力) */
-  --radius-card: 0.75rem; /* 現行 rounded-xl */
-  --radius-control: 0.5rem; /* 現行 rounded-lg */
+  /* ===== タイポ(§3): Anton=数字 / IBM Plex Mono=英字ラベル / Noto Sans JP=和文 ===== */
+  --font-sans: 'Noto Sans JP', ui-sans-serif, system-ui, sans-serif;
+  --font-num: 'Anton', ui-sans-serif, sans-serif;
+  --font-label: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 html {
   /* トレ中の誤ダブルタップでズームしない */
   touch-action: manipulation;
+}
+
+body {
+  /* 画面背景ラジアル(§1 定番グラデーション) */
+  background:
+    radial-gradient(120% 60% at 50% 108%, #2a1006 0%, #140b06 42%, #0b0907 100%) fixed,
+    #0b0907;
+}
+
+@layer components {
+  /* ヒーロー数字(Anton・桁ブレ防止) */
+  .num-hero {
+    font-family: var(--font-num);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-hot);
+  }
+  /* 英字ラベル(Mono・大文字・字間) */
+  .label-mono {
+    font-family: var(--font-label);
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+  /* カード(ember tint + line-ember枠 + 14px) */
+  .card-ember {
+    background: var(--color-ember-tint);
+    border: 1px solid var(--color-line-ember);
+    border-radius: var(--radius-card);
+  }
+  /* プライマリCTA(moltenピル+グロー) */
+  .pill-molten {
+    background: var(--color-molten);
+    color: #fff;
+    border-radius: var(--radius-pill);
+    font-weight: 900;
+    box-shadow: 0 0 34px rgb(255 92 26 / 0.38);
+  }
+  .pill-molten:active {
+    background: var(--color-molten-bright);
+  }
+  /* ゴーストピル(枠 line-ember) */
+  .pill-ghost {
+    border: 1px solid var(--color-line-ember);
+    color: var(--color-ink-mid);
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+  }
+  .pill-ghost:active {
+    background: var(--color-ember-tint);
+  }
+  /* ヒーロー数字グロー(§1) */
+  .glow-text {
+    text-shadow: 0 0 32px rgb(255 92 26 / 0.55);
+  }
+  /* PRテキストグラデ(§1・PR演出のみ) */
+  .pr-gradient-text {
+    background: linear-gradient(180deg, #ffd98a 0%, #ff7a33 46%, #d8321a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ===== アニメーション(§4-5) ===== */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes emberPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+@keyframes heatShimmer {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+.anim-rise {
+  animation: riseIn 0.35s ease-out both;
+}
+.anim-pulse {
+  animation: emberPulse 2.4s ease-in-out infinite;
+}
+/* PR演出のみに限定使用(§4) */
+.anim-shimmer {
+  animation: heatShimmer 2.8s ease-in-out infinite;
+}
+
+/* リデュースモーション尊重(指示書Part 2-3) */
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .anim-pulse,
+  .anim-shimmer {
+    animation: none;
+  }
 }

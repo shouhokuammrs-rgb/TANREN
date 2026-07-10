@@ -110,8 +110,8 @@ export default function SetupPage() {
     <button
       type="button"
       onClick={onClick}
-      className={`h-14 w-full rounded-xl font-bold ${
-        primary ? 'bg-orange-500 text-white active:bg-orange-600' : 'bg-slate-800 text-slate-300 active:bg-slate-700'
+      className={`h-14 w-full rounded-card font-bold ${
+        primary ? 'bg-molten text-white active:bg-molten-bright' : 'bg-line-ember/40 text-ink-mid active:bg-line-ember'
       }`}
     >
       {label}
@@ -123,14 +123,14 @@ export default function SetupPage() {
     onChange: (v: string) => void,
     label: string,
   ) => (
-    <label className="block text-xs text-slate-400">
+    <label className="block text-xs text-ink-mid">
       {label}
       <input
         type="number"
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+        className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
       />
     </label>
   )
@@ -141,11 +141,11 @@ export default function SetupPage() {
 
       {step === 'profile' && (
         <>
-          <h2 className="text-sm font-semibold text-slate-400">{SETUP_COPY.stepProfile}</h2>
+          <h2 className="text-sm font-semibold text-ink-mid">{SETUP_COPY.stepProfile}</h2>
           {numberInput(height, setHeight, SETUP_COPY.heightCm)}
           {numberInput(weight, setWeight, SETUP_COPY.weightKg)}
           {numberInput(bodyFat, setBodyFat, SETUP_COPY.bodyFatPct)}
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
           {stepButton(SETUP_COPY.next, async () => {
             const h = Number(height)
             const w = Number(weight)
@@ -166,15 +166,15 @@ export default function SetupPage() {
 
       {step === 'goal' && (
         <>
-          <h2 className="text-sm font-semibold text-slate-400">{SETUP_COPY.stepGoal}</h2>
+          <h2 className="text-sm font-semibold text-ink-mid">{SETUP_COPY.stepGoal}</h2>
           <div className="grid grid-cols-2 gap-2">
             {GOAL_TYPES.map((g) => (
               <button
                 key={g}
                 type="button"
                 onClick={() => setGoalType(g)}
-                className={`h-14 rounded-xl text-sm font-bold ${
-                  goalType === g ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                className={`h-14 rounded-card text-sm font-bold ${
+                  goalType === g ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
                 }`}
               >
                 {GOAL_TYPE_LABELS[g]}
@@ -183,15 +183,15 @@ export default function SetupPage() {
           </div>
           {goalType === 'focus' && (
             <div>
-              <p className="mb-1 text-xs text-slate-400">{SETUP_COPY.focusParts}</p>
+              <p className="mb-1 text-xs text-ink-mid">{SETUP_COPY.focusParts}</p>
               <div className="grid grid-cols-4 gap-2">
                 {ALL_MUSCLES.map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setFocusParts(toggle(focusParts, m))}
-                    className={`h-11 rounded-lg text-sm font-bold ${
-                      focusParts.includes(m) ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                    className={`h-11 rounded-chip text-sm font-bold ${
+                      focusParts.includes(m) ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
                     }`}
                   >
                     {MUSCLE_GROUP_LABELS[m]}
@@ -207,14 +207,14 @@ export default function SetupPage() {
 
       {step === 'photos' && (
         <>
-          <h2 className="text-sm font-semibold text-slate-400">{SETUP_COPY.stepPhotos}</h2>
-          <p className="text-xs text-slate-500">{SETUP_COPY.photoHint}</p>
+          <h2 className="text-sm font-semibold text-ink-mid">{SETUP_COPY.stepPhotos}</h2>
+          <p className="text-xs text-ink-dim">{SETUP_COPY.photoHint}</p>
           <div className="grid grid-cols-3 gap-2">
             {POSES.map((pose) => (
               <label
                 key={pose}
-                className={`flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-semibold ${
-                  photos[pose] ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-300'
+                className={`flex h-24 cursor-pointer flex-col items-center justify-center rounded-card text-sm font-semibold ${
+                  photos[pose] ? 'bg-molten/20 text-molten-bright' : 'bg-line-ember/40 text-ink-mid'
                 }`}
               >
                 {photos[pose] ? '✓ ' : '+ '}
@@ -240,17 +240,17 @@ export default function SetupPage() {
 
       {step === 'hearing' && (
         <>
-          <h2 className="text-sm font-semibold text-slate-400">{SETUP_COPY.stepHearing}</h2>
+          <h2 className="text-sm font-semibold text-ink-mid">{SETUP_COPY.stepHearing}</h2>
           <div>
-            <p className="mb-1 text-xs text-slate-400">{SETUP_COPY.wantParts}</p>
+            <p className="mb-1 text-xs text-ink-mid">{SETUP_COPY.wantParts}</p>
             <div className="grid grid-cols-4 gap-2">
               {ALL_MUSCLES.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setWantParts(toggle(wantParts, m))}
-                  className={`h-11 rounded-lg text-sm font-bold ${
-                    wantParts.includes(m) ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                  className={`h-11 rounded-chip text-sm font-bold ${
+                    wantParts.includes(m) ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
                   }`}
                 >
                   {MUSCLE_GROUP_LABELS[m]}
@@ -259,7 +259,7 @@ export default function SetupPage() {
             </div>
           </div>
           <div>
-            <p className="mb-1 text-xs text-slate-400">{SETUP_COPY.avoidParts}</p>
+            <p className="mb-1 text-xs text-ink-mid">{SETUP_COPY.avoidParts}</p>
             <div className="grid grid-cols-4 gap-2">
               {ALL_MUSCLES.map((m) => {
                 const avoid = avoidParts.find((a) => a.part === m)
@@ -268,8 +268,8 @@ export default function SetupPage() {
                     key={m}
                     type="button"
                     onClick={() => cycleAvoid(m)}
-                    className={`flex h-14 flex-col items-center justify-center rounded-lg text-sm font-bold ${
-                      avoid ? 'bg-red-500/70 text-white' : 'bg-slate-800 text-slate-300'
+                    className={`flex h-14 flex-col items-center justify-center rounded-chip text-sm font-bold ${
+                      avoid ? 'bg-destructive/70 text-white' : 'bg-line-ember/40 text-ink-mid'
                     }`}
                   >
                     {MUSCLE_GROUP_LABELS[m]}
@@ -284,15 +284,15 @@ export default function SetupPage() {
             </div>
           </div>
           <div>
-            <p className="mb-1 text-xs text-slate-400">{SETUP_COPY.injuryParts}</p>
+            <p className="mb-1 text-xs text-ink-mid">{SETUP_COPY.injuryParts}</p>
             <div className="grid grid-cols-4 gap-2">
               {ALL_MUSCLES.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setInjuryParts(toggle(injuryParts, m))}
-                  className={`h-11 rounded-lg text-sm font-bold ${
-                    injuryParts.includes(m) ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-300'
+                  className={`h-11 rounded-chip text-sm font-bold ${
+                    injuryParts.includes(m) ? 'bg-destructive text-white' : 'bg-line-ember/40 text-ink-mid'
                   }`}
                 >
                   {MUSCLE_GROUP_LABELS[m]}
@@ -305,7 +305,7 @@ export default function SetupPage() {
                 onChange={(e) => setInjuryNote(e.target.value)}
                 placeholder={SETUP_COPY.injuryNote}
                 rows={1}
-                className="mt-2 w-full rounded-lg bg-slate-800 p-2 text-sm placeholder:text-slate-500"
+                className="mt-2 w-full rounded-chip bg-line-ember/40 p-2 text-sm placeholder:text-ink-dim"
               />
             )}
           </div>
@@ -316,25 +316,25 @@ export default function SetupPage() {
 
       {step === 'result' && analysis && (
         <>
-          <h2 className="text-sm font-semibold text-slate-400">{GAP_COPY.title}</h2>
+          <h2 className="text-sm font-semibold text-ink-mid">{GAP_COPY.title}</h2>
           <ol className="space-y-2">
             {analysis.top3.map((entry, i) => (
-              <li key={entry.muscle} className="flex items-center gap-3 rounded-xl bg-slate-900 p-4">
-                <span className="text-lg font-bold text-orange-400">{GAP_COPY.top3(i + 1)}</span>
+              <li key={entry.muscle} className="flex items-center gap-3 rounded-card bg-ember-tint border border-line-ember p-4">
+                <span className="text-lg font-bold text-molten-bright">{GAP_COPY.top3(i + 1)}</span>
                 <div>
                   <p className="font-semibold">{MUSCLE_GROUP_LABELS[entry.muscle]}</p>
-                  <p className="text-xs text-slate-400">{entry.reason}</p>
+                  <p className="text-xs text-ink-mid">{entry.reason}</p>
                 </div>
               </li>
             ))}
           </ol>
-          <div className="rounded-xl bg-slate-900 p-4">
-            <p className="mb-2 text-xs font-semibold text-slate-400">{GAP_COPY.weeklyTargets}</p>
+          <div className="rounded-card bg-ember-tint border border-line-ember p-4">
+            <p className="mb-2 text-xs font-semibold text-ink-mid">{GAP_COPY.weeklyTargets}</p>
             <div className="flex flex-wrap gap-2">
               {ALL_MUSCLES.map((m) => (
-                <span key={m} className="rounded-full bg-slate-800 px-3 py-1.5 text-xs">
+                <span key={m} className="rounded-pill bg-line-ember/40 px-3 py-1.5 text-xs">
                   {MUSCLE_GROUP_LABELS[m]}{' '}
-                  <span className="font-bold text-orange-400">
+                  <span className="font-bold text-molten-bright">
                     {analysis.weeklySetTargets[m]}
                   </span>
                   {GAP_COPY.setsUnit}
@@ -342,7 +342,7 @@ export default function SetupPage() {
               ))}
             </div>
           </div>
-          <p className="text-xs text-slate-500">{GAP_COPY.hint}</p>
+          <p className="text-xs text-ink-dim">{GAP_COPY.hint}</p>
           {stepButton(GAP_COPY.toHome, () => navigate('/'))}
         </>
       )}

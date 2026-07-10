@@ -5,6 +5,7 @@ import FreshnessBodyMap from '../components/FreshnessBodyMap'
 import Modal from '../components/Modal'
 import { MUSCLE_CHART_ORDER } from '../constants/charts'
 import {
+  APP_NAME,
   DASHBOARD_COPY,
   HOME_COPY,
   SETTINGS_COPY,
@@ -16,6 +17,7 @@ import { db } from '../db/db'
 import { lastExportAt, shouldRemindExport } from '../utils/backup'
 import {
   addBodyWeight,
+  homeStats,
   listBodyStats,
   loadEngineContext,
   loadGoal,
@@ -32,18 +34,18 @@ const WeightChart = lazy(() =>
   import('../components/DashboardCharts').then((m) => ({ default: m.WeightChart })),
 )
 
-const chartFallback = <p className="py-6 text-center text-sm text-slate-500">…</p>
+const chartFallback = <p className="py-6 text-center text-sm text-ink-dim">…</p>
 
 export default function HomePage() {
   const [bannerDismissed, setBannerDismissed] = useLocalSetting('setupBannerDismissed', false)
   const [weightModal, setWeightModal] = useState(false)
 
   const goal = useLiveQuery(async () => (await loadGoal()) ?? null)
-  // バックアップリマインダー(ISS-009-3): 記録データがあり、7日以上エクスポートが空いたら
   const exportReminder = useLiveQuery(async () => {
     const hasData = (await db.sessions.count()) > 0
     return { show: shouldRemindExport(lastExportAt(), hasData), never: lastExportAt() === null }
   })
+  const stats = useLiveQuery(() => homeStats())
   const volumeHistory = useLiveQuery(() => weeklyVolumeHistory())
   const freshness = useLiveQuery(async () => muscleFreshnessMap(await loadEngineContext()))
   const bodyStats = useLiveQuery(listBodyStats)
@@ -60,26 +62,38 @@ export default function HomePage() {
     weightKg: s.weightKg,
   }))
 
+  const now = new Date()
+
   return (
     <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">{HOME_COPY.title}</h1>
-        <p className="mt-1 text-sm text-slate-400">{HOME_COPY.subtitle}</p>
-      </div>
+      {/* ヘッダー(§5): ワードマーク+日付 */}
+      <header className="flex items-baseline justify-between">
+        <span className="label-mono text-[12px] font-bold text-molten">{APP_NAME}</span>
+        <span className="label-mono text-[11px] tracking-normal text-ink-dim">
+          {now.getMonth() + 1}/{now.getDate()}
+        </span>
+      </header>
+
+      {/* 挨拶見出し(Noto 900 30px・2行) */}
+      <h1 className="text-[30px] font-black leading-tight text-ink">
+        {HOME_COPY.greeting[0]}
+        <br />
+        {HOME_COPY.greeting[1]}
+      </h1>
 
       {goal === null && !bannerDismissed && (
-        <div className="rounded-xl border border-orange-500/40 bg-orange-500/10 p-3">
-          <p className="text-sm">{SETUP_COPY.banner}</p>
+        <div className="card-ember p-3">
+          <p className="text-sm text-ink-mid">{SETUP_COPY.banner}</p>
           <div className="mt-2 flex gap-2">
             <Link
               to="/setup"
-              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-orange-500 text-sm font-bold text-white active:bg-orange-600"
+              className="pill-molten flex h-11 flex-1 items-center justify-center text-sm"
             >
               {SETUP_COPY.bannerCta}
             </Link>
             <button
               type="button"
-              className="h-11 rounded-lg bg-slate-800 px-4 text-sm text-slate-300 active:bg-slate-700"
+              className="pill-ghost h-11 px-4 text-sm"
               onClick={() => setBannerDismissed(true)}
             >
               {SETUP_COPY.bannerSkip}
@@ -88,27 +102,43 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* 統計カード×2(§5: 数字 Anton 40px+グロー) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card-ember px-4 py-3">
+          <p className="label-mono text-[10px] text-accent-dim">{HOME_COPY.statStreak}</p>
+          <p className="num-hero glow-text mt-1 text-[40px] leading-none">
+            {stats?.streakDays ?? 0}
+            <span className="ml-1 text-sm text-accent-dim">{HOME_COPY.statStreakUnit}</span>
+          </p>
+        </div>
+        <div className="card-ember px-4 py-3">
+          <p className="label-mono text-[10px] text-accent-dim">{HOME_COPY.statWeeklyVolume}</p>
+          <p className="num-hero glow-text mt-1 text-[40px] leading-none">
+            {(stats?.weeklyVolumeKg ?? 0).toLocaleString()}
+            <span className="ml-1 text-sm text-accent-dim">{HOME_COPY.statWeeklyVolumeUnit}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* CTA(§5: moltenピル+グロー) */}
       <Link
         to="/workout"
-        className="flex h-16 w-full items-center justify-center rounded-xl bg-orange-500 text-lg font-bold text-white active:bg-orange-600"
+        className="pill-molten flex h-16 w-full items-center justify-center text-[17px]"
       >
-        {HOME_COPY.startCta} 💪
+        {HOME_COPY.startCta}
       </Link>
 
       {exportReminder?.show && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-900 p-3 text-xs text-slate-300">
+        <div className="card-ember flex items-center justify-between gap-2 p-3 text-xs text-ink-mid">
           <span>💾 {exportReminder.never ? STORAGE_COPY.reminderNever : STORAGE_COPY.reminder}</span>
-          <Link
-            to="/settings"
-            className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 font-semibold text-slate-200 active:bg-slate-700"
-          >
+          <Link to="/settings" className="pill-ghost shrink-0 px-3 py-2 text-xs">
             {STORAGE_COPY.reminderCta}
           </Link>
         </div>
       )}
 
-      <div className="rounded-xl bg-slate-900 p-4">
-        <h2 className="mb-2 text-xs font-semibold text-slate-400">
+      <div className="card-ember p-4">
+        <h2 className="label-mono mb-2 text-[10px] text-accent-dim">
           {DASHBOARD_COPY.weeklyVolume}
         </h2>
         {hasVolume && volumeData ? (
@@ -116,21 +146,21 @@ export default function HomePage() {
             <VolumeChart data={volumeData} />
           </Suspense>
         ) : (
-          <p className="py-6 text-center text-sm text-slate-500">{DASHBOARD_COPY.empty}</p>
+          <p className="py-6 text-center text-sm text-ink-dim">{DASHBOARD_COPY.empty}</p>
         )}
       </div>
 
-      <div className="rounded-xl bg-slate-900 p-4">
-        <h2 className="mb-2 text-xs font-semibold text-slate-400">{DASHBOARD_COPY.freshness}</h2>
+      <div className="card-ember p-4">
+        <h2 className="label-mono mb-2 text-[10px] text-accent-dim">{DASHBOARD_COPY.freshness}</h2>
         {freshness ? <FreshnessBodyMap freshness={freshness} /> : chartFallback}
       </div>
 
-      <div className="rounded-xl bg-slate-900 p-4">
+      <div className="card-ember p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-slate-400">{DASHBOARD_COPY.weight}</h2>
+          <h2 className="label-mono text-[10px] text-accent-dim">{DASHBOARD_COPY.weight}</h2>
           <button
             type="button"
-            className="h-11 rounded-lg bg-slate-800 px-3 text-xs text-slate-300 active:bg-slate-700"
+            className="pill-ghost h-11 px-3 text-xs"
             onClick={() => setWeightModal(true)}
           >
             + {DASHBOARD_COPY.addWeight}
@@ -141,13 +171,13 @@ export default function HomePage() {
             <WeightChart data={weightData} />
           </Suspense>
         ) : (
-          <p className="py-6 text-center text-sm text-slate-500">{DASHBOARD_COPY.empty}</p>
+          <p className="py-6 text-center text-sm text-ink-dim">{DASHBOARD_COPY.empty}</p>
         )}
       </div>
 
       <Link
         to="/photos"
-        className="flex h-12 w-full items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-slate-200 active:bg-slate-800"
+        className="pill-ghost flex h-12 w-full items-center justify-center text-sm"
       >
         📷 {DASHBOARD_COPY.photos}
       </Link>
@@ -164,7 +194,7 @@ function WeightModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={DASHBOARD_COPY.addWeight} onClose={onClose}>
       <div className="space-y-3">
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs text-ink-mid">
           {SETUP_COPY.weightKg}
           <input
             type="number"
@@ -172,23 +202,23 @@ function WeightModal({ onClose }: { onClose: () => void }) {
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             placeholder={DASHBOARD_COPY.weightPlaceholder}
-            className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100 placeholder:text-slate-600"
+            className="mt-1 h-12 w-full rounded-chip border border-line-ember bg-transparent px-3 text-base text-ink placeholder:text-ink-dim"
           />
         </label>
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs text-ink-mid">
           {SETUP_COPY.bodyFatPct}
           <input
             type="number"
             inputMode="decimal"
             value={bodyFat}
             onChange={(e) => setBodyFat(e.target.value)}
-            className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+            className="mt-1 h-12 w-full rounded-chip border border-line-ember bg-transparent px-3 text-base text-ink"
           />
         </label>
         <button
           type="button"
           disabled={!(Number(weight) > 0)}
-          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600 disabled:opacity-40"
+          className="pill-molten h-14 w-full text-[16px] disabled:opacity-40"
           onClick={async () => {
             await addBodyWeight(Number(weight), bodyFat ? Number(bodyFat) : undefined)
             onClose()

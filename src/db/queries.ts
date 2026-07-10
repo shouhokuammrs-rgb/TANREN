@@ -480,6 +480,46 @@ export async function weeklyVolumeHistory(weeks = 8, now = new Date()): Promise<
   return points
 }
 
+/** ホーム統計カード(デザイン仕様§5): 連続記録(日)と今週ボリューム(kg) */
+export interface HomeStats {
+  streakDays: number
+  weeklyVolumeKg: number
+}
+
+export async function homeStats(now = new Date()): Promise<HomeStats> {
+  const sessions = (await db.sessions.orderBy('startedAt').toArray()).filter(
+    (s) => s.status === 'completed' || s.status === 'aborted',
+  )
+
+  // 連続記録: 今日(または昨日)から遡って連続してトレした日数
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  const trainedDays = new Set(sessions.map((s) => dayKey(s.startedAt)))
+  const dayMs = 24 * 3_600_000
+  let streakDays = 0
+  let cursor = new Date(now)
+  if (!trainedDays.has(dayKey(cursor))) cursor = new Date(cursor.getTime() - dayMs)
+  while (trainedDays.has(dayKey(cursor))) {
+    streakDays++
+    cursor = new Date(cursor.getTime() - dayMs)
+  }
+
+  // 今週ボリューム: 直近7日の完了セット Σ重量×レップ
+  const since = now.getTime() - 7 * dayMs
+  let weeklyVolumeKg = 0
+  for (const session of sessions.filter((s) => s.startedAt.getTime() >= since)) {
+    const ses = await db.session_exercises.where('sessionId').equals(session.id!).toArray()
+    for (const se of ses) {
+      const sets = await db.sets.where('sessionExerciseId').equals(se.id!).toArray()
+      for (const s of sets) {
+        if (s.completedAt !== undefined && s.actualReps !== undefined) {
+          weeklyVolumeKg += (s.actualWeightKg ?? 0) * s.actualReps
+        }
+      }
+    }
+  }
+  return { streakDays, weeklyVolumeKg: Math.round(weeklyVolumeKg) }
+}
+
 /** 体重の随時記録(2-4)。プロフィールの現在体重も更新する */
 export async function addBodyWeight(weightKg: number, bodyFatPct?: number): Promise<void> {
   await db.body_stats.add({ measuredAt: new Date(), weightKg, bodyFatPct })

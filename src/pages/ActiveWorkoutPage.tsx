@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
 import Modal from '../components/Modal'
-import Stepper from '../components/Stepper'
-import TimerOverlay from '../components/TimerOverlay'
 import {
   FINISH_COPY,
   MENU_COPY,
   MUSCLE_GROUP_LABELS,
+  TIMER_COPY,
   WORKOUT_COPY,
 } from '../constants/copy'
 import {
@@ -20,29 +19,53 @@ import {
   updateExerciseNote,
   updateSessionNote,
   type Workout,
+  type WorkoutEntry,
 } from '../db/queries'
+import { db } from '../db/db'
 import type { Exercise, MuscleGroup, SetRecord } from '../db/types'
 import { snapToSteps } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 import { useWakeLock } from '../hooks/useWakeLock'
-import { unlockAudio } from '../utils/audio'
-import { db } from '../db/db'
+import { audioReady, countBeep, finishChime, unlockAudio } from '../utils/audio'
+import { vibrate } from '../utils/vibrate'
 
 const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
 
-/** セットごとの入力中の実績値(未確定はsuggestedを初期値にする) */
 type Draft = { weightKg?: number; reps: number }
+
+/** 実行画面ステートマシン(仕様§4): LOGGING=入力主役 / RESTING=タイマー主役 */
+type Mode =
+  | { kind: 'logging' }
+  | { kind: 'resting'; endAt: number; totalSec: number; finished: boolean }
+
+/** 現在(=最初の未完了)セットの位置 */
+interface Position {
+  entry: WorkoutEntry
+  set: SetRecord
+  setIndex: number
+}
+
+function firstIncomplete(workout: Workout): Position | null {
+  for (const entry of workout.entries) {
+    const setIndex = entry.sets.findIndex((s) => s.completedAt === undefined)
+    if (setIndex >= 0) return { entry, set: entry.sets[setIndex], setIndex }
+  }
+  return null
+}
 
 export default function ActiveWorkoutPage() {
   const navigate = useNavigate()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [mode, setMode] = useState<Mode>({ kind: 'logging' })
   const [drafts, setDrafts] = useState<Map<number, Draft>>(new Map())
-  const [timerSec, setTimerSec] = useState<number | null>(null)
   const [finishOpen, setFinishOpen] = useState(false)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [soundOk, setSoundOk] = useState(audioReady)
   const [autoTimer] = useLocalSetting('autoStartTimer', true)
   const [dumbbellSteps, setDumbbellSteps] = useState<number[]>([])
+  const lastBeepSecRef = useRef<number | null>(null)
 
   useWakeLock(workout !== null)
 
@@ -50,14 +73,15 @@ export default function ActiveWorkoutPage() {
     const active = await getActiveSession()
     if (!active) {
       setNotFound(true)
-      return
+      return null
     }
     const loaded = await loadWorkout(active.id!)
     if (!loaded) {
       setNotFound(true)
-      return
+      return null
     }
     setWorkout(loaded)
+    return loaded
   }, [])
 
   useEffect(() => {
@@ -73,14 +97,42 @@ export default function ActiveWorkoutPage() {
     if (notFound) navigate('/workout', { replace: true })
   }, [notFound, navigate])
 
-  // 現在種目 = 未完了セットが残っている最初の種目
-  const currentEntryIndex = useMemo(() => {
-    if (!workout) return -1
-    return workout.entries.findIndex((e) => e.sets.some((s) => s.completedAt === undefined))
-  }, [workout])
+  // RESTINGのカウントダウン(終了時刻ベース・バックグラウンド耐性)
+  useEffect(() => {
+    if (mode.kind !== 'resting' || mode.finished) return
+    const tick = () => {
+      const rest = mode.endAt - Date.now()
+      setSoundOk(audioReady())
+      const restSec = Math.ceil(rest / 1000)
+      if (rest > 0 && restSec <= 3 && lastBeepSecRef.current !== restSec) {
+        lastBeepSecRef.current = restSec
+        countBeep()
+      }
+      if (rest <= 0) {
+        finishChime()
+        vibrate([400, 150, 400])
+        setMode({ ...mode, finished: true })
+      } else {
+        // 再レンダリングして残り秒を更新
+        setMode((m) => (m.kind === 'resting' ? { ...m } : m))
+      }
+    }
+    const id = setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [mode])
+
+  // 終了点滅(iOSバイブ非対応の視覚フォールバック)を見せてからLOGGINGへ(sec==0→自動遷移)
+  useEffect(() => {
+    if (mode.kind === 'resting' && mode.finished) {
+      const id = setTimeout(() => setMode({ kind: 'logging' }), 1400)
+      return () => clearTimeout(id)
+    }
+  }, [mode])
+
+  const position = useMemo(() => (workout ? firstIncomplete(workout) : null), [workout])
 
   if (!workout) {
-    return <p className="pt-10 text-center text-sm text-slate-500">…</p>
+    return <p className="pt-10 text-center text-sm text-ink-dim">…</p>
   }
 
   const draftFor = (set: SetRecord): Draft =>
@@ -89,232 +141,435 @@ export default function ActiveWorkoutPage() {
       reps: set.actualReps ?? set.suggestedReps ?? 10,
     }
 
-  const setDraft = (setId: number, draft: Draft) => {
-    setDrafts((prev) => new Map(prev).set(setId, draft))
-  }
-
-  const completeSet = async (set: SetRecord, intervalSec?: number, atFailure = false) => {
+  const record = async (atFailure = false) => {
+    if (!position) return
     unlockAudio() // タップのたびにAudioContextの復帰を試みる(ISS-005)
-    // ワークアウト全体の最終セットならタイマーを起動せず終了フォームへ直行(ISS-006)
     const isLastSetOfWorkout =
-      workout!.entries.flatMap((e) => e.sets).filter((s) => s.completedAt === undefined).length === 1
-    const draft = draftFor(set)
-    await recordSet(set.id!, {
+      workout.entries.flatMap((e) => e.sets).filter((s) => s.completedAt === undefined).length === 1
+    const draft = draftFor(position.set)
+    await recordSet(position.set.id!, {
       actualWeightKg: draft.weightKg,
       actualReps: draft.reps,
       atFailure,
     })
     await reload()
     if (isLastSetOfWorkout) {
+      // 全体の最終セットはタイマーなしでサマリーへ(ISS-006 / §0-1)
       setFinishOpen(true)
-    } else if (autoTimer && intervalSec) {
-      setTimerSec(intervalSec)
+      setMode({ kind: 'logging' })
+    } else if (autoTimer && position.set.intervalSec) {
+      lastBeepSecRef.current = null
+      setMode({
+        kind: 'resting',
+        endAt: Date.now() + position.set.intervalSec * 1000,
+        totalSec: position.set.intervalSec,
+        finished: false,
+      })
     }
+  }
+
+  const undoLast = async () => {
+    const done = workout.entries
+      .flatMap((e) => e.sets)
+      .filter((s) => s.completedAt !== undefined)
+      .sort((a, b) => a.completedAt!.getTime() - b.completedAt!.getTime())
+    const last = done[done.length - 1]
+    if (!last) return
+    await undoSet(last.id!)
+    await reload()
+    setMode({ kind: 'logging' })
   }
 
   const weightStep = (current: number, direction: 1 | -1): number => {
     if (dumbbellSteps.length === 0) return Math.max(0, current + direction * 0.5)
+    // §0-3: 器具の重量配列にスナップ(前後のステップへ)
     return direction > 0
       ? snapToSteps(current, dumbbellSteps, 'up')
       : snapToSteps(current - 0.01, dumbbellSteps, 'down')
   }
 
-  return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-bold">{WORKOUT_COPY.title}</h1>
+  const totalSetsOfCurrent = position?.entry.sets.length ?? 0
+  const lastDone = position?.entry.sets
+    .filter((s) => s.completedAt !== undefined)
+    .at(-1)
 
-      <ul className="space-y-3">
-        {workout.entries.map((entry, entryIndex) => {
-          const isCurrent = entryIndex === currentEntryIndex
-          return (
-            <li
-              key={entry.sessionExercise.id}
-              className={`rounded-xl p-4 ${
-                isCurrent ? 'bg-slate-900 ring-2 ring-orange-500' : 'bg-slate-900/60'
+  return (
+    <section className="space-y-5">
+      {/* ヘッダー(§4共通) */}
+      <header className="flex items-start justify-between gap-2">
+        <button
+          type="button"
+          className="min-h-11 text-left"
+          onClick={() => position && setDetailExercise(position.entry.exercise)}
+        >
+          <p className="label-mono text-[10px] text-ink-dim">{WORKOUT_COPY.brandLabel}</p>
+          <h1 className="text-[22px] font-black leading-tight text-ink">
+            {position ? position.entry.exercise.name : WORKOUT_COPY.title}
+            {position && <span className="ml-1.5 text-xs font-normal text-ink-dim">ⓘ</span>}
+          </h1>
+        </button>
+        {position && (
+          <span className="label-mono shrink-0 rounded-chip border border-line-ember px-2.5 py-1.5 text-[13px] font-bold tracking-normal text-ink-mid">
+            {WORKOUT_COPY.setChip(position.setIndex + 1, totalSetsOfCurrent)}
+          </span>
+        )}
+      </header>
+
+      {mode.kind === 'resting' && position ? (
+        <RestingView
+          key="resting"
+          mode={mode}
+          soundOk={soundOk}
+          next={position}
+          onAdjust={(delta) => {
+            unlockAudio()
+            setMode((m) =>
+              m.kind === 'resting' && !m.finished
+                ? {
+                    ...m,
+                    endAt: Math.max(Date.now() + 1000, m.endAt + delta * 1000),
+                    totalSec: Math.max(1, m.totalSec + delta),
+                  }
+                : m,
+            )
+          }}
+          onSkip={() => {
+            unlockAudio()
+            setMode({ kind: 'logging' })
+          }}
+          onEnableSound={() => {
+            unlockAudio()
+            setSoundOk(audioReady())
+          }}
+        />
+      ) : position ? (
+        <div key={`logging-${position.set.id}`} className="anim-rise space-y-4">
+          {/* NOWラベル(§4 LOGGING) */}
+          <p className="label-mono anim-pulse text-center text-[11px] text-molten-bright">
+            {WORKOUT_COPY.nowSet(position.setIndex + 1)}
+            {position.set.isPrAttempt && ` ・ ${WORKOUT_COPY.prSet}`}
+          </p>
+
+          {/* 重量カード */}
+          {position.set.suggestedWeightKg !== undefined && (
+            <HeroStepper
+              label={WORKOUT_COPY.weightLabel}
+              display={`${draftFor(position.set).weightKg ?? 0}`}
+              onStep={(dir) => {
+                const draft = draftFor(position.set)
+                setDrafts((prev) =>
+                  new Map(prev).set(position.set.id!, {
+                    ...draft,
+                    weightKg: weightStep(draft.weightKg ?? 0, dir),
+                  }),
+                )
+              }}
+            />
+          )}
+
+          {/* レップカード */}
+          <HeroStepper
+            label={WORKOUT_COPY.repsLabel}
+            display={`${draftFor(position.set).reps}`}
+            onStep={(dir) => {
+              const draft = draftFor(position.set)
+              setDrafts((prev) =>
+                new Map(prev).set(position.set.id!, {
+                  ...draft,
+                  reps: Math.max(0, draft.reps + dir),
+                }),
+              )
+            }}
+          />
+
+          {/* 記録CTA+限界(ISS-004維持 / §0-4) */}
+          <button type="button" className="pill-molten h-14 w-full text-[16px]" onClick={() => void record()}>
+            {WORKOUT_COPY.done}
+          </button>
+          <button
+            type="button"
+            className="pill-ghost h-12 w-full text-xs text-destructive"
+            onClick={() => void record(true)}
+          >
+            🔥 {WORKOUT_COPY.atFailure}
+          </button>
+
+          <ProgressDots entry={position.entry} currentIndex={position.setIndex} />
+
+          {/* 直前セットのフィードバック(達成=緑/調整中=黄) */}
+          {lastDone && (
+            <div
+              className={`flex items-center justify-between rounded-chip px-3 py-2 text-sm ${
+                lastDone.achieved ? 'bg-achieved/10' : 'bg-adjusting/10'
               }`}
             >
-              {/* 種目名タップで詳細シート(ISS-001) */}
+              <span>
+                {WORKOUT_COPY.lastRecorded(lastDone.setNumber)}:{' '}
+                <span className="font-bold">
+                  {lastDone.actualWeightKg !== undefined ? `${lastDone.actualWeightKg}kg × ` : ''}
+                  {lastDone.actualReps}
+                  {WORKOUT_COPY.repsUnit}
+                </span>
+                <span
+                  className={`ml-2 text-xs font-bold ${lastDone.achieved ? 'text-achieved' : 'text-adjusting'}`}
+                >
+                  {lastDone.achieved ? WORKOUT_COPY.achievedLabel : WORKOUT_COPY.missedLabel}
+                </span>
+                {lastDone.atFailure && (
+                  <span className="ml-1.5 rounded-chip bg-destructive/15 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                    {WORKOUT_COPY.atFailureLabel}
+                  </span>
+                )}
+              </span>
               <button
                 type="button"
-                className="flex min-h-11 w-full items-baseline justify-between text-left"
-                onClick={() => setDetailExercise(entry.exercise)}
+                className="h-11 shrink-0 px-2 text-xs text-ink-dim active:text-ink-mid"
+                onClick={() => void undoLast()}
               >
-                <p className="font-semibold">
-                  {entry.exercise.name}
-                  <span className="ml-1.5 text-xs text-slate-500">ⓘ</span>
-                </p>
-                <span className="text-xs text-slate-500">
-                  {MUSCLE_GROUP_LABELS[entry.exercise.primaryMuscle]}
-                </span>
+                {WORKOUT_COPY.undo}
               </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-ink-mid">{MENU_COPY.emptyMenu}</p>
+      )}
 
-              <ul className="mt-2 space-y-2">
-                {entry.sets.map((set) => {
-                  const done = set.completedAt !== undefined
-                  const draft = draftFor(set)
-                  return (
-                    <li
-                      key={set.id}
-                      className={`rounded-lg p-2 ${done ? 'bg-slate-800/40 opacity-70' : 'bg-slate-800/80'}`}
-                    >
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        <span>
-                          {WORKOUT_COPY.setLabel(set.setNumber)}
-                          {set.isPrAttempt && (
-                            <span className="ml-1 rounded bg-orange-500 px-1 py-0.5 text-[10px] font-bold text-white">
-                              {WORKOUT_COPY.prSet}
-                            </span>
-                          )}
-                        </span>
-                        <span>
-                          {WORKOUT_COPY.suggested(
-                            set.suggestedWeightKg !== undefined
-                              ? MENU_COPY.weight(set.suggestedWeightKg)
-                              : MENU_COPY.bodyweight,
-                            set.suggestedReps !== undefined
-                              ? `${set.suggestedReps}${WORKOUT_COPY.repsUnit}`
-                              : '−',
-                          )}
-                        </span>
-                      </div>
-
-                      {done ? (
-                        // 達成=緑 / 未達=黄で即フィードバック(未達は失敗ではなく調整材料のトーン: ISS-004)
-                        <div
-                          className={`mt-1 flex items-center justify-between rounded-md px-2 py-1 ${
-                            set.achieved ? 'bg-green-500/10' : 'bg-yellow-500/10'
-                          }`}
-                        >
-                          <span className="text-sm font-semibold">
-                            {set.actualWeightKg !== undefined ? `${set.actualWeightKg}kg × ` : ''}
-                            {set.actualReps}
-                            {WORKOUT_COPY.repsUnit}
-                            <span
-                              className={`ml-2 text-xs font-bold ${
-                                set.achieved ? 'text-green-400' : 'text-yellow-300'
-                              }`}
-                            >
-                              {set.achieved ? WORKOUT_COPY.achievedLabel : WORKOUT_COPY.missedLabel}
-                            </span>
-                            {set.atFailure && (
-                              <span className="ml-1.5 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-300">
-                                {WORKOUT_COPY.atFailureLabel}
-                              </span>
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            className="h-11 rounded-lg px-3 text-xs text-slate-400 active:bg-slate-700"
-                            onClick={async () => {
-                              await undoSet(set.id!)
-                              await reload()
-                            }}
-                          >
-                            {WORKOUT_COPY.undo}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="mt-1 space-y-1.5">
-                          <div className="flex justify-center gap-3">
-                            {set.suggestedWeightKg !== undefined && (
-                              <Stepper
-                                label={WORKOUT_COPY.weightUnit}
-                                value={draft.weightKg ?? 0}
-                                onChange={(w) => setDraft(set.id!, { ...draft, weightKg: w })}
-                                step={weightStep}
-                              />
-                            )}
-                            <Stepper
-                              label={WORKOUT_COPY.repsUnit}
-                              value={draft.reps}
-                              onChange={(r) => setDraft(set.id!, { ...draft, reps: r })}
-                              step={(cur, dir) => Math.max(0, cur + dir)}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="h-11 flex-[2] rounded-lg bg-orange-500 text-sm font-bold text-white active:bg-orange-600"
-                              onClick={() => completeSet(set, set.intervalSec)}
-                            >
-                              {WORKOUT_COPY.done}
-                            </button>
-                            <button
-                              type="button"
-                              className="h-11 flex-1 rounded-lg bg-slate-700/60 text-xs font-semibold text-red-300 active:bg-slate-700"
-                              onClick={() => completeSet(set, set.intervalSec, true)}
-                            >
-                              🔥 {WORKOUT_COPY.atFailure}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-
+      {/* メモ・終了系(折りたたみで低ノイズに) */}
+      <div className="card-ember">
+        <button
+          type="button"
+          className="flex h-12 w-full items-center justify-between px-4 text-sm text-ink-mid"
+          onClick={() => setNotesOpen((v) => !v)}
+        >
+          {WORKOUT_COPY.notesSection}
+          <span>{notesOpen ? '▲' : '▼'}</span>
+        </button>
+        {notesOpen && (
+          <div className="space-y-2 px-4 pb-4">
+            {position && (
               <textarea
-                defaultValue={entry.sessionExercise.note ?? ''}
+                defaultValue={position.entry.sessionExercise.note ?? ''}
                 placeholder={WORKOUT_COPY.exerciseNotePlaceholder}
                 rows={1}
-                className="mt-2 w-full rounded-lg bg-slate-800/60 p-2 text-sm placeholder:text-slate-600"
+                className="w-full rounded-chip border border-line-ember bg-transparent p-2 text-sm text-ink placeholder:text-ink-dim"
                 onBlur={(e) =>
-                  void updateExerciseNote(entry.sessionExercise.id!, {
+                  void updateExerciseNote(position.entry.sessionExercise.id!, {
                     note: e.target.value || undefined,
                   })
                 }
               />
-            </li>
-          )
-        })}
-      </ul>
+            )}
+            <textarea
+              defaultValue={workout.session.sessionNote ?? ''}
+              placeholder={WORKOUT_COPY.sessionNotePlaceholder}
+              rows={2}
+              className="w-full rounded-chip border border-line-ember bg-transparent p-2 text-sm text-ink placeholder:text-ink-dim"
+              onBlur={(e) => void updateSessionNote(workout.session.id!, e.target.value)}
+            />
+          </div>
+        )}
+      </div>
 
-      <textarea
-        defaultValue={workout.session.sessionNote ?? ''}
-        placeholder={WORKOUT_COPY.sessionNotePlaceholder}
-        rows={2}
-        className="w-full rounded-xl bg-slate-900 p-3 text-sm placeholder:text-slate-600"
-        onBlur={(e) => void updateSessionNote(workout.session.id!, e.target.value)}
-      />
-
-      <button
-        type="button"
-        className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600"
-        onClick={() => setFinishOpen(true)}
-      >
-        {WORKOUT_COPY.finish}
-      </button>
-      <button
-        type="button"
-        className="h-12 w-full rounded-xl bg-slate-800 text-sm text-slate-300 active:bg-slate-700"
-        onClick={async () => {
-          if (window.confirm(WORKOUT_COPY.interruptConfirm)) {
-            await abortSession(workout.session.id!)
-            navigate('/log')
-          }
-        }}
-      >
-        {WORKOUT_COPY.interrupt}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="pill-ghost h-12 flex-1 text-sm"
+          onClick={async () => {
+            if (window.confirm(WORKOUT_COPY.interruptConfirm)) {
+              await abortSession(workout.session.id!)
+              navigate('/log')
+            }
+          }}
+        >
+          {WORKOUT_COPY.interrupt}
+        </button>
+        <button
+          type="button"
+          className="pill-molten h-12 flex-1 text-sm"
+          onClick={() => setFinishOpen(true)}
+        >
+          {WORKOUT_COPY.finish}
+        </button>
+      </div>
 
       {detailExercise && (
         <ExerciseDetailSheet exercise={detailExercise} onClose={() => setDetailExercise(null)} />
       )}
-
-      {timerSec !== null && <TimerOverlay initialSec={timerSec} onDone={() => setTimerSec(null)} />}
 
       {finishOpen && (
         <FinishModal
           onClose={() => setFinishOpen(false)}
           onSave={async (input) => {
             await finishSession(workout.session.id!, input)
-            // セッション後サマリー(F-07)へ
             navigate(`/summary/${workout.session.id}`, { replace: true })
           }}
         />
       )}
     </section>
+  )
+}
+
+/** ヒーロー数字ステッパー(§4: Anton 64px + 56px円形±) */
+function HeroStepper({
+  label,
+  display,
+  onStep,
+}: {
+  label: string
+  display: string
+  onStep: (direction: 1 | -1) => void
+}) {
+  return (
+    <div className="card-ember px-4 py-3">
+      <p className="label-mono mb-1 text-center text-[10px] text-accent-dim">{label}</p>
+      <div className="flex items-center justify-between">
+        <StepButton sign="−" onClick={() => onStep(-1)} />
+        <span className="num-hero glow-text text-[64px] leading-none">{display}</span>
+        <StepButton sign="+" onClick={() => onStep(1)} />
+      </div>
+    </div>
+  )
+}
+
+function StepButton({ sign, onClick }: { sign: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-14 w-14 items-center justify-center rounded-pill border border-line-ember text-2xl text-ink-mid active:border-molten active:text-molten"
+    >
+      {sign}
+    </button>
+  )
+}
+
+/** セット進捗ドット(完了=molten / 現在=molten-bright枠 / 未=line-ember) */
+function ProgressDots({ entry, currentIndex }: { entry: WorkoutEntry; currentIndex: number }) {
+  return (
+    <div className="flex justify-center gap-2.5">
+      {entry.sets.map((s, i) => (
+        <span
+          key={s.id}
+          className={`h-2.5 w-2.5 rounded-pill ${
+            s.completedAt !== undefined
+              ? 'bg-molten'
+              : i === currentIndex
+                ? 'border border-molten-bright'
+                : 'bg-line-ember'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
+const RING_RADIUS = 132
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+
+/** RESTING(§4): 残時間リングが主役+NEXTカード */
+function RestingView({
+  mode,
+  next,
+  soundOk,
+  onAdjust,
+  onSkip,
+  onEnableSound,
+}: {
+  mode: Extract<Mode, { kind: 'resting' }>
+  next: Position
+  soundOk: boolean
+  onAdjust: (deltaSec: number) => void
+  onSkip: () => void
+  onEnableSound: () => void
+}) {
+  const remainingMs = Math.max(0, mode.endAt - Date.now())
+  const remainingSec = Math.ceil(remainingMs / 1000)
+  const progress = mode.totalSec > 0 ? remainingMs / (mode.totalSec * 1000) : 0
+  const draftWeight = next.set.actualWeightKg ?? next.set.suggestedWeightKg
+
+  return (
+    <div className={`anim-rise space-y-5 ${mode.finished ? 'anim-pulse' : ''}`}>
+      {!soundOk && !mode.finished && (
+        <button
+          type="button"
+          className="mx-auto block rounded-pill bg-adjusting/15 px-4 py-2 text-xs text-adjusting"
+          onClick={onEnableSound}
+        >
+          🔇 {TIMER_COPY.soundSuspended}
+        </button>
+      )}
+
+      {/* 残時間リング(300px・溶鉄グラデ・グロー・emberPulse) */}
+      <div className="anim-pulse relative mx-auto h-[300px] w-[300px]">
+        <svg
+          width="300"
+          height="300"
+          viewBox="0 0 300 300"
+          aria-hidden="true"
+          style={{ filter: 'drop-shadow(0 0 12px rgba(255,92,26,.65))' }}
+        >
+          <defs>
+            {/* 溶鉄グラデ(§1・45°) */}
+            <linearGradient id="moltenRing" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#FFB300" />
+              <stop offset="60%" stopColor="#FF5C1A" />
+              <stop offset="100%" stopColor="#D8321A" />
+            </linearGradient>
+          </defs>
+          <circle cx="150" cy="150" r={RING_RADIUS} fill="none" stroke="#3A2213" strokeWidth="10" />
+          <circle
+            cx="150"
+            cy="150"
+            r={RING_RADIUS}
+            fill="none"
+            stroke={mode.finished ? '#FFB300' : 'url(#moltenRing)'}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={RING_CIRCUMFERENCE}
+            strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
+            transform="rotate(-90 150 150)"
+            style={{ transition: 'stroke-dashoffset 1s linear' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <p className="label-mono text-[11px] text-accent-dim">
+            {mode.finished ? TIMER_COPY.finished : WORKOUT_COPY.intervalLabel}
+          </p>
+          <p className="num-hero glow-text text-[88px] leading-none">{remainingSec}</p>
+          <p className="label-mono text-[11px] tracking-normal text-ink-dim">/ {mode.totalSec}s</p>
+        </div>
+      </div>
+
+      {/* 操作(§0-2: ±15秒+スキップを炉心スタイルで) */}
+      <div className="flex justify-center gap-3">
+        <button type="button" className="pill-ghost h-12 px-5 text-sm" onClick={() => onAdjust(-15)}>
+          −15{TIMER_COPY.secondsSuffix}
+        </button>
+        <button type="button" className="pill-ghost h-12 px-5 text-sm" onClick={() => onAdjust(15)}>
+          +15{TIMER_COPY.secondsSuffix}
+        </button>
+        <button type="button" className="pill-molten h-12 px-6 text-sm" onClick={onSkip}>
+          {TIMER_COPY.skip}
+        </button>
+      </div>
+
+      {/* NEXTカード(§4) */}
+      <div className="card-ember px-4 py-3">
+        <p className="label-mono text-[10px] text-accent-dim">
+          {WORKOUT_COPY.nextLabel} — {WORKOUT_COPY.setLabel(next.setIndex + 1)}
+          {next.setIndex === 0 && ` ・${next.entry.exercise.name}`}
+        </p>
+        <div className="mt-1 flex items-end justify-between">
+          <p className="num-hero text-[34px] leading-none">
+            {draftWeight !== undefined ? `${draftWeight}kg × ` : ''}
+            {next.set.suggestedReps ?? '−'}
+            <span className="ml-1 text-sm text-accent-dim">{WORKOUT_COPY.repsUnit}</span>
+          </p>
+          <ProgressDots entry={next.entry} currentIndex={next.setIndex} />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -339,15 +594,15 @@ function FinishModal({ onClose, onSave }: FinishModalProps) {
     <Modal title={FINISH_COPY.title} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <p className="mb-1 text-xs font-semibold text-slate-400">{FINISH_COPY.rpe}</p>
+          <p className="mb-1 text-xs font-bold text-ink-mid">{FINISH_COPY.rpe}</p>
           <div className="grid grid-cols-10 gap-1">
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setRpe(rpe === n ? undefined : n)}
-                className={`h-11 rounded-lg text-sm font-bold ${
-                  rpe === n ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                className={`h-11 rounded-chip text-sm font-bold ${
+                  rpe === n ? 'bg-molten text-white' : 'border border-line-ember text-ink-mid'
                 }`}
               >
                 {n}
@@ -361,11 +616,11 @@ function FinishModal({ onClose, onSave }: FinishModalProps) {
           onChange={(e) => setConditionNote(e.target.value)}
           placeholder={FINISH_COPY.conditionNote}
           rows={2}
-          className="w-full rounded-lg bg-slate-800 p-2 text-sm placeholder:text-slate-500"
+          className="w-full rounded-chip border border-line-ember bg-transparent p-2 text-sm text-ink placeholder:text-ink-dim"
         />
 
         <div>
-          <p className="mb-1 text-xs font-semibold text-slate-400">{FINISH_COPY.painTitle}</p>
+          <p className="mb-1 text-xs font-bold text-ink-mid">{FINISH_COPY.painTitle}</p>
           <div className="grid grid-cols-4 gap-2">
             {ALL_MUSCLES.map((m) => (
               <button
@@ -376,8 +631,10 @@ function FinishModal({ onClose, onSave }: FinishModalProps) {
                     prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
                   )
                 }
-                className={`h-11 rounded-lg text-sm font-bold ${
-                  painParts.includes(m) ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-300'
+                className={`h-11 rounded-chip text-sm font-bold ${
+                  painParts.includes(m)
+                    ? 'bg-destructive text-forge-black'
+                    : 'border border-line-ember text-ink-mid'
                 }`}
               >
                 {MUSCLE_GROUP_LABELS[m]}
@@ -391,9 +648,9 @@ function FinishModal({ onClose, onSave }: FinishModalProps) {
                 onChange={(e) => setPainNote(e.target.value)}
                 placeholder={FINISH_COPY.painNote}
                 rows={1}
-                className="mt-2 w-full rounded-lg bg-slate-800 p-2 text-sm placeholder:text-slate-500"
+                className="mt-2 w-full rounded-chip border border-line-ember bg-transparent p-2 text-sm text-ink placeholder:text-ink-dim"
               />
-              <p className="mt-1 text-xs text-slate-500">{FINISH_COPY.painHint}</p>
+              <p className="mt-1 text-xs text-ink-dim">{FINISH_COPY.painHint}</p>
             </>
           )}
         </div>
@@ -403,12 +660,12 @@ function FinishModal({ onClose, onSave }: FinishModalProps) {
           onChange={(e) => setHandoverNote(e.target.value)}
           placeholder={`${FINISH_COPY.handover}(${FINISH_COPY.handoverPlaceholder})`}
           rows={2}
-          className="w-full rounded-lg bg-slate-800 p-2 text-sm placeholder:text-slate-500"
+          className="w-full rounded-chip border border-line-ember bg-transparent p-2 text-sm text-ink placeholder:text-ink-dim"
         />
 
         <button
           type="button"
-          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600"
+          className="pill-molten h-14 w-full text-[16px]"
           onClick={() =>
             void onSave({
               rpe,

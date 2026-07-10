@@ -40,7 +40,7 @@ export default function PhotosPage() {
   return (
     <section className="space-y-4">
       <div>
-        <Link to="/" className="text-xs text-slate-500">
+        <Link to="/" className="text-xs text-ink-dim">
           ← {LOG_COPY.backToList}
         </Link>
         <h1 className="mt-1 text-2xl font-bold">{PHOTO_COPY.title}</h1>
@@ -55,8 +55,8 @@ export default function PhotosPage() {
               setPose(p)
               setSliderIndex(0)
             }}
-            className={`h-11 rounded-lg text-sm font-bold ${
-              pose === p ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+            className={`h-11 rounded-chip text-sm font-bold ${
+              pose === p ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
             }`}
           >
             {POSE_LABELS[p]}
@@ -64,7 +64,7 @@ export default function PhotosPage() {
         ))}
       </div>
 
-      <label className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-600 text-sm text-slate-300 active:bg-slate-800">
+      <label className="flex h-12 w-full cursor-pointer items-center justify-center rounded-card border border-dashed border-line-ember text-sm text-ink-mid active:bg-line-ember/60">
         📷 + {PHOTO_COPY.add}({POSE_LABELS[pose]})
         <input
           type="file"
@@ -79,7 +79,7 @@ export default function PhotosPage() {
       </label>
 
       {photos?.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+        <p className="rounded-card border border-dashed border-line-ember p-6 text-sm text-ink-mid">
           {PHOTO_COPY.empty}
         </p>
       )}
@@ -87,7 +87,7 @@ export default function PhotosPage() {
       {photos && photos.length === 1 && latest && (
         <div>
           <PhotoCard url={latestUrl} caption={formatDate(latest.takenAt)} photo={latest} />
-          <p className="mt-2 text-xs text-slate-500">{PHOTO_COPY.needTwo}</p>
+          <p className="mt-2 text-xs text-ink-dim">{PHOTO_COPY.needTwo}</p>
         </div>
       )}
 
@@ -103,7 +103,7 @@ export default function PhotosPage() {
           </div>
           {olderPool.length > 1 && (
             <div>
-              <p className="mb-1 text-xs text-slate-400">{PHOTO_COPY.sliderLabel}</p>
+              <p className="mb-1 text-xs text-ink-mid">{PHOTO_COPY.sliderLabel}</p>
               <input
                 type="range"
                 min={0}
@@ -111,7 +111,7 @@ export default function PhotosPage() {
                 step={1}
                 value={Math.min(sliderIndex, olderPool.length - 1)}
                 onChange={(e) => setSliderIndex(Number(e.target.value))}
-                className="h-11 w-full accent-orange-500"
+                className="h-11 w-full accent-molten"
               />
             </div>
           )}
@@ -131,14 +131,14 @@ function PhotoCard({
   photo: Photo
 }) {
   return (
-    <figure className="overflow-hidden rounded-xl bg-slate-900">
+    <figure className="overflow-hidden rounded-card bg-ember-tint border border-line-ember">
       {url && <img src={url} alt={caption} className="aspect-[3/4] w-full object-cover" />}
-      <figcaption className="flex items-center justify-between px-2 py-1.5 text-[11px] text-slate-400">
+      <figcaption className="flex items-center justify-between px-2 py-1.5 text-[11px] text-ink-mid">
         {caption}
         <button
           type="button"
           aria-label={PHOTO_COPY.delete}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 active:bg-slate-800"
+          className="flex h-8 w-8 items-center justify-center rounded-pill text-ink-dim active:bg-line-ember/60"
           onClick={() => {
             if (window.confirm(PHOTO_COPY.deleteConfirm)) void deletePhoto(photo.id!)
           }}

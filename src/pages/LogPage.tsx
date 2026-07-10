@@ -16,7 +16,7 @@ export default function LogPage() {
       <h1 className="text-2xl font-bold">{LOG_COPY.title}</h1>
 
       {summaries?.length === 0 && (
-        <p className="mt-6 rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+        <p className="mt-6 rounded-card border border-dashed border-line-ember p-6 text-sm text-ink-mid">
           {LOG_COPY.empty}
         </p>
       )}
@@ -26,21 +26,21 @@ export default function LogPage() {
           <li key={session.id}>
             <Link
               to={`/log/${session.id}`}
-              className="block rounded-xl bg-slate-900 p-4 active:bg-slate-800"
+              className="block rounded-card bg-ember-tint border border-line-ember p-4 active:bg-line-ember/60"
             >
               <div className="flex items-baseline justify-between">
                 <span className="font-semibold">{formatDate(session.startedAt)}</span>
                 <span
                   className={`text-xs ${
-                    session.status === 'aborted' ? 'text-yellow-400' : 'text-slate-500'
+                    session.status === 'aborted' ? 'text-adjusting' : 'text-ink-dim'
                   }`}
                 >
                   {SESSION_STATUS_LABELS[session.status]}
                 </span>
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-mid">
                 {session.muscles && session.muscles.length > 0 && (
-                  <span className="text-orange-400">
+                  <span className="text-molten-bright">
                     {session.muscles.map((m) => MUSCLE_GROUP_LABELS[m]).join('・')}
                   </span>
                 )}

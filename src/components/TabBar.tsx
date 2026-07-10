@@ -30,32 +30,39 @@ const TABS = [
 
 export default function TabBar() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 border-t border-slate-800 bg-slate-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 border-t border-line-ember bg-forge-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <div className="mx-auto flex max-w-md">
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
-            // タップターゲット44px以上(h-16 = 64px)
+            // タップターゲット44px以上(h-16 = 64px)。アクティブ= text-hot+moltenドット(§5)
             className={({ isActive }) =>
-              `flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] ${
-                isActive ? 'text-orange-400' : 'text-slate-400'
+              `flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
+                isActive ? 'font-bold text-text-hot' : 'font-medium text-tab-idle'
               }`
             }
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-6 w-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d={tab.path} />
-            </svg>
-            {tab.label}
+            {({ isActive }) => (
+              <>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d={tab.path} />
+                </svg>
+                {tab.label}
+                <span
+                  className={`h-1 w-1 rounded-pill ${isActive ? 'bg-molten' : 'bg-transparent'}`}
+                />
+              </>
+            )}
           </NavLink>
         ))}
       </div>

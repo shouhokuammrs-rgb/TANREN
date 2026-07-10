@@ -96,8 +96,14 @@ export const SESSION_STATUS_LABELS = {
 
 export const HOME_COPY = {
   title: `${APP_NAME}(鍛錬)`,
+  // 挨拶見出し(§5・2行。鍛冶メタファー文言は使わない)
+  greeting: ['今日の最適メニューを、', '考えずに。'],
   subtitle: '今日の最適メニューを、考えずに。',
   startCta: '今日のトレを始める',
+  statStreak: '連続記録',
+  statStreakUnit: '日',
+  statWeeklyVolume: '今週ボリューム',
+  statWeeklyVolumeUnit: 'kg',
   lastSession: (dateLabel: string) => `前回: ${dateLabel}`,
   noSession: 'まだトレ記録がありません。最初のトレを始めましょう💪',
 }
@@ -153,6 +159,17 @@ export const MENU_COPY = {
 
 export const WORKOUT_COPY = {
   title: 'ワークアウト',
+  // 実行画面(デザイン仕様書§4)の英字ラベルはMono表示
+  brandLabel: 'TANREN / 実行中',
+  setChip: (n: number, total: number) => `SET ${n}/${total}`,
+  nowSet: (n: number) => `NOW — 第${n}セット`,
+  intervalLabel: 'INTERVAL',
+  weightLabel: 'WEIGHT / KG',
+  repsLabel: 'REPS',
+  nextLabel: 'NEXT',
+  nextExercise: (name: string) => `次の種目: ${name}`,
+  notesSection: 'メモ・その他',
+  lastRecorded: (n: number) => `セット${n}を記録済み`,
   setLabel: (n: number) => `セット${n}`,
   suggested: (weight: string, reps: string) => `目標 ${weight} × ${reps}`,
   prSet: 'PR挑戦セット',
@@ -300,7 +317,12 @@ export const GAP_COPY = {
 }
 
 export const SUMMARY_COPY = {
-  title: 'トレ完了!🎉',
+  title: 'ワークアウト完了。',
+  caption: (dateLabel: string, minutes: number | null) =>
+    minutes !== null ? `${dateLabel} ・ ${minutes}MIN` : dateLabel,
+  volumeLabel: 'TOTAL VOLUME',
+  volumeUnit: 'kg',
+  prTitle: (name: string) => `自己ベスト更新 — ${name}`,
   prCelebration: (n: number) => `自己新 ${n}本! 💪`,
   prBadge: 'PR',
   volume: 'ボリューム',

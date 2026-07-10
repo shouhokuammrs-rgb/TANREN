@@ -1,7 +1,7 @@
 import type { MuscleGroup } from '../db/types'
 
 // ダッシュボード(2-4)のチャート配色。
-// ダーク面(#0f172a)で検証済みのカテゴリカルパレット(順序はCVD分離を最大化する固定順)。
+// ダーク面で検証済みのカテゴリカルパレット(順序はCVD分離を最大化する固定順)。
 // 部位→色の対応は固定で、フィルタ等で塗り替えない
 export const MUSCLE_CHART_COLORS: Record<MuscleGroup, string> = {
   chest: '#3987e5', // blue
@@ -32,4 +32,4 @@ export const FRESHNESS_BUCKETS = [
 ] as const
 
 /** 人体図の未対象部位・輪郭色 */
-export const BODY_NEUTRAL = '#1e293b'
+export const BODY_NEUTRAL = '#241812'

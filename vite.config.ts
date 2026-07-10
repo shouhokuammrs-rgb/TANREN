@@ -12,6 +12,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
+      workbox: {
+        // フォント(Noto Sans JPのunicode-rangeサブセット多数)はプリキャッシュから外し、
+        // 実際に使われたサブセットだけを実行時キャッシュ(§0-5の容量配慮+オフライン両立)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: /\.woff2?$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tanren-fonts',
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'TANREN',
         short_name: 'TANREN',
@@ -20,9 +36,9 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
-        // テーマカラーは仮(Phase 4 デザインフェーズで正式決定)
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        // 炉心パレット(デザイン仕様書v1 §1)
+        theme_color: '#0b0907',
+        background_color: '#0b0907',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

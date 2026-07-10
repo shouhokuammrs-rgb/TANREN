@@ -55,12 +55,12 @@ export default function SettingsPage() {
     <section>
       <h1 className="text-2xl font-bold">{SETTINGS_COPY.title}</h1>
 
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">
         {SETTINGS_COPY.equipmentSection}
       </h2>
       <ul className="mt-2 space-y-2">
         {equipment?.length === 0 && (
-          <li className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+          <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
             {SETTINGS_COPY.equipmentEmpty}
           </li>
         )}
@@ -68,25 +68,25 @@ export default function SettingsPage() {
           const detail = equipmentDetail(eq)
           const editable = eq.type === 'dumbbell' || eq.type === 'bench'
           return (
-            <li key={eq.id} className="rounded-xl bg-slate-900 p-4">
+            <li key={eq.id} className="rounded-card bg-ember-tint border border-line-ember p-4">
               <div className="flex items-baseline justify-between">
                 <span className="font-medium">
                   {eq.name}
                   {eq.quantity > 1 && (
-                    <span className="ml-1 text-sm text-slate-400">
+                    <span className="ml-1 text-sm text-ink-mid">
                       {SETTINGS_COPY.equipmentCount(eq.quantity)}
                     </span>
                   )}
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-ink-dim">
                   {EQUIPMENT_TYPE_LABELS[eq.type]}
                 </span>
               </div>
-              {detail && <p className="mt-1 text-sm text-slate-400">{detail}</p>}
+              {detail && <p className="mt-1 text-sm text-ink-mid">{detail}</p>}
               {editable && (
                 <button
                   type="button"
-                  className="mt-2 h-11 w-full rounded-lg bg-slate-800 text-xs text-slate-300 active:bg-slate-700"
+                  className="mt-2 h-11 w-full rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
                   onClick={() => setEditing(eq)}
                 >
                   {SETTINGS_COPY.edit}
@@ -101,43 +101,43 @@ export default function SettingsPage() {
 
       <StrengthSection />
 
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">{SETTINGS_COPY.timerSection}</h2>
-      <label className="mt-2 flex h-14 items-center justify-between rounded-xl bg-slate-900 px-4">
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{SETTINGS_COPY.timerSection}</h2>
+      <label className="mt-2 flex h-14 items-center justify-between rounded-card bg-ember-tint border border-line-ember px-4">
         <span className="text-sm">{SETTINGS_COPY.timerAutoStart}</span>
         <input
           type="checkbox"
           checked={autoTimer}
           onChange={(e) => setAutoTimer(e.target.checked)}
-          className="h-6 w-6 accent-orange-500"
+          className="h-6 w-6 accent-molten"
         />
       </label>
 
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">
         {SETTINGS_COPY.injuriesSection}
       </h2>
       <ul className="mt-2 space-y-2">
         {(injuries === undefined || injuries.length === 0) && (
-          <li className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+          <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
             {SETTINGS_COPY.injuriesEmpty}
           </li>
         )}
         {injuries?.map((injury) => (
           <li
             key={injury.id}
-            className="flex items-center justify-between rounded-xl bg-slate-900 p-4"
+            className="flex items-center justify-between rounded-card bg-ember-tint border border-line-ember p-4"
           >
             <div>
-              <p className="text-sm font-semibold text-red-400">
+              <p className="text-sm font-semibold text-destructive">
                 {MUSCLE_GROUP_LABELS[injury.bodyPart]}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-dim">
                 {SETTINGS_COPY.injuryReportedAt(formatDate(injury.reportedAt))}
                 {injury.note ? `・${injury.note}` : ''}
               </p>
             </div>
             <button
               type="button"
-              className="h-11 rounded-lg bg-slate-800 px-4 text-xs text-slate-300 active:bg-slate-700"
+              className="h-11 rounded-chip bg-line-ember/40 px-4 text-xs text-ink-mid active:bg-line-ember"
               onClick={() => void resolveInjury(injury.id!)}
             >
               {SETTINGS_COPY.injuryResolve}
@@ -164,27 +164,27 @@ function GoalSection() {
 
   return (
     <>
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">{GOAL_SETTINGS_COPY.section}</h2>
-      <div className="mt-2 rounded-xl bg-slate-900 p-4">
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{GOAL_SETTINGS_COPY.section}</h2>
+      <div className="mt-2 rounded-card bg-ember-tint border border-line-ember p-4">
         <p className="text-sm font-semibold">
           {goal ? GOAL_TYPE_LABELS[goal.goalType] : GOAL_SETTINGS_COPY.notSet}
         </p>
         {goal && goal.wantParts.length > 0 && (
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-ink-mid">
             {goal.wantParts.map((m) => MUSCLE_GROUP_LABELS[m]).join('・')}
           </p>
         )}
         <div className="mt-2 flex gap-2">
           <Link
             to="/setup"
-            className="flex h-11 flex-1 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-300 active:bg-slate-700"
+            className="flex h-11 flex-1 items-center justify-center rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
           >
             {GOAL_SETTINGS_COPY.edit}
           </Link>
           {goal && (
             <Link
               to="/setup?analysis=1"
-              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-300 active:bg-slate-700"
+              className="flex h-11 flex-1 items-center justify-center rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
             >
               {GOAL_SETTINGS_COPY.viewAnalysis}
             </Link>
@@ -260,7 +260,7 @@ function DataSection() {
 
   return (
     <>
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">{DATA_COPY.section}</h2>
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{DATA_COPY.section}</h2>
       <div className="mt-2 space-y-2">
         {/* データ保護(ISS-009-1): 未許可ならタップで再要求 */}
         <button
@@ -269,39 +269,39 @@ function DataSection() {
           onClick={async () => {
             setPersist(await requestPersistentStorage())
           }}
-          className="flex h-14 w-full items-center justify-between rounded-xl bg-slate-900 px-4 text-left"
+          className="flex h-14 w-full items-center justify-between rounded-card bg-ember-tint border border-line-ember px-4 text-left"
         >
           <span>
             <span className="block text-sm">{STORAGE_COPY.protectionLabel}</span>
-            <span className="block text-[10px] text-slate-500">{STORAGE_COPY.protectionHint}</span>
+            <span className="block text-[10px] text-ink-dim">{STORAGE_COPY.protectionHint}</span>
           </span>
           <span
             className={`text-xs font-bold ${
               persist === 'granted'
-                ? 'text-green-400'
+                ? 'text-achieved'
                 : persist === 'denied'
-                  ? 'text-yellow-300'
-                  : 'text-slate-500'
+                  ? 'text-adjusting'
+                  : 'text-ink-dim'
             }`}
           >
             {persistLabel}
           </span>
         </button>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-ink-dim">
           {lastExport ? STORAGE_COPY.lastExport(formatDate(lastExport)) : STORAGE_COPY.neverExported}
         </p>
         <button
           type="button"
           disabled={busy}
           onClick={() => void onExport()}
-          className="h-12 w-full rounded-xl bg-slate-900 text-sm font-semibold text-slate-200 active:bg-slate-800 disabled:opacity-40"
+          className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60 disabled:opacity-40"
         >
           📤 {busy ? DATA_COPY.exporting : DATA_COPY.exportBtn}
         </button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="h-12 w-full rounded-xl bg-slate-900 text-sm font-semibold text-slate-200 active:bg-slate-800"
+          className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
         >
           📥 {DATA_COPY.importBtn}
         </button>
@@ -319,7 +319,7 @@ function DataSection() {
         <button
           type="button"
           onClick={() => void onWipe()}
-          className="h-12 w-full rounded-xl border border-red-500/40 text-sm font-semibold text-red-400 active:bg-red-500/10"
+          className="h-12 w-full rounded-card border border-destructive/40 text-sm font-semibold text-destructive active:bg-destructive/10"
         >
           {DATA_COPY.wipeBtn}
         </button>
@@ -336,31 +336,31 @@ function StrengthSection() {
 
   return (
     <>
-      <h2 className="mt-6 text-sm font-semibold text-slate-400">{STRENGTH_COPY.section}</h2>
-      <p className="mt-1 text-xs text-slate-500">{STRENGTH_COPY.hint}</p>
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{STRENGTH_COPY.section}</h2>
+      <p className="mt-1 text-xs text-ink-dim">{STRENGTH_COPY.hint}</p>
       <ul className="mt-2 space-y-2">
         {marks?.length === 0 && (
-          <li className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+          <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
             {STRENGTH_COPY.empty}
           </li>
         )}
         {marks?.map((mark) => (
           <li
             key={mark.id}
-            className="flex items-center justify-between rounded-xl bg-slate-900 p-4"
+            className="flex items-center justify-between rounded-card bg-ember-tint border border-line-ember p-4"
           >
             <div>
               <p className="text-sm font-semibold">
                 {refById.get(mark.refLiftId)?.name ?? mark.refLiftId}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-ink-mid">
                 {STRENGTH_COPY.mark(mark.weightKg, mark.reps)}・
                 {STRENGTH_COPY.est1Rm(Math.round(epley1Rm(mark.weightKg, mark.reps) * 10) / 10)}
               </p>
             </div>
             <button
               type="button"
-              className="h-11 rounded-lg bg-slate-800 px-4 text-xs text-slate-300 active:bg-slate-700"
+              className="h-11 rounded-chip bg-line-ember/40 px-4 text-xs text-ink-mid active:bg-line-ember"
               onClick={() => void deleteStrengthMark(mark.id!)}
             >
               {STRENGTH_COPY.delete}
@@ -370,7 +370,7 @@ function StrengthSection() {
       </ul>
       <button
         type="button"
-        className="mt-2 h-12 w-full rounded-xl border border-dashed border-slate-600 text-sm text-slate-300 active:bg-slate-800"
+        className="mt-2 h-12 w-full rounded-card border border-dashed border-line-ember text-sm text-ink-mid active:bg-line-ember/60"
         onClick={() => setAdding(true)}
       >
         + {STRENGTH_COPY.add}
@@ -390,15 +390,15 @@ function StrengthMarkModal({ onClose }: { onClose: () => void }) {
     <Modal title={STRENGTH_COPY.addTitle} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <p className="mb-1 text-xs font-semibold text-slate-400">{STRENGTH_COPY.refLift}</p>
+          <p className="mb-1 text-xs font-semibold text-ink-mid">{STRENGTH_COPY.refLift}</p>
           <div className="grid grid-cols-1 gap-1.5">
             {REF_LIFTS.map((lift) => (
               <button
                 key={lift.id}
                 type="button"
                 onClick={() => setRefLiftId(lift.id)}
-                className={`h-11 rounded-lg px-3 text-left text-sm font-semibold ${
-                  refLiftId === lift.id ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                className={`h-11 rounded-chip px-3 text-left text-sm font-semibold ${
+                  refLiftId === lift.id ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
                 }`}
               >
                 {lift.name}
@@ -407,31 +407,31 @@ function StrengthMarkModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="flex gap-2">
-          <label className="flex-1 text-xs text-slate-400">
+          <label className="flex-1 text-xs text-ink-mid">
             {STRENGTH_COPY.weight}
             <input
               type="number"
               inputMode="decimal"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
-              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+              className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
             />
           </label>
-          <label className="flex-1 text-xs text-slate-400">
+          <label className="flex-1 text-xs text-ink-mid">
             {STRENGTH_COPY.reps}
             <input
               type="number"
               inputMode="numeric"
               value={reps}
               onChange={(e) => setReps(e.target.value)}
-              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+              className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
             />
           </label>
         </div>
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <button
           type="button"
-          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600"
+          className="h-14 w-full rounded-card bg-molten font-bold text-white active:bg-molten-bright"
           onClick={async () => {
             const w = Number(weight)
             const r = Number(reps)
@@ -490,14 +490,14 @@ function DumbbellWizard({ equipment, onClose }: { equipment: Equipment; onClose:
   }
 
   const numberInput = (value: string, onChange: (v: string) => void, label: string) => (
-    <label className="flex-1 text-xs text-slate-400">
+    <label className="flex-1 text-xs text-ink-mid">
       {label}
       <input
         type="number"
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+        className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
       />
     </label>
   )
@@ -513,15 +513,15 @@ function DumbbellWizard({ equipment, onClose }: { equipment: Equipment; onClose:
         <button
           type="button"
           onClick={generate}
-          className="h-12 w-full rounded-xl bg-slate-700 text-sm font-semibold text-white active:bg-slate-600"
+          className="h-12 w-full rounded-card bg-line-ember text-sm font-semibold text-white active:bg-line-ember/70"
         >
           {SETTINGS_COPY.dumbbellGenerate}
         </button>
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         {steps && (
           <div>
-            <p className="mb-2 text-xs text-slate-400">{SETTINGS_COPY.dumbbellGenerated}</p>
+            <p className="mb-2 text-xs text-ink-mid">{SETTINGS_COPY.dumbbellGenerated}</p>
             <div className="flex flex-wrap gap-2">
               {steps.map((s, i) => (
                 <button
@@ -531,8 +531,8 @@ function DumbbellWizard({ equipment, onClose }: { equipment: Equipment; onClose:
                     setEditIndex(i)
                     setEditValue(String(s))
                   }}
-                  className={`h-11 min-w-14 rounded-lg px-2 text-sm font-semibold tabular-nums ${
-                    editIndex === i ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-200'
+                  className={`h-11 min-w-14 rounded-chip px-2 text-sm font-semibold tabular-nums ${
+                    editIndex === i ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
                   }`}
                 >
                   {s}
@@ -548,7 +548,7 @@ function DumbbellWizard({ equipment, onClose }: { equipment: Equipment; onClose:
                 )}
                 <button
                   type="button"
-                  className="h-12 rounded-lg bg-slate-700 px-4 text-sm font-semibold text-white active:bg-slate-600"
+                  className="h-12 rounded-chip bg-line-ember px-4 text-sm font-semibold text-white active:bg-line-ember/70"
                   onClick={() => {
                     const v = Number(editValue)
                     if (!Number.isFinite(v) || v <= 0) return
@@ -566,7 +566,7 @@ function DumbbellWizard({ equipment, onClose }: { equipment: Equipment; onClose:
         <button
           type="button"
           disabled={!steps}
-          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600 disabled:opacity-40"
+          className="h-14 w-full rounded-card bg-molten font-bold text-white active:bg-molten-bright disabled:opacity-40"
           onClick={async () => {
             if (!steps) return
             const sorted = [...steps].sort((a, b) => a - b)
@@ -591,31 +591,31 @@ function BenchEditor({ equipment, onClose }: { equipment: Equipment; onClose: ()
     <Modal title={SETTINGS_COPY.benchWizardTitle} onClose={onClose}>
       <div className="space-y-4">
         <div className="flex gap-2">
-          <label className="flex-1 text-xs text-slate-400">
+          <label className="flex-1 text-xs text-ink-mid">
             {SETTINGS_COPY.benchMin}
             <input
               type="number"
               inputMode="numeric"
               value={minDeg}
               onChange={(e) => setMinDeg(e.target.value)}
-              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+              className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
             />
           </label>
-          <label className="flex-1 text-xs text-slate-400">
+          <label className="flex-1 text-xs text-ink-mid">
             {SETTINGS_COPY.benchMax}
             <input
               type="number"
               inputMode="numeric"
               value={maxDeg}
               onChange={(e) => setMaxDeg(e.target.value)}
-              className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+              className="mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base text-ink"
             />
           </label>
         </div>
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <button
           type="button"
-          className="h-14 w-full rounded-xl bg-orange-500 font-bold text-white active:bg-orange-600"
+          className="h-14 w-full rounded-card bg-molten font-bold text-white active:bg-molten-bright"
           onClick={async () => {
             const min = Number(minDeg)
             const max = Number(maxDeg)

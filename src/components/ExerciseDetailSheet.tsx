@@ -30,10 +30,10 @@ export default function ExerciseDetailSheet({ exercise: initial, onClose }: Exer
     <Modal title={exercise.name} onClose={onClose}>
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-800 text-orange-400">
+          <div className="flex h-16 w-16 items-center justify-center rounded-card bg-line-ember/40 text-molten-bright">
             <Pictogram pattern={exercise.movementPattern} />
           </div>
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-ink-mid">
             <p>
               {MOVEMENT_PATTERN_LABELS[exercise.movementPattern]}・
               {MOVEMENT_TYPE_LABELS[exercise.movementType]}
@@ -41,7 +41,7 @@ export default function ExerciseDetailSheet({ exercise: initial, onClose }: Exer
             <p className="mt-0.5">
               {exercise.requiredEquipment.map((e) => EQUIPMENT_TYPE_LABELS[e]).join('+')}
               {exercise.benchAngleDeg !== undefined && (
-                <span className="ml-2 text-orange-400">
+                <span className="ml-2 text-molten-bright">
                   {DETAIL_COPY.benchAngle(exercise.benchAngleDeg)}
                 </span>
               )}
@@ -51,24 +51,24 @@ export default function ExerciseDetailSheet({ exercise: initial, onClose }: Exer
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="rounded-full bg-orange-500 px-2.5 py-1 font-bold text-white">
+          <span className="rounded-pill bg-molten px-2.5 py-1 font-bold text-white">
             {DETAIL_COPY.primary}: {MUSCLE_GROUP_LABELS[exercise.primaryMuscle]}
           </span>
           {secondary.map((m) => (
-            <span key={m} className="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">
+            <span key={m} className="rounded-pill bg-line-ember/40 px-2.5 py-1 text-ink-mid">
               {DETAIL_COPY.secondary}: {MUSCLE_GROUP_LABELS[m]}
             </span>
           ))}
         </div>
 
-        {exercise.note && <p className="text-xs text-slate-400">{exercise.note}</p>}
+        {exercise.note && <p className="text-xs text-ink-mid">{exercise.note}</p>}
 
         <div>
-          <p className="mb-1 text-xs font-semibold text-slate-400">{DETAIL_COPY.cues}</p>
+          <p className="mb-1 text-xs font-semibold text-ink-mid">{DETAIL_COPY.cues}</p>
           <ul className="space-y-1.5">
             {exercise.formCues.map((cue) => (
-              <li key={cue} className="flex gap-2 rounded-lg bg-slate-800/60 p-2 text-sm">
-                <span className="text-orange-400">✓</span>
+              <li key={cue} className="flex gap-2 rounded-chip bg-line-ember/40 p-2 text-sm">
+                <span className="text-molten-bright">✓</span>
                 {cue}
               </li>
             ))}
@@ -76,8 +76,8 @@ export default function ExerciseDetailSheet({ exercise: initial, onClose }: Exer
         </div>
 
         <div>
-          <p className="mb-1 text-xs font-semibold text-slate-400">{DETAIL_COPY.mistake}</p>
-          <p className="flex gap-2 rounded-lg bg-red-500/10 p-2 text-sm text-red-300">
+          <p className="mb-1 text-xs font-semibold text-ink-mid">{DETAIL_COPY.mistake}</p>
+          <p className="flex gap-2 rounded-chip bg-destructive/10 p-2 text-sm text-destructive">
             <span>⚠️</span>
             {exercise.commonMistake}
           </p>
@@ -115,13 +115,13 @@ function VideoSection({ exercise }: { exercise: Exercise }) {
 
   return (
     <div>
-      <p className="mb-1 text-xs font-semibold text-slate-400">{VIDEO_COPY.section}</p>
+      <p className="mb-1 text-xs font-semibold text-ink-mid">{VIDEO_COPY.section}</p>
 
       {videoIds.length > 0 && (
         <ul className="mb-2 space-y-2">
           {videoIds.map((videoId, i) =>
             playingId === videoId ? (
-              <li key={videoId} className="overflow-hidden rounded-lg">
+              <li key={videoId} className="overflow-hidden rounded-chip">
                 {/* 遅延読み込み: タップされた動画だけiframeを生成(プライバシー強化モード) */}
                 <iframe
                   src={embedUrl(videoId)}
@@ -135,7 +135,7 @@ function VideoSection({ exercise }: { exercise: Exercise }) {
               <li key={videoId} className="relative">
                 <button
                   type="button"
-                  className="block w-full overflow-hidden rounded-lg bg-slate-800"
+                  className="block w-full overflow-hidden rounded-chip bg-line-ember/40"
                   onClick={() => online && setPlayingId(videoId)}
                   aria-label={VIDEO_COPY.playLabel(i + 1)}
                 >
@@ -152,20 +152,20 @@ function VideoSection({ exercise }: { exercise: Exercise }) {
                       )}
                       {brokenThumbs.includes(videoId) && <div className="aspect-video w-full" />}
                       <span className="absolute inset-0 flex items-center justify-center">
-                        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/60 pl-1 text-xl text-white">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-black/60 pl-1 text-xl text-white">
                           ▶
                         </span>
                       </span>
                     </div>
                   ) : (
-                    <div className="flex aspect-video w-full items-center justify-center text-sm text-slate-400">
+                    <div className="flex aspect-video w-full items-center justify-center text-sm text-ink-mid">
                       📡 {VIDEO_COPY.offline}
                     </div>
                   )}
                 </button>
                 <button
                   type="button"
-                  className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-slate-300"
+                  className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-pill bg-black/60 text-ink-mid"
                   aria-label={VIDEO_COPY.remove}
                   onClick={() => void removeExerciseVideo(exercise.id!, videoId)}
                 >
@@ -181,7 +181,7 @@ function VideoSection({ exercise }: { exercise: Exercise }) {
         href={searchUrl(exercise.searchKeyword ?? `${exercise.name} ${VIDEO_COPY.searchSuffix}`)}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-slate-800 text-sm font-semibold text-slate-200 active:bg-slate-700"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-chip bg-line-ember/40 text-sm font-semibold text-ink-mid active:bg-line-ember"
       >
         ▶ {VIDEO_COPY.search} ↗
       </a>
@@ -195,18 +195,18 @@ function VideoSection({ exercise }: { exercise: Exercise }) {
             setError(null)
           }}
           placeholder={VIDEO_COPY.urlPlaceholder}
-          className="h-12 min-w-0 flex-1 rounded-lg bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-slate-600"
+          className="h-12 min-w-0 flex-1 rounded-chip bg-line-ember/40 px-3 text-sm text-ink placeholder:text-ink-dim"
         />
         <button
           type="button"
           disabled={url.trim() === ''}
-          className="h-12 shrink-0 rounded-lg bg-slate-700 px-4 text-sm font-semibold text-white active:bg-slate-600 disabled:opacity-40"
+          className="h-12 shrink-0 rounded-chip bg-line-ember px-4 text-sm font-semibold text-white active:bg-line-ember/70 disabled:opacity-40"
           onClick={() => void register()}
         >
           {VIDEO_COPY.add}
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>
   )
 }

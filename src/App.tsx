@@ -16,10 +16,10 @@ export default function App() {
   const onPreviewHost = isPreviewHost(window.location.hostname)
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100">
+    <div className="min-h-dvh text-ink">
       {/* プレビューURL警告(ISS-009-2): 一時URLでの記録を防ぐ */}
       {onPreviewHost && (
-        <div className="bg-yellow-500/15 px-4 py-2 text-center text-xs text-yellow-300">
+        <div className="bg-adjusting/15 px-4 py-2 text-center text-xs text-adjusting">
           ⚠️ {STORAGE_COPY.previewWarning}{' '}
           <a href={PRODUCTION_URL} className="font-bold underline">
             {STORAGE_COPY.previewLink}
