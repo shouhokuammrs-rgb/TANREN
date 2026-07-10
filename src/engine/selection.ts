@@ -50,11 +50,13 @@ export function selectMuscles(
     return { muscles: usable, warnings }
   }
 
-  // おまかせ: フレッシュネス降順(同率は大筋群優先の登録順)
+  // おまかせ: 優先度スコア(F-03)×フレッシュネス の降順(優先度未設定は全部位1.0)
+  const priority = ctx.priorityScores
+  const combined = (m: MuscleGroup) => freshness[m] * (priority?.[m] ?? 1)
   const all = Object.keys(freshness) as MuscleGroup[]
   const candidates = all
     .filter((m) => !injured.has(m))
-    .sort((a, b) => freshness[b] - freshness[a])
+    .sort((a, b) => combined(b) - combined(a))
   const count = muscleCountForTime(availableMinutes)
 
   const fresh = candidates.filter((m) => freshness[m] >= FRESHNESS_WARN_THRESHOLD)

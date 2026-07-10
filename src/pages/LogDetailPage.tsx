@@ -67,6 +67,11 @@ export default function LogDetailPage() {
                       {set.actualWeightKg !== undefined ? `${set.actualWeightKg}kg × ` : ''}
                       {set.actualReps}
                       {WORKOUT_COPY.repsUnit}
+                      {set.isPr && (
+                        <span className="ml-1.5 rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          PR
+                        </span>
+                      )}
                       <span
                         className={`ml-2 text-xs ${set.achieved ? 'text-green-400' : 'text-yellow-400'}`}
                       >

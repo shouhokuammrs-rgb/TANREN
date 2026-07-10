@@ -6,6 +6,9 @@ import ActiveWorkoutPage from './pages/ActiveWorkoutPage'
 import LogPage from './pages/LogPage'
 import LogDetailPage from './pages/LogDetailPage'
 import SettingsPage from './pages/SettingsPage'
+import SetupPage from './pages/SetupPage'
+import SummaryPage from './pages/SummaryPage'
+import PhotosPage from './pages/PhotosPage'
 
 export default function App() {
   return (
@@ -18,6 +21,9 @@ export default function App() {
           <Route path="/workout/active" element={<ActiveWorkoutPage />} />
           <Route path="/log" element={<LogPage />} />
           <Route path="/log/:id" element={<LogDetailPage />} />
+          <Route path="/summary/:id" element={<SummaryPage />} />
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/photos" element={<PhotosPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

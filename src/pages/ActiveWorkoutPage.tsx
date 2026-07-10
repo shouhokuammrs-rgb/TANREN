@@ -309,7 +309,8 @@ export default function ActiveWorkoutPage() {
           onClose={() => setFinishOpen(false)}
           onSave={async (input) => {
             await finishSession(workout.session.id!, input)
-            navigate('/log')
+            // セッション後サマリー(F-07)へ
+            navigate(`/summary/${workout.session.id}`, { replace: true })
           }}
         />
       )}

@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Link } from 'react-router-dom'
 import Modal from '../components/Modal'
 import { db } from '../db/db'
-import { addStrengthMark, deleteStrengthMark, resolveInjury, updateEquipment } from '../db/queries'
+import {
+  addStrengthMark,
+  deleteStrengthMark,
+  loadGoal,
+  resolveInjury,
+  updateEquipment,
+} from '../db/queries'
 import type { Equipment } from '../db/types'
 import {
+  DATA_COPY,
   EQUIPMENT_TYPE_LABELS,
+  GOAL_SETTINGS_COPY,
+  GOAL_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
   SETTINGS_COPY,
   STRENGTH_COPY,
   formatDate,
 } from '../constants/copy'
+import { exportBackup, importBackup, wipeAllData } from '../utils/backup'
 import { REF_LIFTS } from '../constants/strength'
 import { epley1Rm } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
@@ -78,6 +89,8 @@ export default function SettingsPage() {
         })}
       </ul>
 
+      <GoalSection />
+
       <StrengthSection />
 
       <h2 className="mt-6 text-sm font-semibold text-slate-400">{SETTINGS_COPY.timerSection}</h2>
@@ -125,6 +138,8 @@ export default function SettingsPage() {
         ))}
       </ul>
 
+      <DataSection />
+
       {editing?.type === 'dumbbell' && (
         <DumbbellWizard equipment={editing} onClose={() => setEditing(null)} />
       )}
@@ -132,6 +147,131 @@ export default function SettingsPage() {
         <BenchEditor equipment={editing} onClose={() => setEditing(null)} />
       )}
     </section>
+  )
+}
+
+/** 目標とヒヤリング(2-1/2-2): 現在の目標表示+ウィザード再実行・分析への導線 */
+function GoalSection() {
+  const goal = useLiveQuery(async () => (await loadGoal()) ?? null)
+
+  return (
+    <>
+      <h2 className="mt-6 text-sm font-semibold text-slate-400">{GOAL_SETTINGS_COPY.section}</h2>
+      <div className="mt-2 rounded-xl bg-slate-900 p-4">
+        <p className="text-sm font-semibold">
+          {goal ? GOAL_TYPE_LABELS[goal.goalType] : GOAL_SETTINGS_COPY.notSet}
+        </p>
+        {goal && goal.wantParts.length > 0 && (
+          <p className="mt-0.5 text-xs text-slate-400">
+            {goal.wantParts.map((m) => MUSCLE_GROUP_LABELS[m]).join('・')}
+          </p>
+        )}
+        <div className="mt-2 flex gap-2">
+          <Link
+            to="/setup"
+            className="flex h-11 flex-1 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-300 active:bg-slate-700"
+          >
+            {GOAL_SETTINGS_COPY.edit}
+          </Link>
+          {goal && (
+            <Link
+              to="/setup?analysis=1"
+              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-300 active:bg-slate-700"
+            >
+              {GOAL_SETTINGS_COPY.viewAnalysis}
+            </Link>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+/** データ管理(F-08): エクスポート/インポート(全置換)/全削除 */
+function DataSection() {
+  const [busy, setBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const onExport = async () => {
+    setBusy(true)
+    try {
+      const backup = await exportBackup()
+      const json = JSON.stringify(backup)
+      const date = new Date().toISOString().slice(0, 10)
+      const file = new File([json], `tanren-backup-${date}.json`, { type: 'application/json' })
+      // iOSは共有シート、非対応環境はダウンロードにフォールバック
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] }).catch(() => {})
+      } else {
+        const url = URL.createObjectURL(file)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = file.name
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onImportFile = async (file: File) => {
+    if (!window.confirm(DATA_COPY.importConfirm)) return
+    try {
+      const data = JSON.parse(await file.text())
+      await importBackup(data)
+      window.alert(DATA_COPY.importDone)
+    } catch {
+      window.alert(DATA_COPY.importError)
+    }
+  }
+
+  const onWipe = async () => {
+    if (!window.confirm(DATA_COPY.wipeConfirm1)) return
+    if (!window.confirm(DATA_COPY.wipeConfirm2)) return
+    await wipeAllData()
+    window.alert(DATA_COPY.wipeDone)
+  }
+
+  return (
+    <>
+      <h2 className="mt-6 text-sm font-semibold text-slate-400">{DATA_COPY.section}</h2>
+      <div className="mt-2 space-y-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void onExport()}
+          className="h-12 w-full rounded-xl bg-slate-900 text-sm font-semibold text-slate-200 active:bg-slate-800 disabled:opacity-40"
+        >
+          📤 {busy ? DATA_COPY.exporting : DATA_COPY.exportBtn}
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="h-12 w-full rounded-xl bg-slate-900 text-sm font-semibold text-slate-200 active:bg-slate-800"
+        >
+          📥 {DATA_COPY.importBtn}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) void onImportFile(file)
+            e.target.value = ''
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void onWipe()}
+          className="h-12 w-full rounded-xl border border-red-500/40 text-sm font-semibold text-red-400 active:bg-red-500/10"
+        >
+          {DATA_COPY.wipeBtn}
+        </button>
+      </div>
+    </>
   )
 }
 

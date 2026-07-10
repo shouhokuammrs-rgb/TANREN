@@ -42,6 +42,8 @@ export interface EngineContext {
   activeInjuries: MuscleGroup[]
   /** 筋力キャリブレーション由来のパターン別基準1RM(ISS-002)。未入力なら省略可 */
   patternBase1Rm?: Partial<Record<MovementPattern, number>>
+  /** ギャップ分析(F-03)由来の部位別優先度スコア。未設定なら全部位1.0 */
+  priorityScores?: Record<MuscleGroup, number>
 }
 
 export interface MenuRequest {

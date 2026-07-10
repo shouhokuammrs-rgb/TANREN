@@ -246,6 +246,121 @@ export const SETTINGS_COPY = {
   injuryReportedAt: (dateLabel: string) => `${dateLabel} 登録`,
 }
 
+export const GOAL_TYPE_LABELS = {
+  lean: '細マッチョ',
+  bulk: 'バルクアップ',
+  health: '体力・健康維持',
+  focus: '部位特化',
+} as const
+
+export const AVOID_REASON_LABELS = {
+  injury: '怪我',
+  dislike: '好みでない',
+  developed: '十分発達',
+} as const
+
+export const POSE_LABELS = {
+  front: '正面',
+  side: '横',
+  back: '背面',
+} as const
+
+export const SETUP_COPY = {
+  title: '初期セットアップ',
+  banner: 'セットアップが未完了です。目標を設定すると「おまかせ」があなた仕様になります',
+  bannerCta: 'セットアップする',
+  bannerSkip: 'あとで',
+  stepProfile: 'プロフィール',
+  heightCm: '身長(cm)',
+  weightKg: '体重(kg)',
+  bodyFatPct: '体脂肪率(%・任意)',
+  stepGoal: '目標ボディ',
+  focusParts: '特化したい部位(複数可)',
+  stepPhotos: '現状写真(任意・あとで撮ってもOK)',
+  photoHint: 'ビフォーアフター比較用。ローカル保存のみで外部送信されません',
+  stepHearing: '部位のヒヤリング',
+  wantParts: '鍛えたい部位(複数可)',
+  avoidParts: '鍛えたくない部位(タップで理由を選択)',
+  injuryParts: '怪我・違和感のある部位(自動で回避されます)',
+  injuryNote: '違和感の内容(任意)',
+  next: '次へ',
+  backStep: '戻る',
+  skip: 'スキップ',
+  finish: '分析して完了',
+  invalidProfile: '身長・体重を正しく入力してください',
+}
+
+export const GAP_COPY = {
+  title: 'あなたの優先部位',
+  top3: (rank: number) => `${rank}位`,
+  weeklyTargets: '週あたり推奨セット数',
+  setsUnit: 'セット',
+  toHome: 'ホームへ',
+  hint: '「おまかせ」生成はこの優先度×回復状況で部位を選びます。目標は設定からいつでも変更できます',
+}
+
+export const SUMMARY_COPY = {
+  title: 'トレ完了!🎉',
+  prCelebration: (n: number) => `自己新 ${n}本! 💪`,
+  prBadge: 'PR',
+  volume: 'ボリューム',
+  volumeDiff: (diff: number) => (diff >= 0 ? `前回 +${diff}` : `前回 ${diff}`),
+  best: 'ベスト',
+  prevBest: (s: string) => `前回ベスト ${s}`,
+  firstTime: '初挑戦',
+  weeklySection: '今週の部位別セット数',
+  toLog: 'ログを見る',
+  toHome: 'ホームへ',
+}
+
+export const DASHBOARD_COPY = {
+  weeklyVolume: '部位別 週間セット数の推移',
+  freshness: '回復状況(フレッシュネス)',
+  freshnessFront: '前面',
+  freshnessBack: '背面',
+  weight: '体重の推移',
+  addWeight: '体重を記録',
+  weightPlaceholder: '58.0',
+  weightSaved: '記録しました',
+  empty: 'まだデータがありません。トレを重ねると育っていきます🌱',
+  photos: '写真比較',
+}
+
+export const PHOTO_COPY = {
+  title: '写真比較',
+  add: '写真を追加',
+  poseSelect: 'ポーズを選択',
+  empty: 'まだ写真がありません。現在の姿を残しておくと後で比較できます',
+  needTwo: '同じポーズの写真が2枚以上たまると比較スライダーが使えます',
+  sliderLabel: '比較する過去写真',
+  latest: '最新',
+  delete: 'この写真を削除',
+  deleteConfirm: 'この写真を削除しますか?',
+}
+
+export const DATA_COPY = {
+  section: 'データ管理',
+  exportBtn: 'JSONエクスポート',
+  exporting: '書き出し中…',
+  importBtn: 'JSONインポート(全置換)',
+  importConfirm:
+    '現在の全データを削除してインポートデータで置き換えます。この操作は元に戻せません。続けますか?',
+  importDone: 'インポートが完了しました',
+  importError: 'インポートに失敗しました。ファイル形式を確認してください',
+  wipeBtn: '全データ削除',
+  wipeConfirm1: '全データ(ログ・写真・設定)を削除します。よろしいですか?',
+  wipeConfirm2: '本当に削除しますか?この操作は元に戻せません',
+  wipeDone: '全データを削除しました',
+}
+
+export const GOAL_SETTINGS_COPY = {
+  section: '目標とヒヤリング',
+  notSet: '未設定(セットアップで設定できます)',
+  edit: '目標を変更',
+  viewAnalysis: '分析を見る',
+  save: '保存して再分析',
+}
+
 /** 日付の共通フォーマット */
 export function formatDate(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()} ${date
