@@ -32,7 +32,7 @@ export default function FreshnessBodyMap({ freshness }: FreshnessBodyMapProps) {
             <rect x="37" y="86" width="11" height="52" rx="5" {...f('legs')} />
             <rect x="52" y="86" width="11" height="52" rx="5" {...f('legs')} />
           </svg>
-          <figcaption className="mt-1 text-[10px] text-slate-500">
+          <figcaption className="mt-1 text-[10px] text-ink-dim">
             {DASHBOARD_COPY.freshnessFront}
           </figcaption>
         </figure>
@@ -48,7 +48,7 @@ export default function FreshnessBodyMap({ freshness }: FreshnessBodyMapProps) {
             <rect x="37" y="88" width="11" height="50" rx="5" fill={BODY_NEUTRAL} />
             <rect x="52" y="88" width="11" height="50" rx="5" fill={BODY_NEUTRAL} />
           </svg>
-          <figcaption className="mt-1 text-[10px] text-slate-500">
+          <figcaption className="mt-1 text-[10px] text-ink-dim">
             {DASHBOARD_COPY.freshnessBack}
           </figcaption>
         </figure>
@@ -57,8 +57,8 @@ export default function FreshnessBodyMap({ freshness }: FreshnessBodyMapProps) {
       {/* 部位別%(色だけに頼らない二次表示) */}
       <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
         {(Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]).map((m) => (
-          <div key={m} className="rounded-lg bg-slate-800/60 py-1.5">
-            <p className="text-[10px] text-slate-400">{MUSCLE_GROUP_LABELS[m]}</p>
+          <div key={m} className="rounded-chip bg-line-ember/40 py-1.5">
+            <p className="text-[10px] text-ink-mid">{MUSCLE_GROUP_LABELS[m]}</p>
             <p className="text-xs font-bold" style={{ color: colorFor(freshness[m]) }}>
               {freshness[m]}%
             </p>
@@ -68,8 +68,8 @@ export default function FreshnessBodyMap({ freshness }: FreshnessBodyMapProps) {
 
       <div className="mt-2 flex justify-center gap-3">
         {FRESHNESS_BUCKETS.map((b) => (
-          <span key={b.label} className="flex items-center gap-1 text-[10px] text-slate-400">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: b.color }} />
+          <span key={b.label} className="flex items-center gap-1 text-[10px] text-ink-mid">
+            <span className="h-2.5 w-2.5 rounded-pill" style={{ background: b.color }} />
             {b.label}
           </span>
         ))}

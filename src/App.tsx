@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TabBar from './components/TabBar'
+import { STORAGE_COPY } from './constants/copy'
+import { PRODUCTION_URL, isPreviewHost } from './utils/env'
 import HomePage from './pages/HomePage'
 import WorkoutPage from './pages/WorkoutPage'
 import ActiveWorkoutPage from './pages/ActiveWorkoutPage'
@@ -11,8 +13,19 @@ import SummaryPage from './pages/SummaryPage'
 import PhotosPage from './pages/PhotosPage'
 
 export default function App() {
+  const onPreviewHost = isPreviewHost(window.location.hostname)
+
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100">
+    <div className="min-h-dvh text-ink">
+      {/* プレビューURL警告(ISS-009-2): 一時URLでの記録を防ぐ */}
+      {onPreviewHost && (
+        <div className="bg-adjusting/15 px-4 py-2 text-center text-xs text-adjusting">
+          ⚠️ {STORAGE_COPY.previewWarning}{' '}
+          <a href={PRODUCTION_URL} className="font-bold underline">
+            {STORAGE_COPY.previewLink}
+          </a>
+        </div>
+      )}
       {/* 下部タブに隠れないよう余白を確保 */}
       <main className="mx-auto max-w-md px-4 pt-6 pb-28">
         <Routes>
