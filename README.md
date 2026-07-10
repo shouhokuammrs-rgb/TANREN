@@ -19,3 +19,17 @@ npm run preview  # ビルド結果のプレビュー(PWA確認用)
 ## スタック
 
 Vite + React + TypeScript + Tailwind CSS / Dexie.js(IndexedDB)/ vite-plugin-pwa / Vitest。デプロイはVercel(バックエンドなし)。
+
+## 本番URLとリリース手順
+
+- **本番URL**: Vercelが割り当てたドメイン(`.env.production` の `VITE_PROD_HOST` に設定した値)。この値はプレビューURL警告(ISS-009/010)の判定にも使われる
+  - 未設定の間はプレビュー警告が無効になる(偽陽性防止)。ドメイン確定後に `VITE_PROD_HOST=<正式ドメイン>` を1行設定すること
+- **デプロイ**: `main` へのマージでVercelが自動デプロイ(プレビューはPRごと)
+- **リリース(タグ運用)**: 節目のリリースは `main` 上で注釈付きタグを打つ
+
+```bash
+git tag -a v1.0.0 -m "v1.0.0: 初回リリース"
+git push origin v1.0.0
+```
+
+- タグは `vX.Y.Z`(小さな修正はpatch、機能追加はminor)。障害時は直前タグをVercelの「Redeploy」で切り戻す
