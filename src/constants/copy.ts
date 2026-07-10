@@ -353,6 +353,24 @@ export const DATA_COPY = {
   wipeDone: '全データを削除しました',
 }
 
+export const STORAGE_COPY = {
+  // ISS-009-1: 永続ストレージ
+  protectionLabel: 'データ保護',
+  protectionHint: '端末のストレージ逼迫時にブラウザがデータを自動削除するのを防ぎます',
+  granted: '有効',
+  denied: '未許可(タップで再要求)',
+  unsupported: 'この環境では非対応',
+  // ISS-009-2: プレビューURL警告
+  previewWarning: 'このURLは一時的なプレビューです。トレの記録は本番URLで行ってください',
+  previewLink: '本番を開く',
+  // ISS-009-3: エクスポートリマインダー
+  lastExport: (dateLabel: string) => `最終エクスポート: ${dateLabel}`,
+  neverExported: '最終エクスポート: まだなし',
+  reminder: 'バックアップが7日以上空いています。設定からJSONエクスポートを',
+  reminderNever: 'バックアップ未実施です。設定からJSONエクスポートを',
+  reminderCta: '設定を開く',
+}
+
 export const GOAL_SETTINGS_COPY = {
   section: '目標とヒヤリング',
   notSet: '未設定(セットアップで設定できます)',

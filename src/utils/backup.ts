@@ -7,6 +7,45 @@ import { seedInitialData } from '../db/seed'
 
 export const BACKUP_VERSION = 1
 
+// ===== エクスポートリマインダー(ISS-009-3) =====
+
+export const EXPORT_REMINDER_DAYS = 7
+const LAST_EXPORT_KEY = 'tanren:lastExportAt'
+
+/** エクスポート完了を記録する(共有シートのキャンセルは検知できないため実行時点で記録) */
+export function recordExportDone(now = new Date()): void {
+  try {
+    localStorage.setItem(LAST_EXPORT_KEY, now.toISOString())
+  } catch {
+    // localStorage不可でも動作は継続
+  }
+}
+
+export function lastExportAt(): Date | null {
+  try {
+    const raw = localStorage.getItem(LAST_EXPORT_KEY)
+    if (!raw) return null
+    const date = new Date(raw)
+    return Number.isNaN(date.getTime()) ? null : date
+  } catch {
+    return null
+  }
+}
+
+/**
+ * バックアップリマインダーを出すべきか(ISS-009-3)。
+ * 記録データがない端末では出さない。未エクスポート or 7日以上経過で出す
+ */
+export function shouldRemindExport(
+  lastExport: Date | null,
+  hasData: boolean,
+  now = new Date(),
+): boolean {
+  if (!hasData) return false
+  if (!lastExport) return true
+  return now.getTime() - lastExport.getTime() > EXPORT_REMINDER_DAYS * 24 * 3_600_000
+}
+
 const TABLES = [
   'profiles',
   'goals',

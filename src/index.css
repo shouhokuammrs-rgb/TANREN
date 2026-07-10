@@ -1,5 +1,39 @@
 @import 'tailwindcss';
 
+/*
+ * デザイントークン(Phase 4 Part 2の下準備)。
+ * 方針書 docs/design/specs/2026-07-10_design_direction.md の「鍛冶場」トークン指針に沿って
+ * 現行の実値をセマンティック名で定数化した。Part 2で全コンポーネントをこのトークンへ移行し、
+ * 正式なデザイン仕様書が来たらこのブロックの値だけを差し替える。
+ * 生成されるユーティリティ例: bg-surface-raised / text-ink-muted / bg-forge / rounded-card
+ */
+@theme {
+  /* 背景3段(暗がりのレイヤー構造: base / raised / overlay) */
+  --color-surface-base: #020617; /* 現行 slate-950 */
+  --color-surface-raised: #0f172a; /* 現行 slate-900(カード) */
+  --color-surface-overlay: #1e293b; /* 現行 slate-800(入力・チップ) */
+
+  /* 溶鉄オレンジ(行動と熱=達成のみに使う)。輝度変化: glow=強調 / press=押下 */
+  --color-forge: #f97316; /* 現行 orange-500 */
+  --color-forge-glow: #fb923c; /* 現行 orange-400 */
+  --color-forge-press: #ea580c; /* 現行 orange-600 */
+
+  /* テキスト3役 */
+  --color-ink: #f1f5f9; /* 見出し・主数値(現行 slate-100) */
+  --color-ink-muted: #94a3b8; /* 本文補助(現行 slate-400) */
+  --color-ink-faint: #64748b; /* 弱い注釈(現行 slate-500) */
+
+  /* セマンティック: 達成=緑 / 調整中=黄 / 破壊=赤 / 情報=青 */
+  --color-achieved: #4ade80; /* 現行 green-400 */
+  --color-adjusting: #fde047; /* 現行 yellow-300 */
+  --color-destructive: #f87171; /* 現行 red-400 */
+  --color-info: #3987e5; /* チャートの基準青と統一 */
+
+  /* 角丸スケール: カード / コントロール(ボタン・入力) */
+  --radius-card: 0.75rem; /* 現行 rounded-xl */
+  --radius-control: 0.5rem; /* 現行 rounded-lg */
+}
+
 html {
   /* トレ中の誤ダブルタップでズームしない */
   touch-action: manipulation;

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import Modal from '../components/Modal'
@@ -18,10 +18,18 @@ import {
   GOAL_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
   SETTINGS_COPY,
+  STORAGE_COPY,
   STRENGTH_COPY,
   formatDate,
 } from '../constants/copy'
-import { exportBackup, importBackup, wipeAllData } from '../utils/backup'
+import {
+  exportBackup,
+  importBackup,
+  lastExportAt,
+  recordExportDone,
+  wipeAllData,
+} from '../utils/backup'
+import { persistedState, requestPersistentStorage, type PersistState } from '../utils/storage'
 import { REF_LIFTS } from '../constants/strength'
 import { epley1Rm } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
@@ -187,10 +195,25 @@ function GoalSection() {
   )
 }
 
-/** データ管理(F-08): エクスポート/インポート(全置換)/全削除 */
+/** データ管理(F-08): エクスポート/インポート(全置換)/全削除+データ保護(ISS-009) */
 function DataSection() {
   const [busy, setBusy] = useState(false)
+  const [persist, setPersist] = useState<PersistState | null>(null)
+  const [lastExport, setLastExport] = useState<Date | null>(lastExportAt)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    void persistedState().then(setPersist)
+  }, [])
+
+  const persistLabel =
+    persist === 'granted'
+      ? STORAGE_COPY.granted
+      : persist === 'denied'
+        ? STORAGE_COPY.denied
+        : persist === 'unsupported'
+          ? STORAGE_COPY.unsupported
+          : '…'
 
   const onExport = async () => {
     setBusy(true)
@@ -210,6 +233,8 @@ function DataSection() {
         a.click()
         URL.revokeObjectURL(url)
       }
+      recordExportDone()
+      setLastExport(lastExportAt())
     } finally {
       setBusy(false)
     }
@@ -237,6 +262,34 @@ function DataSection() {
     <>
       <h2 className="mt-6 text-sm font-semibold text-slate-400">{DATA_COPY.section}</h2>
       <div className="mt-2 space-y-2">
+        {/* データ保護(ISS-009-1): 未許可ならタップで再要求 */}
+        <button
+          type="button"
+          disabled={persist !== 'denied'}
+          onClick={async () => {
+            setPersist(await requestPersistentStorage())
+          }}
+          className="flex h-14 w-full items-center justify-between rounded-xl bg-slate-900 px-4 text-left"
+        >
+          <span>
+            <span className="block text-sm">{STORAGE_COPY.protectionLabel}</span>
+            <span className="block text-[10px] text-slate-500">{STORAGE_COPY.protectionHint}</span>
+          </span>
+          <span
+            className={`text-xs font-bold ${
+              persist === 'granted'
+                ? 'text-green-400'
+                : persist === 'denied'
+                  ? 'text-yellow-300'
+                  : 'text-slate-500'
+            }`}
+          >
+            {persistLabel}
+          </span>
+        </button>
+        <p className="text-xs text-slate-500">
+          {lastExport ? STORAGE_COPY.lastExport(formatDate(lastExport)) : STORAGE_COPY.neverExported}
+        </p>
         <button
           type="button"
           disabled={busy}

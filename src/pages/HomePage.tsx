@@ -9,8 +9,11 @@ import {
   HOME_COPY,
   SETTINGS_COPY,
   SETUP_COPY,
+  STORAGE_COPY,
   formatDate,
 } from '../constants/copy'
+import { db } from '../db/db'
+import { lastExportAt, shouldRemindExport } from '../utils/backup'
 import {
   addBodyWeight,
   listBodyStats,
@@ -36,6 +39,11 @@ export default function HomePage() {
   const [weightModal, setWeightModal] = useState(false)
 
   const goal = useLiveQuery(async () => (await loadGoal()) ?? null)
+  // バックアップリマインダー(ISS-009-3): 記録データがあり、7日以上エクスポートが空いたら
+  const exportReminder = useLiveQuery(async () => {
+    const hasData = (await db.sessions.count()) > 0
+    return { show: shouldRemindExport(lastExportAt(), hasData), never: lastExportAt() === null }
+  })
   const volumeHistory = useLiveQuery(() => weeklyVolumeHistory())
   const freshness = useLiveQuery(async () => muscleFreshnessMap(await loadEngineContext()))
   const bodyStats = useLiveQuery(listBodyStats)
@@ -86,6 +94,18 @@ export default function HomePage() {
       >
         {HOME_COPY.startCta} 💪
       </Link>
+
+      {exportReminder?.show && (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-900 p-3 text-xs text-slate-300">
+          <span>💾 {exportReminder.never ? STORAGE_COPY.reminderNever : STORAGE_COPY.reminder}</span>
+          <Link
+            to="/settings"
+            className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 font-semibold text-slate-200 active:bg-slate-700"
+          >
+            {STORAGE_COPY.reminderCta}
+          </Link>
+        </div>
+      )}
 
       <div className="rounded-xl bg-slate-900 p-4">
         <h2 className="mb-2 text-xs font-semibold text-slate-400">
