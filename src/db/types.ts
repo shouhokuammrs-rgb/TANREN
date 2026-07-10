@@ -155,6 +155,8 @@ export interface SetRecord {
   atFailure?: boolean
   /** 絶好調時のPR挑戦セット */
   isPrAttempt?: boolean
+  /** 自己新(F-07)。セッション完了時にエンジンのPR判定結果を保存する */
+  isPr?: boolean
   completedAt?: Date
 }
 
