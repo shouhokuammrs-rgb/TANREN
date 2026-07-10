@@ -5,6 +5,7 @@ import Modal from '../components/Modal'
 import {
   CONDITION_LABELS,
   HEARING_COPY,
+  MEAL_TIMING_LABELS,
   MENU_COPY,
   MOVEMENT_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
@@ -16,9 +17,11 @@ import {
   getActiveSession,
   loadEngineContext,
   loadLastHandoverNote,
+  loadLastSleepTimes,
   startSession,
 } from '../db/queries'
-import type { Condition, Exercise, MuscleGroup, Session } from '../db/types'
+import type { Condition, Exercise, MealTiming, MuscleGroup, Session } from '../db/types'
+import { calcSleepHours } from '../utils/time'
 import {
   alternativesFor,
   estimatedMinutes,
@@ -31,6 +34,7 @@ import { useLocalSetting } from '../hooks/useLocalSetting'
 const TIME_OPTIONS = [15, 30, 45, 60, 90]
 const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
 const CONDITIONS = Object.keys(CONDITION_LABELS) as Condition[]
+const MEAL_TIMINGS = Object.keys(MEAL_TIMING_LABELS) as MealTiming[]
 
 type Phase =
   | { kind: 'loading' }
@@ -49,11 +53,20 @@ export default function WorkoutPage() {
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   // 初回生成時のみ「提案は目安」の注意を出す(ISS-002)
   const [calibNoteShown, setCalibNoteShown] = useLocalSetting('calibrationNoteShown', false)
+  // コンディション詳細(ISS-007・任意・折りたたみデフォルト閉)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [sleepStart, setSleepStart] = useState('')
+  const [sleepEnd, setSleepEnd] = useState('')
+  const [mealTiming, setMealTiming] = useState<MealTiming | null>(null)
 
   useEffect(() => {
     void (async () => {
       const active = await getActiveSession()
       setHandover(await loadLastHandoverNote())
+      // 時刻ピッカーのデフォルトは前回値
+      const lastSleep = await loadLastSleepTimes()
+      setSleepStart((prev) => prev || (lastSleep.sleepStart ?? ''))
+      setSleepEnd((prev) => prev || (lastSleep.sleepEnd ?? ''))
       setPhase(active ? { kind: 'resume', session: active } : { kind: 'hearing' })
     })()
   }, [])
@@ -194,6 +207,64 @@ export default function WorkoutPage() {
             )}
           </div>
         )}
+
+        {/* コンディション詳細(ISS-007): 折りたたみ・任意。3タップフローは阻害しない */}
+        <div className="rounded-xl bg-slate-900/60">
+          <button
+            type="button"
+            className="flex h-12 w-full items-center justify-between px-4 text-sm text-slate-400"
+            onClick={() => setDetailOpen((v) => !v)}
+          >
+            {HEARING_COPY.detailSection}
+            <span>{detailOpen ? '▲' : '▼'}</span>
+          </button>
+          {detailOpen && (
+            <div className="space-y-3 px-4 pb-4">
+              <div className="flex items-end gap-2">
+                <label className="flex-1 text-xs text-slate-400">
+                  {HEARING_COPY.sleepStart}
+                  <input
+                    type="time"
+                    value={sleepStart}
+                    onChange={(e) => setSleepStart(e.target.value)}
+                    className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+                  />
+                </label>
+                <label className="flex-1 text-xs text-slate-400">
+                  {HEARING_COPY.sleepEnd}
+                  <input
+                    type="time"
+                    value={sleepEnd}
+                    onChange={(e) => setSleepEnd(e.target.value)}
+                    className="mt-1 h-12 w-full rounded-lg bg-slate-800 px-3 text-base text-slate-100"
+                  />
+                </label>
+              </div>
+              {calcSleepHours(sleepStart, sleepEnd) !== null && (
+                <p className="text-xs text-orange-400">
+                  {HEARING_COPY.sleepHours(calcSleepHours(sleepStart, sleepEnd)!)}
+                </p>
+              )}
+              <div>
+                <p className="mb-1 text-xs text-slate-400">{HEARING_COPY.mealLabel}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {MEAL_TIMINGS.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMealTiming(mealTiming === m ? null : m)}
+                      className={`h-11 rounded-lg text-xs font-semibold ${
+                        mealTiming === m ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {MEAL_TIMING_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {minutes !== null && (muscleMode === 'omakase' || (muscleMode === 'choose' && muscles.length > 0)) && (
           <div>
@@ -347,7 +418,13 @@ export default function WorkoutPage() {
         type="button"
         disabled={menu.items.length === 0}
         onClick={async () => {
-          await startSession(menu, request, ctx.dumbbellStepsKg)
+          const sleepHours = calcSleepHours(sleepStart, sleepEnd)
+          await startSession(menu, request, ctx.dumbbellStepsKg, {
+            sleepStart: sleepHours !== null ? sleepStart : undefined,
+            sleepEnd: sleepHours !== null ? sleepEnd : undefined,
+            sleepHours: sleepHours ?? undefined,
+            mealTiming: mealTiming ?? undefined,
+          })
           setCalibNoteShown(true)
           navigate('/workout/active')
         }}

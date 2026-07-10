@@ -5,6 +5,8 @@ export interface SetPerformance {
   weightKg?: number
   reps?: number
   achieved?: boolean
+  /** 「限界でした」(ISS-004)。trueのセットがあれば次回は増量せず様子を見る */
+  atFailure?: boolean
 }
 
 /** 種目ごとの直近実績 */

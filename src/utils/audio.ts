@@ -1,21 +1,37 @@
-// タイマー音(Web Audio)。iOS Safariはユーザー操作内でAudioContextを作成/resumeする必要が
-// あるため、セット完了タップ時にunlockAudio()を呼んでおく
+// タイマー音(Web Audio)。
+// iOS SafariはAudioContextが時間経過・画面遷移・着信等でsuspended/interruptedに戻るため(ISS-005)、
+// ユーザータップのたびにunlockAudio()でresumeを試行し、再生直前にも状態を確認して復帰させる
 
 let audioCtx: AudioContext | null = null
 
+function tryResume(): void {
+  if (audioCtx && audioCtx.state !== 'running') {
+    void audioCtx.resume().catch(() => {})
+  }
+}
+
+/** ユーザー操作(タップ)の中で毎回呼ぶ。初回は作成、以降はresume試行 */
 export function unlockAudio(): void {
   try {
     audioCtx ??= new AudioContext()
-    if (audioCtx.state === 'suspended') {
-      void audioCtx.resume()
-    }
+    tryResume()
   } catch {
     audioCtx = null
   }
 }
 
+/** 音が実際に鳴らせる状態か(タイマー画面のフォールバック表示用) */
+export function audioReady(): boolean {
+  return audioCtx?.state === 'running'
+}
+
 function tone(freq: number, durationMs: number, volume = 0.4): void {
-  if (!audioCtx || audioCtx.state !== 'running') return
+  if (!audioCtx) return
+  if (audioCtx.state !== 'running') {
+    // resumeは非同期のためこのビープはスキップし、次のビープまでの復帰を試みる
+    tryResume()
+    return
+  }
   const osc = audioCtx.createOscillator()
   const gain = audioCtx.createGain()
   osc.type = 'sine'

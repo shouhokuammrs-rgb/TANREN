@@ -132,6 +132,19 @@ describe('ダブルプログレッション', () => {
     expect(STEPS).toContain(result.weightKg)
   })
 
+  it('「限界でした」フラグ(ISS-004)があれば達成していても増量・レップ加算を保留', () => {
+    const last = history([
+      { weightKg: 13, reps: 12, achieved: true },
+      { weightKg: 13, reps: 12, achieved: true },
+    ])
+    last.sets[1].atFailure = true
+    // 上限到達でも増量せず、同重量・同レップで様子を見る
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
+      weightKg: 13,
+      reps: 12,
+    })
+  })
+
   it('自重種目がレップ上限到達→上限で頭打ち', () => {
     const last: ExerciseHistoryEntry = {
       exerciseId: 2,

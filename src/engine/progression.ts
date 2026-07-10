@@ -73,10 +73,19 @@ export function suggestWeightReps(
 
   const minReps = Math.min(...recordedSets.map((s) => s.reps!))
   const allAchieved = recordedSets.every((s) => s.achieved !== false)
+  // 「限界でした」(ISS-004)が付いた回は、達成していても増量・レップ加算を保留して様子を見る
+  const anyAtFailure = recordedSets.some((s) => s.atFailure === true)
   const lastWeight = usesDumbbell ? recordedSets[0].weightKg : undefined
   // 過去ログの重量が現在の刻みに存在しない場合(器具設定変更後)もスナップし直す
   const currentWeight =
     usesDumbbell && lastWeight !== undefined ? snapToSteps(lastWeight, stepsKg, 'down') : undefined
+
+  if (anyAtFailure) {
+    return {
+      weightKg: currentWeight,
+      reps: Math.min(repRangeMax, Math.max(repRangeMin, minReps)),
+    }
+  }
 
   if (allAchieved && minReps >= repRangeMax) {
     if (!usesDumbbell || currentWeight === undefined) {

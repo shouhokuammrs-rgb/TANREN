@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { TIMER_COPY } from '../constants/copy'
-import { countBeep, finishChime } from '../utils/audio'
+import { audioReady, countBeep, finishChime, unlockAudio } from '../utils/audio'
 import { vibrate } from '../utils/vibrate'
 
 interface TimerOverlayProps {
@@ -21,6 +21,7 @@ export default function TimerOverlay({ initialSec, onDone }: TimerOverlayProps) 
   const [endAt, setEndAt] = useState(() => Date.now() + initialSec * 1000)
   const [remainingMs, setRemainingMs] = useState(initialSec * 1000)
   const [finished, setFinished] = useState(false)
+  const [soundOk, setSoundOk] = useState(audioReady)
   const lastBeepSecRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -28,6 +29,8 @@ export default function TimerOverlay({ initialSec, onDone }: TimerOverlayProps) 
     const tick = () => {
       const rest = endAt - Date.now()
       setRemainingMs(Math.max(0, rest))
+      // iOSでsuspendedに落ちた場合のフォールバック表示を更新(ISS-005)
+      setSoundOk(audioReady())
       const restSec = Math.ceil(rest / 1000)
       if (rest > 0 && restSec <= 3 && lastBeepSecRef.current !== restSec) {
         lastBeepSecRef.current = restSec
@@ -52,6 +55,7 @@ export default function TimerOverlay({ initialSec, onDone }: TimerOverlayProps) 
   }, [finished, onDone])
 
   const adjust = (deltaSec: number) => {
+    unlockAudio() // タップのたびにAudioContextの復帰を試みる(ISS-005)
     if (finished) return
     setEndAt((prev) => {
       const next = Math.max(Date.now() + 1000, prev + deltaSec * 1000)
@@ -72,6 +76,18 @@ export default function TimerOverlay({ initialSec, onDone }: TimerOverlayProps) 
       }`}
     >
       <p className="text-sm text-slate-300">{finished ? TIMER_COPY.finished : TIMER_COPY.resting}</p>
+      {!soundOk && !finished && (
+        <button
+          type="button"
+          className="rounded-full bg-yellow-500/20 px-4 py-2 text-xs text-yellow-300"
+          onClick={() => {
+            unlockAudio()
+            setSoundOk(audioReady())
+          }}
+        >
+          🔇 {TIMER_COPY.soundSuspended}
+        </button>
+      )}
       <div className="relative">
         <svg width="280" height="280" viewBox="0 0 280 280" aria-hidden="true">
           <circle cx="140" cy="140" r={RADIUS} fill="none" stroke="#1e293b" strokeWidth="12" />
@@ -111,7 +127,10 @@ export default function TimerOverlay({ initialSec, onDone }: TimerOverlayProps) 
         </button>
         <button
           type="button"
-          onClick={onDone}
+          onClick={() => {
+            unlockAudio()
+            onDone()
+          }}
           className="h-12 rounded-full bg-slate-700 px-5 text-sm font-semibold text-white active:bg-slate-600"
         >
           {TIMER_COPY.skip}
