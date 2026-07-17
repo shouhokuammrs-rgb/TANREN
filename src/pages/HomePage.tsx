@@ -17,10 +17,13 @@ import { db } from '../db/db'
 import { lastExportAt, shouldRemindExport } from '../utils/backup'
 import {
   addBodyWeight,
+  dailyVolumeHistory,
+  getSetting,
   homeStats,
   listBodyStats,
   loadEngineContext,
   loadGoal,
+  setSetting,
   weeklyVolumeHistory,
 } from '../db/queries'
 import { muscleFreshnessMap } from '../engine'
@@ -46,12 +49,17 @@ export default function HomePage() {
     return { show: shouldRemindExport(lastExportAt(), hasData), never: lastExportAt() === null }
   })
   const stats = useLiveQuery(() => homeStats())
-  const volumeHistory = useLiveQuery(() => weeklyVolumeHistory())
+  // ISS-012: 週/日切り替え。選択はDexieのsettingsに保存(バックアップにも含まれる)
+  const chartMode = useLiveQuery(() => getSetting<'day' | 'week'>('volumeChartMode', 'day'), [], 'day')
+  const volumeHistory = useLiveQuery(
+    () => (chartMode === 'week' ? weeklyVolumeHistory() : dailyVolumeHistory()),
+    [chartMode],
+  )
   const freshness = useLiveQuery(async () => muscleFreshnessMap(await loadEngineContext()))
   const bodyStats = useLiveQuery(listBodyStats)
 
   const volumeData = volumeHistory?.map((p) => {
-    const row: Record<string, number | string> = { week: p.weekLabel }
+    const row: Record<string, number | string> = { label: p.weekLabel }
     for (const m of MUSCLE_CHART_ORDER) row[m] = p.sets[m] ?? 0
     return row
   })
@@ -138,9 +146,26 @@ export default function HomePage() {
       )}
 
       <div className="card-ember p-4">
-        <h2 className="label-mono mb-2 text-[10px] text-accent-dim">
-          {DASHBOARD_COPY.weeklyVolume}
-        </h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="label-mono text-[10px] text-accent-dim">
+            {DASHBOARD_COPY.weeklyVolume}
+          </h2>
+          {/* ISS-012: 週/日切り替えタブ(デフォルト=日) */}
+          <div className="flex gap-1">
+            {(['day', 'week'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => void setSetting('volumeChartMode', mode)}
+                className={`h-11 rounded-chip px-4 text-xs font-bold ${
+                  chartMode === mode ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
+                }`}
+              >
+                {mode === 'day' ? DASHBOARD_COPY.chartModeDay : DASHBOARD_COPY.chartModeWeek}
+              </button>
+            ))}
+          </div>
+        </div>
         {hasVolume && volumeData ? (
           <Suspense fallback={chartFallback}>
             <VolumeChart data={volumeData} />

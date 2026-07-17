@@ -104,7 +104,8 @@ describe('generateMenu: 部位指定とフレッシュネス警告', () => {
       condition: 'normal',
     })
     expect(menu.muscles).toEqual(['chest'])
-    expect(menu.warnings.some((w) => w.includes('回復途中'))).toBe(true)
+    // ISS-011: 人体図と同じ状態語(回復中/休息推奨)+%+軽め推奨の文言
+    expect(menu.warnings.some((w) => /(回復中|休息推奨)\(\d+%\)。軽めを推奨/.test(w))).toBe(true)
   })
 
   it('おまかせは疲労部位を避けてフレッシュな部位を選ぶ', () => {

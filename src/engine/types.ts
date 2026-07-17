@@ -7,6 +7,8 @@ export interface SetPerformance {
   achieved?: boolean
   /** 「限界でした」(ISS-004)。trueのセットがあれば次回は増量せず様子を見る */
   atFailure?: boolean
+  /** 「余裕あり」(ISS-013b)。上限レップ到達と組み合わさると次回2ステップ増量 */
+  hadSlack?: boolean
 }
 
 /** 種目ごとの直近実績 */
@@ -36,6 +38,8 @@ export interface EngineContext {
   exercises: Exercise[]
   /** 種目ID→直近実績 */
   lastPerformance: Map<number, ExerciseHistoryEntry>
+  /** 種目ID→直近実績より前の実績(新しい順・最大2件)。2ステップ増量の連続回数判定に使う(ISS-013b) */
+  performanceHistory?: Map<number, ExerciseHistoryEntry[]>
   /** 部位ごとの直近刺激(なければその部位は完全回復扱い) */
   muscleStimuli: MuscleStimulus[]
   /** 有効な痛み・違和感フラグの部位(メニューから自動回避) */

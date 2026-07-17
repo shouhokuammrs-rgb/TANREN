@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
 import Modal from '../components/Modal'
+import { FRESHNESS_BUCKETS, freshnessBucketOf } from '../constants/charts'
 import {
   CONDITION_LABELS,
+  FRESHNESS_COPY,
   HEARING_COPY,
   MEAL_TIMING_LABELS,
   MENU_COPY,
@@ -26,6 +28,7 @@ import {
   alternativesFor,
   estimatedMinutes,
   generateMenu,
+  muscleFreshnessMap,
   prescriptionFor,
 } from '../engine'
 import type { EngineContext, GeneratedMenu, MenuItem, MenuRequest } from '../engine/types'
@@ -49,6 +52,8 @@ export default function WorkoutPage() {
   const [muscleMode, setMuscleMode] = useState<'omakase' | 'choose' | null>(null)
   const [muscles, setMuscles] = useState<MuscleGroup[]>([])
   const [handover, setHandover] = useState<string | undefined>()
+  // ISS-011: 部位選択チップにフレッシュネスを事前表示する
+  const [freshness, setFreshness] = useState<Record<MuscleGroup, number> | null>(null)
   const [picker, setPicker] = useState<{ mode: 'swap' | 'add'; itemIndex?: number } | null>(null)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   // 初回生成時のみ「提案は目安」の注意を出す(ISS-002)
@@ -63,6 +68,7 @@ export default function WorkoutPage() {
     void (async () => {
       const active = await getActiveSession()
       setHandover(await loadLastHandoverNote())
+      setFreshness(muscleFreshnessMap(await loadEngineContext()))
       // 時刻ピッカーのデフォルトは前回値
       const lastSleep = await loadLastSleepTimes()
       setSleepStart((prev) => prev || (lastSleep.sleepStart ?? ''))
@@ -186,24 +192,60 @@ export default function WorkoutPage() {
               </button>
             </div>
             {muscleMode === 'choose' && (
-              <div className="mt-2 grid grid-cols-4 gap-2">
-                {ALL_MUSCLES.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() =>
-                      setMuscles((prev) =>
-                        prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
-                      )
-                    }
-                    className={`h-12 rounded-card text-sm font-bold ${
-                      muscles.includes(m) ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
-                    }`}
-                  >
-                    {MUSCLE_GROUP_LABELS[m]}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {ALL_MUSCLES.map((m) => {
+                    const pct = freshness?.[m]
+                    const selected = muscles.includes(m)
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() =>
+                          setMuscles((prev) =>
+                            prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+                          )
+                        }
+                        className={`h-14 rounded-card text-sm font-bold ${
+                          selected ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
+                        }`}
+                      >
+                        {MUSCLE_GROUP_LABELS[m]}
+                        {pct !== undefined && (
+                          // ISS-011: 人体図と同じ3状態・同閾値の色分け+%併記
+                          <span
+                            className="block text-[10px] font-bold leading-tight"
+                            style={{ color: selected ? '#fff' : freshnessBucketOf(pct).color }}
+                          >
+                            {FRESHNESS_COPY.chipPct(pct)}
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* ISS-011: 疲労部位を選んだ時点のインライン注意(生成はブロックしない) */}
+                {freshness && (
+                  <div className="mt-2 space-y-1">
+                    {muscles
+                      .filter((m) => freshness[m] < FRESHNESS_BUCKETS[0].min)
+                      .map((m) => (
+                        <p
+                          key={m}
+                          className="text-xs"
+                          style={{ color: freshnessBucketOf(freshness[m]).color }}
+                        >
+                          ⚠️{' '}
+                          {FRESHNESS_COPY.selectNotice(
+                            MUSCLE_GROUP_LABELS[m],
+                            freshnessBucketOf(freshness[m]).label,
+                            freshness[m],
+                          )}
+                        </p>
+                      ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

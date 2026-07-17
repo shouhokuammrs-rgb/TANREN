@@ -145,6 +145,70 @@ describe('ダブルプログレッション', () => {
     })
   })
 
+  it('「余裕あり」(ISS-013b): 上限到達+余裕→2ステップ増量', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[0].hadSlack = true
+    // 11.5 → 13(1段) → 14.5(2段)
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
+      weightKg: 14.5,
+      reps: 6,
+    })
+  })
+
+  it('「余裕あり」: 上限のみ(余裕なし)→通常の1ステップ', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
+      weightKg: 13,
+      reps: 6,
+    })
+  })
+
+  it('「余裕あり」: 上限未達なら増量しない(レップ先行の原則)', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 9, achieved: true },
+      { weightKg: 11.5, reps: 9, achieved: true },
+    ])
+    last.sets[0].hadSlack = true
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
+      weightKg: 11.5,
+      reps: 10,
+    })
+  })
+
+  it('「余裕あり」: 2ステップ増量は連続2回まで、3回目は1ステップ(暴走防止)', () => {
+    // 過去: 8.5→11.5(2段)→14.5(2段)と連続2回ジャンプ済み
+    const last = history([{ weightKg: 14.5, reps: 12, achieved: true }])
+    last.sets[0].hadSlack = true
+    const older = [
+      {
+        exerciseId: 1,
+        performedAt: new Date('2026-07-05T10:00:00'),
+        sets: [{ weightKg: 11.5, reps: 12, achieved: true }],
+      },
+      {
+        exerciseId: 1,
+        performedAt: new Date('2026-07-01T10:00:00'),
+        sets: [{ weightKg: 8.5, reps: 12, achieved: true }],
+      },
+    ]
+    // 14.5 → 16(1段のみ)
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS, {}, older)).toEqual({
+      weightKg: 16,
+      reps: 6,
+    })
+  })
+
+  it('snapToSteps: nearestは最寄りの刻み', () => {
+    expect(snapToSteps(12.77, STEPS, 'nearest')).toBe(13)
+    expect(snapToSteps(12.2, STEPS, 'nearest')).toBe(11.5)
+  })
+
   it('自重種目がレップ上限到達→上限で頭打ち', () => {
     const last: ExerciseHistoryEntry = {
       exerciseId: 2,

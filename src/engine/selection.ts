@@ -6,7 +6,8 @@ import {
   MUSCLES_BY_TIME,
   TIRED_AVOID_REP_MAX,
 } from '../constants/engine'
-import { MUSCLE_GROUP_LABELS } from '../constants/copy'
+import { freshnessBucketOf } from '../constants/charts'
+import { FRESHNESS_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import type { Condition, Exercise, MuscleGroup } from '../db/types'
 import type { EngineContext } from './types'
 
@@ -42,8 +43,13 @@ export function selectMuscles(
       if (injured.has(m)) {
         warnings.push(`${MUSCLE_GROUP_LABELS[m]}は痛みフラグがあるため除外しました`)
       } else if (freshness[m] < FRESHNESS_WARN_THRESHOLD) {
+        // ISS-011: 選択時インライン注意と同じ状態語(回復中/休息推奨)で整合させる
         warnings.push(
-          `${MUSCLE_GROUP_LABELS[m]}は回復途中です(フレッシュネス${freshness[m]}%)。軽めを推奨`,
+          FRESHNESS_COPY.generatedWarning(
+            MUSCLE_GROUP_LABELS[m],
+            freshnessBucketOf(freshness[m]).label,
+            freshness[m],
+          ),
         )
       }
     }

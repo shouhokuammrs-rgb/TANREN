@@ -65,20 +65,20 @@ describe('patternBase1RmFrom(パターン基準1RM)', () => {
   })
 })
 
-describe('受け入れ条件: ベンチプレス45kg×7 → ダンベルプレス初期提案が10〜12.5kg帯', () => {
+describe('受け入れ条件(ISS-013a): ベンチプレス45kg×7 → ダンベルプレス初期提案が12.5〜13.5kg帯', () => {
   const base = patternBase1RmFrom([mark('barbell_bench_press', 45, 7)])
 
-  it('ダンベルベンチプレスの初期重量が10〜12.5kgに収まる(刻みスナップ済み)', () => {
+  it('新係数0.23で初期重量が12.5〜13.5kgに収まる(1RM55.5×0.23=12.77→最寄り13kg)', () => {
     const weight = initialWeightKg(flatPress, 58, STEPS, base)!
-    expect(weight).toBeGreaterThanOrEqual(10)
-    expect(weight).toBeLessThanOrEqual(12.5)
+    expect(weight).toBeGreaterThanOrEqual(12.5)
+    expect(weight).toBeLessThanOrEqual(13.5)
     expect(STEPS).toContain(weight)
   })
 
   it('suggestWeightReps(ログなし)でも同じ帯に収まる', () => {
     const { weightKg, reps } = suggestWeightReps(flatPress, undefined, 58, STEPS, base)
-    expect(weightKg).toBeGreaterThanOrEqual(10)
-    expect(weightKg).toBeLessThanOrEqual(12.5)
+    expect(weightKg).toBeGreaterThanOrEqual(12.5)
+    expect(weightKg).toBeLessThanOrEqual(13.5)
     expect(reps).toBe(flatPress.repRangeMin)
   })
 

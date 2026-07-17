@@ -1,12 +1,11 @@
-import { BODY_NEUTRAL, FRESHNESS_BUCKETS } from '../constants/charts'
+import { BODY_NEUTRAL, FRESHNESS_BUCKETS, freshnessBucketOf } from '../constants/charts'
 import { DASHBOARD_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import type { MuscleGroup } from '../db/types'
 
 // 簡易人体図SVG(2-4)。見た目はPhase 4で磨く前提の機能優先版
 
 function colorFor(freshness: number): string {
-  const bucket = FRESHNESS_BUCKETS.find((b) => freshness >= b.min)
-  return bucket ? bucket.color : BODY_NEUTRAL
+  return freshnessBucketOf(freshness)?.color ?? BODY_NEUTRAL
 }
 
 interface FreshnessBodyMapProps {

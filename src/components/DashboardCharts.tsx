@@ -27,7 +27,8 @@ export function VolumeChart({ data }: { data: Record<string, number | string>[] 
     <ResponsiveContainer width="100%" height={230}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
         <CartesianGrid stroke="#241812" vertical={false} />
-        <XAxis dataKey="week" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+        {/* ISS-012: 週別/日別どちらの集計でも使うため軸キーはlabelに統一 */}
+        <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} />
         <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip
           contentStyle={TOOLTIP_STYLE}

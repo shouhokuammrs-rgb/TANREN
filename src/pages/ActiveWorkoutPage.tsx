@@ -141,7 +141,7 @@ export default function ActiveWorkoutPage() {
       reps: set.actualReps ?? set.suggestedReps ?? 10,
     }
 
-  const record = async (atFailure = false) => {
+  const record = async (feedback?: { atFailure?: boolean; hadSlack?: boolean }) => {
     if (!position) return
     unlockAudio() // タップのたびにAudioContextの復帰を試みる(ISS-005)
     const isLastSetOfWorkout =
@@ -150,7 +150,8 @@ export default function ActiveWorkoutPage() {
     await recordSet(position.set.id!, {
       actualWeightKg: draft.weightKg,
       actualReps: draft.reps,
-      atFailure,
+      atFailure: feedback?.atFailure,
+      hadSlack: feedback?.hadSlack,
     })
     await reload()
     if (isLastSetOfWorkout) {
@@ -282,17 +283,26 @@ export default function ActiveWorkoutPage() {
             }}
           />
 
-          {/* 記録CTA+限界(ISS-004維持 / §0-4) */}
+          {/* 記録CTA+限界/余裕のワンタップフィードバック(ISS-004 / ISS-013b) */}
           <button type="button" className="pill-molten h-14 w-full text-[16px]" onClick={() => void record()}>
             {WORKOUT_COPY.done}
           </button>
-          <button
-            type="button"
-            className="pill-ghost h-12 w-full text-xs text-destructive"
-            onClick={() => void record(true)}
-          >
-            🔥 {WORKOUT_COPY.atFailure}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="pill-ghost h-12 flex-1 text-xs text-info"
+              onClick={() => void record({ hadSlack: true })}
+            >
+              💨 {WORKOUT_COPY.hadSlack}
+            </button>
+            <button
+              type="button"
+              className="pill-ghost h-12 flex-1 text-xs text-destructive"
+              onClick={() => void record({ atFailure: true })}
+            >
+              🔥 {WORKOUT_COPY.atFailure}
+            </button>
+          </div>
 
           <ProgressDots entry={position.entry} currentIndex={position.setIndex} />
 
@@ -318,6 +328,11 @@ export default function ActiveWorkoutPage() {
                 {lastDone.atFailure && (
                   <span className="ml-1.5 rounded-chip bg-destructive/15 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
                     {WORKOUT_COPY.atFailureLabel}
+                  </span>
+                )}
+                {lastDone.hadSlack && (
+                  <span className="ml-1.5 rounded-chip bg-info/15 px-1.5 py-0.5 text-[10px] font-bold text-info">
+                    {WORKOUT_COPY.hadSlackLabel}
                   </span>
                 )}
               </span>

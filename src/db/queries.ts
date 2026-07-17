@@ -51,7 +51,9 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     (s) => s.status === 'completed' || s.status === 'aborted',
   )
 
-  const lastPerformance = new Map<number, ExerciseHistoryEntry>()
+  // 種目ごとに直近3セッション分の実績を集める(直近=進行判定、以前=2ステップ増量の連続判定: ISS-013b)
+  const HISTORY_DEPTH = 3
+  const entriesByExercise = new Map<number, ExerciseHistoryEntry[]>()
   const stimulusByMuscle = new Map<MuscleGroup, MuscleStimulus>()
   const exerciseById = new Map(exercises.map((e) => [e.id!, e]))
 
@@ -67,8 +69,9 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
       const completed = sets.filter((s) => s.completedAt !== undefined)
       if (completed.length === 0) continue
 
-      if (!lastPerformance.has(se.exerciseId)) {
-        lastPerformance.set(se.exerciseId, {
+      const entries = entriesByExercise.get(se.exerciseId) ?? []
+      if (entries.length < HISTORY_DEPTH) {
+        entries.push({
           exerciseId: se.exerciseId,
           performedAt: session.startedAt,
           sets: completed.map((s) => ({
@@ -76,8 +79,10 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
             reps: s.actualReps,
             achieved: s.achieved,
             atFailure: s.atFailure,
+            hadSlack: s.hadSlack,
           })),
         })
+        entriesByExercise.set(se.exerciseId, entries)
       }
 
       const muscle = exerciseById.get(se.exerciseId)?.primaryMuscle
@@ -93,6 +98,13 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     }
   }
 
+  const lastPerformance = new Map<number, ExerciseHistoryEntry>()
+  const performanceHistory = new Map<number, ExerciseHistoryEntry[]>()
+  for (const [exerciseId, entries] of entriesByExercise) {
+    lastPerformance.set(exerciseId, entries[0])
+    performanceHistory.set(exerciseId, entries.slice(1))
+  }
+
   return {
     now,
     bodyWeightKg: profile?.weightKg ?? 58,
@@ -103,6 +115,7 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
         : undefined,
     exercises: exercises.filter((e) => e.isActive === 1),
     lastPerformance,
+    performanceHistory,
     muscleStimuli: [...stimulusByMuscle.values()],
     activeInjuries: [...new Set(injuries.map((i) => i.bodyPart))],
     patternBase1Rm: patternBase1RmFrom(strengthMarks),
@@ -263,7 +276,7 @@ export async function loadWorkout(sessionId: number): Promise<Workout | undefine
 
 export async function recordSet(
   setId: number,
-  actual: { actualWeightKg?: number; actualReps: number; atFailure?: boolean },
+  actual: { actualWeightKg?: number; actualReps: number; atFailure?: boolean; hadSlack?: boolean },
 ): Promise<void> {
   const set = await db.sets.get(setId)
   if (!set) return
@@ -277,6 +290,7 @@ export async function recordSet(
     actualReps: actual.actualReps,
     achieved,
     atFailure: actual.atFailure || undefined,
+    hadSlack: actual.hadSlack || undefined,
     completedAt: new Date(),
   })
 }
@@ -287,6 +301,7 @@ export async function undoSet(setId: number): Promise<void> {
     actualReps: undefined,
     achieved: undefined,
     atFailure: undefined,
+    hadSlack: undefined,
     completedAt: undefined,
   })
 }
@@ -457,7 +472,8 @@ export async function weeklyVolumeHistory(weeks = 8, now = new Date()): Promise<
   const points: WeeklyVolumePoint[] = []
   for (let i = weeks - 1; i >= 0; i--) {
     const start = new Date(monday.getTime() - i * 7 * dayMs)
-    points.push({ weekLabel: `${start.getMonth() + 1}/${start.getDate()}`, sets: {} })
+    // 週集計であることを明示(ISS-012)
+    points.push({ weekLabel: `${start.getMonth() + 1}/${start.getDate()}週`, sets: {} })
   }
   const rangeStart = monday.getTime() - (weeks - 1) * 7 * dayMs
 
@@ -518,6 +534,55 @@ export async function homeStats(now = new Date()): Promise<HomeStats> {
     }
   }
   return { streakDays, weeklyVolumeKg: Math.round(weeklyVolumeKg) }
+}
+
+/** ダッシュボード: 直近N日の日別部位別完了セット数(ISS-012)。トレなしの日も空点として含める */
+export async function dailyVolumeHistory(days = 14, now = new Date()): Promise<WeeklyVolumePoint[]> {
+  const exercises = await db.exercises.toArray()
+  const exerciseById = new Map(exercises.map((e) => [e.id!, e]))
+  const dayMs = 24 * 3_600_000
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+
+  const points: WeeklyVolumePoint[] = []
+  const indexByDayKey = new Map<string, number>()
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(today.getTime() - i * dayMs)
+    const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`
+    indexByDayKey.set(key, points.length)
+    points.push({ weekLabel: `${day.getMonth() + 1}/${day.getDate()}`, sets: {} })
+  }
+
+  const rangeStart = today.getTime() - (days - 1) * dayMs
+  const sessions = (await db.sessions.orderBy('startedAt').toArray()).filter(
+    (s) => s.startedAt.getTime() >= rangeStart && s.status !== 'planned',
+  )
+  for (const session of sessions) {
+    const d = session.startedAt
+    const index = indexByDayKey.get(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`)
+    if (index === undefined) continue
+    const point = points[index]
+    const ses = await db.session_exercises.where('sessionId').equals(session.id!).toArray()
+    for (const se of ses) {
+      const muscle = exerciseById.get(se.exerciseId)?.primaryMuscle
+      if (!muscle) continue
+      const completed = (await db.sets.where('sessionExerciseId').equals(se.id!).toArray()).filter(
+        (s) => s.completedAt !== undefined,
+      ).length
+      if (completed > 0) point.sets[muscle] = (point.sets[muscle] ?? 0) + completed
+    }
+  }
+  return points
+}
+
+/** アプリ設定(ISS-012)。UI設定のうちバックアップに含めたいものはlocalStorageではなくここへ */
+export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
+  const row = await db.settings.get(key)
+  return row === undefined ? defaultValue : (row.value as T)
+}
+
+export async function setSetting<T>(key: string, value: T): Promise<void> {
+  await db.settings.put({ key, value })
 }
 
 /** 体重の随時記録(2-4)。プロフィールの現在体重も更新する */

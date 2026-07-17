@@ -131,6 +131,17 @@ export const HEARING_COPY = {
   mealLabel: '食事',
 }
 
+// ISS-011: 部位フレッシュネスの事前可視化(状態語はFRESHNESS_BUCKETSのlabelを渡す)
+export const FRESHNESS_COPY = {
+  chipPct: (pct: number) => `${pct}%`,
+  // 選択時のインライン注意。生成はブロックしない(ユーザー主権)
+  selectNotice: (label: string, status: string, pct: number) =>
+    `${label}は${status}(${pct}%)。効果が下がる可能性があります`,
+  // 生成後警告(インライン注意と同じ状態語で整合させる)
+  generatedWarning: (label: string, status: string, pct: number) =>
+    `${label}は${status}(${pct}%)。軽めを推奨`,
+}
+
 export const MEAL_TIMING_LABELS = {
   before: '食前',
   within1h: '食後1時間以内',
@@ -176,6 +187,9 @@ export const WORKOUT_COPY = {
   // 提案値がデフォルト入力済み→±修正して記録するモデル(ISS-004)
   done: '記録',
   atFailure: '限界でした',
+  // ISS-013b: 限界の対になるポジティブ側フィードバック
+  hadSlack: '余裕あり',
+  hadSlackLabel: '余裕',
   achievedLabel: '達成',
   // 未達は調整材料であり失敗ではないトーン(ISS-004)
   missedLabel: '調整中',
@@ -336,7 +350,10 @@ export const SUMMARY_COPY = {
 }
 
 export const DASHBOARD_COPY = {
-  weeklyVolume: '部位別 週間セット数の推移',
+  weeklyVolume: '部位別 セット数の推移',
+  // ISS-012: 週/日切り替え(デフォルト=日)
+  chartModeDay: '日',
+  chartModeWeek: '週',
   freshness: '回復状況(フレッシュネス)',
   freshnessFront: '前面',
   freshnessBack: '背面',

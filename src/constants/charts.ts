@@ -31,5 +31,12 @@ export const FRESHNESS_BUCKETS = [
   { min: 0, color: '#e66767', label: '休息推奨' },
 ] as const
 
+export type FreshnessBucket = (typeof FRESHNESS_BUCKETS)[number]
+
+/** %が属する状態バケット(人体図・部位チップ・警告文言で共通利用 / ISS-011) */
+export function freshnessBucketOf(pct: number): FreshnessBucket {
+  return FRESHNESS_BUCKETS.find((b) => pct >= b.min) ?? FRESHNESS_BUCKETS[FRESHNESS_BUCKETS.length - 1]
+}
+
 /** 人体図の未対象部位・輪郭色 */
 export const BODY_NEUTRAL = '#241812'

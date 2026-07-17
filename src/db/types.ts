@@ -153,6 +153,8 @@ export interface SetRecord {
   achieved?: boolean
   /** 「限界でした」フラグ(ISS-004): RPE10相当。次回はこの重量で増やさず様子を見る */
   atFailure?: boolean
+  /** 「余裕あり」フラグ(ISS-013b): 上限レップ到達と組で次回2ステップ増量 */
+  hadSlack?: boolean
   /** 絶好調時のPR挑戦セット */
   isPrAttempt?: boolean
   /** 自己新(F-07)。セッション完了時にエンジンのPR判定結果を保存する */
@@ -174,6 +176,12 @@ export interface BodyStat {
   weightKg?: number
   bodyFatPct?: number
   note?: string
+}
+
+/** アプリ設定のkey-value(ISS-012〜)。UI設定のうち端末バックアップに含めたいものはここへ */
+export interface Setting {
+  key: string
+  value: unknown
 }
 
 /** 筋力の目安(ISS-002)。基準種目の実績から推定1RMを算出し初期重量提案に使う */
