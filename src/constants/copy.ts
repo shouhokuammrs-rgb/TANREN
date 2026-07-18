@@ -410,6 +410,35 @@ export const STORAGE_COPY = {
   reminderCta: '設定を開く',
 }
 
+// クラウドバックアップ(Phase 5 / DEC-006)
+export const CLOUD_COPY = {
+  section: 'クラウドバックアップ',
+  hint: 'トレ保存のたびに全データを自動でクラウドへ退避します(ローカルが常に正・二重の安全網)',
+  email: 'メールアドレス',
+  password: 'パスワード',
+  signIn: 'ログイン',
+  signUp: '新規登録',
+  signOut: 'ログアウト',
+  signedInAs: (email: string) => `ログイン中: ${email}`,
+  authError: 'ログインに失敗しました。メールとパスワードを確認してください',
+  signUpError: '登録に失敗しました。時間をおいて再試行してください',
+  invalidInput: 'メールアドレスとパスワード(6文字以上)を入力してください',
+  backupNow: '今すぐバックアップ',
+  restore: 'クラウドから復元',
+  restoreConfirm1:
+    '現在の全データを削除し、クラウドの最新バックアップで置き換えます。続けますか?',
+  restoreConfirm2: '本当に復元しますか?この操作は元に戻せません',
+  restoreDone: 'クラウドから復元しました',
+  restoreError: '復元に失敗しました。ログイン状態とバックアップの有無を確認してください',
+  lastSync: (dateLabel: string) => `最終クラウド同期: ${dateLabel}`,
+  neverSynced: '最終クラウド同期: まだなし',
+  pendingBadge: '未同期あり(次回オンライン時に自動同期)',
+  syncDone: '☁️ クラウドへバックアップしました',
+  syncOffline: 'オフラインのため保留しました。次回オンライン時に自動同期します',
+  syncError: 'クラウド同期に失敗しました。設定から再試行できます',
+  working: '処理中…',
+}
+
 export const GOAL_SETTINGS_COPY = {
   section: '目標とヒヤリング',
   notSet: '未設定(セットアップで設定できます)',

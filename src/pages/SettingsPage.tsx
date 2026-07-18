@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
+import CloudBackupSection from '../components/CloudBackupSection'
 import Modal from '../components/Modal'
 import { db } from '../db/db'
 import {
@@ -145,6 +146,8 @@ export default function SettingsPage() {
           </li>
         ))}
       </ul>
+
+      <CloudBackupSection />
 
       <DataSection />
 
