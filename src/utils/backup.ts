@@ -58,6 +58,8 @@ const TABLES = [
   'body_stats',
   'injuries',
   'strength_marks',
+  // ISS-012: UI設定(グラフ表示モード等)もバックアップ対象に含める
+  'settings',
 ] as const
 
 type TableName = (typeof TABLES)[number]

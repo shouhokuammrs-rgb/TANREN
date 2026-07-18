@@ -46,3 +46,8 @@ export const VOLUME_RECOVERY_FACTORS: { maxSets: number; factor: number }[] = [
 
 /** initialWeightFactor未設定のダンベル種目に使う保守的な既定係数 */
 export const DEFAULT_INITIAL_WEIGHT_FACTOR = 0.1
+
+/** 「余裕あり」フィードバック(ISS-013b): 上限レップ到達+余裕あり時の増量ステップ数 */
+export const SLACK_JUMP_STEPS = 2
+/** 2ステップ増量の連続適用上限(暴走防止)。超えたら通常の1ステップ進行に戻す */
+export const MAX_CONSECUTIVE_DOUBLE_JUMPS = 2

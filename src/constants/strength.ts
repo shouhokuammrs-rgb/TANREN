@@ -37,16 +37,17 @@ export const REF_LIFTS: RefLift[] = [
 /**
  * パターン基準1RM(バーベル相当)→ ダンベル種目の作業重量(片手・8-12レップ想定)係数。
  * 根拠: 8-12レップの作業重量 ≒ 1RMの70〜75%、ダンベル片手 ≒ バーベルの35〜40%
- *   → 例(水平プレス): 0.35 × 0.6〜0.65(ダンベルの安定性ロス込み) ≒ 0.21
- *   → 指示書の目安「バーベルベンチ1RM × 0.20〜0.22」の中央値と一致
+ * 補正(ISS-013a): 初期値0.21(水平)はEiichi実地検証(ベンチ45kg×7→提案11.5kgが
+ * 「全セット完遂+各セット数回の余裕」)で保守的すぎと判明したため、全パターン約+10%。
+ * ※実測1点による補正。今後のドッグフーディングで再調整の可能性あり
  * isolation / core は基準1RMとの相関が薄いため換算対象外(体重比デフォルトにフォールバック)
  */
 export const WORKING_WEIGHT_COEF: Partial<Record<MovementPattern, number>> = {
-  horizontal_press: 0.21,
-  vertical_press: 0.24,
-  row: 0.3,
-  hinge: 0.2,
-  squat: 0.26,
+  horizontal_press: 0.23,
+  vertical_press: 0.26,
+  row: 0.33,
+  hinge: 0.22,
+  squat: 0.29,
 }
 
 /**
