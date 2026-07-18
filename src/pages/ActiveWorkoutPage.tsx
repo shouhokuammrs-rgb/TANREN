@@ -24,6 +24,8 @@ import {
 import { db } from '../db/db'
 import type { Exercise, MuscleGroup, SetRecord } from '../db/types'
 import { snapToSteps } from '../engine'
+import { autoCloudBackup } from '../utils/cloudBackup'
+import { toastSyncResult } from '../utils/cloudToast'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 import { useWakeLock } from '../hooks/useWakeLock'
 import { audioReady, countBeep, finishChime, unlockAudio } from '../utils/audio'
@@ -393,6 +395,8 @@ export default function ActiveWorkoutPage() {
           onClick={async () => {
             if (window.confirm(WORKOUT_COPY.interruptConfirm)) {
               await abortSession(workout.session.id!)
+              // Phase 5: 保存成功のたび非同期でクラウドへ(UIはブロックしない)
+              void autoCloudBackup().then(toastSyncResult)
               navigate('/log')
             }
           }}
@@ -417,6 +421,8 @@ export default function ActiveWorkoutPage() {
           onClose={() => setFinishOpen(false)}
           onSave={async (input) => {
             await finishSession(workout.session.id!, input)
+            // Phase 5: 保存成功のたび非同期でクラウドへ(UIはブロックしない)
+            void autoCloudBackup().then(toastSyncResult)
             navigate(`/summary/${workout.session.id}`, { replace: true })
           }}
         />

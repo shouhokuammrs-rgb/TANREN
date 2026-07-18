@@ -1,6 +1,10 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TabBar from './components/TabBar'
-import { STORAGE_COPY } from './constants/copy'
+import { ToastHost } from './components/Toast'
+import { CLOUD_COPY, STORAGE_COPY } from './constants/copy'
+import { retryPendingCloudBackup } from './utils/cloudBackup'
+import { showToast } from './utils/toast'
 import { isPreviewHost, productionUrl } from './utils/env'
 import HomePage from './pages/HomePage'
 import WorkoutPage from './pages/WorkoutPage'
@@ -16,6 +20,13 @@ export default function App() {
   // ISS-010: 本番ホストはVITE_PROD_HOSTから取得。未設定なら警告無効(偽陽性防止)
   const onPreviewHost = isPreviewHost(window.location.hostname)
   const prodUrl = productionUrl()
+
+  // Phase 5: オフライン中に保留したクラウドバックアップを起動時に再試行(未ログイン端末は即return)
+  useEffect(() => {
+    void retryPendingCloudBackup().then((result) => {
+      if (result === 'uploaded') showToast(CLOUD_COPY.syncDone, 'success')
+    })
+  }, [])
 
   return (
     <div className="min-h-dvh text-ink">
@@ -44,6 +55,7 @@ export default function App() {
         </Routes>
       </main>
       <TabBar />
+      <ToastHost />
     </div>
   )
 }
