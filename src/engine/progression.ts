@@ -91,7 +91,8 @@ function consecutiveDoubleJumps(chainWeightsKg: number[], sortedSteps: number[])
  * 直近実績からダブルプログレッションで次回の重量・レップを提案する。
  * - 実績なし: 初期重量+レップ下限
  * - 全セット達成かつレップ上限到達: 次の重量ステップ+レップ下限
- *   (「余裕あり」付きなら2ステップ増量。ただし連続2回まで: ISS-013b)
+ *   (最終記録セットが「余裕あり」なら2ステップ増量。ただし連続2回まで: ISS-013b/DEC-007。
+ *    途中セットの余裕は疲労が乗っていないため信号として採用しない)
  * - 全セット達成: 同重量でレップ+1(「余裕あり」単独では増量しない=レップ先行の原則)
  * - 未達成あり: 同重量・同レップで再挑戦
  */
@@ -137,8 +138,9 @@ export function suggestWeightReps(
       // 自重種目は上限で頭打ち(Phase 2以降で難易度バリエーション対応を検討)
       return { reps: repRangeMax }
     }
-    // 「余裕あり」(ISS-013b): 上限到達+余裕なら2ステップ増量。ただし連続2回まで
-    const anySlack = recordedSets.some((s) => s.hadSlack === true)
+    // 「余裕あり」(ISS-013b/DEC-007): 疲労が乗った最終記録セットの余裕のみを増量トリガーにする。
+    // 上限到達+最終セット余裕なら2ステップ増量。ただし連続2回まで
+    const lastSetSlack = recordedSets[recordedSets.length - 1].hadSlack === true
     const sorted = [...stepsKg].sort((a, b) => a - b)
     const pastWeights = [
       currentWeight,
@@ -147,7 +149,7 @@ export function suggestWeightReps(
         .filter((w): w is number => w !== undefined),
     ]
     const jumpSteps =
-      anySlack && consecutiveDoubleJumps(pastWeights, sorted) < MAX_CONSECUTIVE_DOUBLE_JUMPS
+      lastSetSlack && consecutiveDoubleJumps(pastWeights, sorted) < MAX_CONSECUTIVE_DOUBLE_JUMPS
         ? SLACK_JUMP_STEPS
         : 1
     let nextWeight = currentWeight
