@@ -80,4 +80,12 @@ export interface GeneratedMenu {
   rationale: string
   warnings: string[]
   estimatedMinutes: number
+  /** 希望時間(分)(DEC-006) */
+  requestedMinutes: number
+  /** 回復中部位の除外により希望時間より大幅に短くなった(DEC-006の短縮通知) */
+  isShortened: boolean
+  /** おまかせで除外した回復中部位(回復が進んでいる順)(DEC-006) */
+  excludedRecoveringMuscles: { muscle: MuscleGroup; freshness: number }[]
+  /** 全部位が回復中→休養日を提案(DEC-006) */
+  isRestDay: boolean
 }

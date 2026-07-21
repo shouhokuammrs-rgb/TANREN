@@ -8,13 +8,19 @@ import {
   EXERCISE_SETUP_SEC,
   MIN_SETS,
   SET_EXEC_SEC,
+  SHORTENED_NOTICE_RATIO,
 } from '../constants/engine'
-import { MUSCLE_GROUP_LABELS } from '../constants/copy'
+import { MENU_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import type { Condition, Exercise, MuscleGroup } from '../db/types'
 import { muscleFreshnessMap } from './freshness'
 import { intervalSecFor } from './interval'
 import { snapToSteps, suggestWeightReps } from './progression'
-import { candidatesByMuscle, isExerciseAvailable, selectMuscles } from './selection'
+import {
+  candidatesByMuscle,
+  isExerciseAvailable,
+  selectMuscles,
+  type ExcludedRecoveringMuscle,
+} from './selection'
 import type { EngineContext, GeneratedMenu, MenuItem, MenuRequest, Prescription } from './types'
 
 /** 1種目の所要時間見積り(秒) */
@@ -82,10 +88,25 @@ function applyVolumeFactor(items: MenuItem[], condition: Condition): MenuItem[] 
   return result
 }
 
+/** 短縮理由の部位名列挙(DEC-006)。最大3件、4件以上は「A、B、Cほか」 */
+export function recoveringListLabel(excluded: ExcludedRecoveringMuscle[]): string {
+  const names = excluded.map((e) => MUSCLE_GROUP_LABELS[e.muscle])
+  return names.length <= 3 ? names.join('と') : `${names.slice(0, 3).join('、')}ほか`
+}
+
+/** 短縮通知を出すべきか(DEC-006)。回復中部位の除外が原因で希望時間×係数を下回ったとき */
+export function isShortenedMenu(
+  estimatedMinutes: number,
+  requestedMinutes: number,
+  hasExcludedRecovering: boolean,
+): boolean {
+  return hasExcludedRecovering && estimatedMinutes < requestedMinutes * SHORTENED_NOTICE_RATIO
+}
+
 /** その日の最適メニューを生成する(F-04ロジック1〜7) */
 export function generateMenu(ctx: EngineContext, request: MenuRequest): GeneratedMenu {
   const freshness = muscleFreshnessMap(ctx)
-  const { muscles, warnings } = selectMuscles(
+  const { muscles, warnings, excludedRecovering, isRestDay } = selectMuscles(
     ctx,
     request.targetMuscles,
     request.availableMinutes,
@@ -134,20 +155,31 @@ export function generateMenu(ctx: EngineContext, request: MenuRequest): Generate
     }
   }
 
+  const estimated = estimatedMinutes(adjusted)
+  const isShortened = !isRestDay && isShortenedMenu(estimated, request.availableMinutes, excludedRecovering.length > 0)
+
+  // 説明文(DEC-006: 休養日・短縮時は指定文言を優先)
   const muscleSummary = muscles
     .map((m) => `${MUSCLE_GROUP_LABELS[m]}(回復${freshness[m]}%)`)
     .join('・')
-  const rationale =
-    muscles.length === 0
+  const rationale = isRestDay
+    ? `${MENU_COPY.restDayTitle}。${MENU_COPY.restDayReason}`
+    : muscles.length === 0
       ? '実施可能な部位がありません。痛みフラグや器具設定を確認してください'
-      : `今日の対象: ${muscleSummary}。回復状況と使える時間から構成しました`
+      : isShortened
+        ? MENU_COPY.shortenedNotice(estimated, recoveringListLabel(excludedRecovering))
+        : `今日の対象: ${muscleSummary}。回復状況と使える時間から構成しました`
 
   return {
     items: adjusted,
     muscles,
     rationale,
     warnings,
-    estimatedMinutes: estimatedMinutes(adjusted),
+    estimatedMinutes: estimated,
+    requestedMinutes: request.availableMinutes,
+    isShortened,
+    excludedRecoveringMuscles: excludedRecovering,
+    isRestDay,
   }
 }
 

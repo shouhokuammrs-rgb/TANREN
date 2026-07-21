@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { INITIAL_EXERCISES } from '../constants/exercises'
 import type { MuscleGroup } from '../db/types'
-import { alternativesFor, generateMenu, prescriptionFor } from './menu'
+import {
+  alternativesFor,
+  generateMenu,
+  isShortenedMenu,
+  prescriptionFor,
+  recoveringListLabel,
+} from './menu'
 import { muscleFreshnessMap } from './freshness'
 import { selectMuscles } from './selection'
 import type { EngineContext, MenuRequest, MuscleStimulus } from './types'
@@ -81,7 +87,7 @@ describe('generateMenu: 時間15分(境界値)', () => {
   })
 })
 
-describe('generateMenu: 全部位疲労時(境界値)', () => {
+describe('generateMenu: 全部位疲労時(DEC-006: 休養日提案)', () => {
   const ctx = makeCtx({ muscleStimuli: allFatiguedStimuli() })
   const menu = generateMenu(ctx, {
     availableMinutes: 45,
@@ -89,9 +95,70 @@ describe('generateMenu: 全部位疲労時(境界値)', () => {
     condition: 'normal',
   })
 
-  it('それでもメニューを返し、警告が付く', () => {
-    expect(menu.items.length).toBeGreaterThan(0)
-    expect(menu.warnings.length).toBeGreaterThan(0)
+  it('繰り上げフォールバックせず、空メニュー+休養日フラグを返す', () => {
+    expect(menu.isRestDay).toBe(true)
+    expect(menu.items).toHaveLength(0)
+    expect(menu.muscles).toHaveLength(0)
+    expect(menu.rationale).toContain('休養日')
+  })
+})
+
+describe('generateMenu: 回復優先の短縮(DEC-006)', () => {
+  // chest以外を24時間前に高ボリューム刺激(全て100%未満)。60分希望=3部位要求だが100%はchestのみ
+  const ctx = makeCtx({
+    muscleStimuli: ALL_MUSCLES.filter((m) => m !== 'chest').map((muscle) => ({
+      muscle,
+      at: hoursAgo(24),
+      setCount: 8,
+    })),
+  })
+  const menu = generateMenu(ctx, {
+    availableMinutes: 60,
+    targetMuscles: [],
+    condition: 'normal',
+  })
+
+  it('回復中部位を含めず、短縮フラグと除外リストが立つ', () => {
+    expect(menu.muscles).toEqual(['chest'])
+    expect(menu.isShortened).toBe(true)
+    expect(menu.isRestDay).toBe(false)
+    expect(menu.requestedMinutes).toBe(60)
+    expect(menu.estimatedMinutes).toBeLessThan(60 * 0.8)
+    expect(menu.excludedRecoveringMuscles.map((e) => e.muscle)).not.toContain('chest')
+    expect(menu.excludedRecoveringMuscles).toHaveLength(ALL_MUSCLES.length - 1)
+  })
+
+  it('説明文は指定文言「今日は◯分のメニューになります。理由:…が回復中のため」', () => {
+    expect(menu.rationale).toBe(
+      `今日は${menu.estimatedMinutes}分のメニューになります。理由:${recoveringListLabel(menu.excludedRecoveringMuscles)}が回復中のため`,
+    )
+  })
+
+  it('100%部位のみで時間充足なら短縮通知なし(回帰)', () => {
+    const fullMenu = generateMenu(makeCtx(), {
+      availableMinutes: 45,
+      targetMuscles: [],
+      condition: 'normal',
+    })
+    expect(fullMenu.isShortened).toBe(false)
+    expect(fullMenu.excludedRecoveringMuscles).toEqual([])
+    expect(fullMenu.rationale).toContain('今日の対象')
+  })
+})
+
+describe('recoveringListLabel / isShortenedMenu(DEC-006)', () => {
+  const ex = (muscles: MuscleGroup[]) => muscles.map((muscle) => ({ muscle, freshness: 50 }))
+
+  it('部位名の列挙は3件まで「と」区切り、4件以上は先頭3件+「ほか」', () => {
+    expect(recoveringListLabel(ex(['chest', 'back']))).toBe('胸と背中')
+    expect(recoveringListLabel(ex(['chest', 'back', 'legs']))).toBe('胸と背中と脚')
+    expect(recoveringListLabel(ex(['chest', 'back', 'legs', 'arms']))).toBe('胸、背中、脚ほか')
+  })
+
+  it('短縮判定は希望時間×SHORTENED_NOTICE_RATIO(0.8)の境界で切り替わる', () => {
+    expect(isShortenedMenu(36, 45, true)).toBe(false) // ちょうど0.8倍は短縮扱いしない
+    expect(isShortenedMenu(35, 45, true)).toBe(true)
+    expect(isShortenedMenu(10, 45, false)).toBe(false) // 除外部位がなければ短縮通知なし
   })
 })
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
+import FreshnessBodyMap from '../components/FreshnessBodyMap'
 import Modal from '../components/Modal'
 import { FRESHNESS_BUCKETS, freshnessBucketOf } from '../constants/charts'
 import {
@@ -333,6 +334,34 @@ export default function WorkoutPage() {
 
   // phase.kind === 'menu'
   const { ctx, menu, request } = phase
+
+  // DEC-006: 全部位が回復中→メニューの代わりに休養日提案ビュー
+  if (menu.isRestDay) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-bold">{MENU_COPY.title}</h1>
+        <div className="rounded-card bg-ember-tint border border-line-ember p-5 text-center">
+          <p className="text-3xl">🌙</p>
+          <p className="mt-2 text-lg font-bold">{MENU_COPY.restDayTitle}</p>
+          <p className="mt-1 text-sm text-ink-mid">{MENU_COPY.restDayReason}</p>
+        </div>
+        {freshness && (
+          <div className="card-ember p-4">
+            <FreshnessBodyMap freshness={freshness} />
+          </div>
+        )}
+        <p className="text-xs text-ink-dim">💡 {MENU_COPY.restDayHint}</p>
+        <button
+          type="button"
+          onClick={resetHearing}
+          className="h-12 w-full rounded-card bg-line-ember/40 text-sm text-ink-mid active:bg-line-ember"
+        >
+          {MENU_COPY.restDayBack}
+        </button>
+      </section>
+    )
+  }
+
   const exerciseById = new Map(ctx.exercises.map((e) => [e.id!, e]))
   const menuExerciseIds = menu.items.map((i) => i.exerciseId)
 
@@ -371,7 +400,14 @@ export default function WorkoutPage() {
         <span className="text-sm text-ink-mid">{MENU_COPY.estimated(menu.estimatedMinutes)}</span>
       </div>
 
-      <p className="text-xs text-ink-mid">{menu.rationale}</p>
+      {/* DEC-006: 短縮通知は中立トーン(回復は計画の一部。エラー風にしない) */}
+      {menu.isShortened ? (
+        <p className="rounded-chip border border-molten/40 bg-ember-tint p-2.5 text-xs text-ink-mid">
+          🌙 {menu.rationale}
+        </p>
+      ) : (
+        <p className="text-xs text-ink-mid">{menu.rationale}</p>
+      )}
       {!calibNoteShown && menu.items.length > 0 && (
         <p className="rounded-chip bg-line-ember/40 p-2 text-xs text-ink-mid">
           💡 {STRENGTH_COPY.calibrationNote}

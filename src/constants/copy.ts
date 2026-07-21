@@ -166,6 +166,13 @@ export const MENU_COPY = {
   addTitle: '追加する種目を選ぶ',
   noAlternatives: '代替候補がありません',
   emptyMenu: 'メニューが空です。種目を追加するか生成し直してください',
+  // DEC-006: 回復優先の短縮通知と休養日提案(エラー風にしない・回復は計画の一部)
+  shortenedNotice: (minutes: number, muscleList: string) =>
+    `今日は${minutes}分のメニューになります。理由:${muscleList}が回復中のため`,
+  restDayTitle: '今日は休養日がおすすめです',
+  restDayReason: '全部位が回復中のため',
+  restDayHint: 'それでも動きたい日は「部位を選ぶ」で指定できます(軽め推奨)',
+  restDayBack: 'ヒヤリングに戻る',
 }
 
 export const WORKOUT_COPY = {
