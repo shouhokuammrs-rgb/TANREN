@@ -21,8 +21,12 @@ import {
   SETTINGS_COPY,
   STORAGE_COPY,
   STRENGTH_COPY,
+  TUNING_COPY,
   formatDate,
 } from '../constants/copy'
+import { ENGINE_TUNING_RANGES } from '../constants/engine'
+import type { EngineTuning } from '../engine/types'
+import { ENGINE_TUNING_SETTING_KEY, sanitizeEngineTuning } from '../utils/engineTuning'
 import {
   exportBackup,
   importBackup,
@@ -147,6 +151,8 @@ export default function SettingsPage() {
         ))}
       </ul>
 
+      <EngineTuningSection />
+
       <CloudBackupSection />
 
       <DataSection />
@@ -193,6 +199,97 @@ function GoalSection() {
             </Link>
           )}
         </div>
+      </div>
+    </>
+  )
+}
+
+const TUNING_KEYS = Object.keys(ENGINE_TUNING_RANGES) as (keyof EngineTuning)[]
+
+/**
+ * エンジン上級者設定(DEC-010)。折りたたみデフォルト閉で誤操作を防ぐ。
+ * 保存はlocalStorage1キー(engineTuning)。範囲外はclampして保存する
+ */
+function EngineTuningSection() {
+  const [open, setOpen] = useState(false)
+  const [tuning, setTuning] = useLocalSetting<EngineTuning>(ENGINE_TUNING_SETTING_KEY, {})
+  // 入力途中のテキストを保持し、blur時にclamp+保存する
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+
+  const commit = (key: keyof EngineTuning, raw: string) => {
+    setDrafts((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+    const value = Number(raw)
+    if (raw.trim() === '' || !Number.isFinite(value)) {
+      // 空・不正入力はその項目だけデフォルトに戻す
+      const next = { ...tuning }
+      delete next[key]
+      setTuning(next)
+      return
+    }
+    setTuning(sanitizeEngineTuning({ ...tuning, [key]: value }))
+  }
+
+  return (
+    <>
+      <h2 className="mt-6 text-sm font-semibold text-ink-mid">🔧 {TUNING_COPY.section}</h2>
+      <div className="mt-2 rounded-card bg-ember-tint border border-line-ember">
+        <button
+          type="button"
+          className="flex h-12 w-full items-center justify-between px-4 text-sm text-ink-mid"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? TUNING_COPY.toggleClose : TUNING_COPY.toggleOpen}
+          <span>{open ? '▲' : '▼'}</span>
+        </button>
+        {open && (
+          <div className="space-y-4 px-4 pb-4">
+            <p className="text-xs text-ink-dim">{TUNING_COPY.hint}</p>
+            {TUNING_KEYS.map((key) => {
+              const range = ENGINE_TUNING_RANGES[key]
+              const item = TUNING_COPY.items[key]
+              return (
+                <label key={key} className="block text-xs text-ink-mid">
+                  <span className="flex items-baseline justify-between">
+                    <span className="font-semibold">{item.label}</span>
+                    <span className="text-[10px] text-ink-dim">
+                      {TUNING_COPY.rangeLabel(range.min, range.max, item.unit)}・
+                      {TUNING_COPY.defaultLabel(range.default, item.unit)}
+                    </span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={range.min}
+                    max={range.max}
+                    value={drafts[key] ?? String(tuning[key] ?? range.default)}
+                    onChange={(e) => setDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                    onBlur={(e) => commit(key, e.target.value)}
+                    className={`mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base ${
+                      tuning[key] !== undefined ? 'text-molten-bright font-bold' : 'text-ink'
+                    }`}
+                  />
+                  <span className="mt-0.5 block text-[10px] leading-relaxed text-ink-dim">
+                    {item.description}
+                  </span>
+                </label>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => {
+                setTuning({})
+                setDrafts({})
+              }}
+              className="h-12 w-full rounded-card border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
+            >
+              ↺ {TUNING_COPY.reset}
+            </button>
+          </div>
+        )}
       </div>
     </>
   )

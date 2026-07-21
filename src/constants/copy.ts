@@ -173,6 +173,9 @@ export const MENU_COPY = {
   restDayReason: '全部位が回復中のため',
   restDayHint: 'それでも動きたい日は「部位を選ぶ」で指定できます(軽め推奨)',
   restDayBack: 'ヒヤリングに戻る',
+  // DEC-010 §3-1: 最短で回復する部位1つの予測(24h未満は時間表示・以上は「明日以降」)
+  recoverySoon: (label: string, hours: number) => `${label}はあと約${hours}時間で回復します`,
+  recoveryTomorrow: (label: string) => `${label}は明日以降に回復します`,
 }
 
 export const WORKOUT_COPY = {
@@ -283,6 +286,44 @@ export const SETTINGS_COPY = {
   injuryResolve: '解除',
   injuryReportedAt: (dateLabel: string) => `${dateLabel} 登録`,
 }
+
+// DEC-010: エンジン上級者設定(折りたたみ・誤操作防止)
+export const TUNING_COPY = {
+  section: '上級者設定(エンジン調整)',
+  toggleOpen: '調整項目を表示',
+  toggleClose: '閉じる',
+  hint: 'メニュー生成エンジンの調整値。通常は変更不要です。端末ローカル保存のため、クラウドバックアップ(DEC-008)の対象外です',
+  reset: 'デフォルトに戻す',
+  rangeLabel: (min: number, max: number, unit: string) => `${min}〜${max}${unit}`,
+  defaultLabel: (value: number, unit: string) => `デフォルト ${value}${unit}`,
+  items: {
+    largeRecoveryHours: {
+      label: '大筋群の基準回復時間',
+      unit: '時間',
+      description: '胸・背中・脚・尻の回復にかかる時間。短くすると同じ部位を高頻度で回せます',
+    },
+    smallRecoveryHours: {
+      label: '小筋群の基準回復時間',
+      unit: '時間',
+      description: '肩・腕・腹の回復にかかる時間',
+    },
+    freshnessReadyThreshold: {
+      label: 'おまかせ選択の回復下限',
+      unit: '%',
+      description: '回復下限を95%にすると、ほぼ回復した部位もおまかせに含まれます',
+    },
+    slackJumpSteps: {
+      label: '「余裕あり」時の増量ステップ数',
+      unit: '段',
+      description: '最終セットに余裕ありを付けたとき、次回に上げる重量の段数',
+    },
+    defaultSets: {
+      label: '基本セット数',
+      unit: 'セット',
+      description: '1種目あたりの標準セット数。時間が許す範囲でメニューに反映されます',
+    },
+  },
+} as const
 
 export const GOAL_TYPE_LABELS = {
   lean: '細マッチョ',
