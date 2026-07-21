@@ -335,6 +335,16 @@ export default function WorkoutPage() {
   // phase.kind === 'menu'
   const { ctx, menu, request } = phase
 
+  // DEC-010 §3-1: 最短で回復する部位1つの予測行(時間単位に切り上げ)
+  const recoveryForecast = menu.soonestRecovery
+    ? menu.soonestRecovery.hoursUntilRecovered < 24
+      ? MENU_COPY.recoverySoon(
+          MUSCLE_GROUP_LABELS[menu.soonestRecovery.muscle],
+          Math.max(1, Math.ceil(menu.soonestRecovery.hoursUntilRecovered)),
+        )
+      : MENU_COPY.recoveryTomorrow(MUSCLE_GROUP_LABELS[menu.soonestRecovery.muscle])
+    : null
+
   // DEC-006: 全部位が回復中→メニューの代わりに休養日提案ビュー
   if (menu.isRestDay) {
     return (
@@ -344,6 +354,7 @@ export default function WorkoutPage() {
           <p className="text-3xl">🌙</p>
           <p className="mt-2 text-lg font-bold">{MENU_COPY.restDayTitle}</p>
           <p className="mt-1 text-sm text-ink-mid">{MENU_COPY.restDayReason}</p>
+          {recoveryForecast && <p className="mt-2 text-xs text-achieved">{recoveryForecast}</p>}
         </div>
         {freshness && (
           <div className="card-ember p-4">
@@ -402,9 +413,15 @@ export default function WorkoutPage() {
 
       {/* DEC-006: 短縮通知は中立トーン(回復は計画の一部。エラー風にしない) */}
       {menu.isShortened ? (
-        <p className="rounded-chip border border-molten/40 bg-ember-tint p-2.5 text-xs text-ink-mid">
-          🌙 {menu.rationale}
-        </p>
+        <>
+          <div className="rounded-chip border border-molten/40 bg-ember-tint p-2.5 text-xs text-ink-mid">
+            🌙 {menu.rationale}
+            {/* DEC-010 §3-1: 最短回復部位の予測を1行併記 */}
+            {recoveryForecast && <p className="mt-1 text-achieved">{recoveryForecast}</p>}
+          </div>
+          {/* DEC-010 §3-2: 短縮時も対象行を併記する */}
+          {menu.muscleSummary && <p className="text-xs text-ink-mid">{menu.muscleSummary}</p>}
+        </>
       ) : (
         <p className="text-xs text-ink-mid">{menu.rationale}</p>
       )}

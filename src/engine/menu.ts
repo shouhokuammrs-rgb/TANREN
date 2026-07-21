@@ -12,7 +12,7 @@ import {
 } from '../constants/engine'
 import { MENU_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import type { Condition, Exercise, MuscleGroup } from '../db/types'
-import { muscleFreshnessMap } from './freshness'
+import { effectiveRecoveryHours, hoursUntilRecovered, muscleFreshnessMap } from './freshness'
 import { intervalSecFor } from './interval'
 import { snapToSteps, suggestWeightReps } from './progression'
 import {
@@ -41,9 +41,11 @@ export function prescriptionFor(exercise: Exercise, ctx: EngineContext): Prescri
     ctx.dumbbellStepsKg,
     ctx.patternBase1Rm ?? {},
     ctx.performanceHistory?.get(exercise.id!) ?? [],
+    ctx.tuning,
   )
   return {
-    sets: DEFAULT_SETS,
+    // 基本セット数は上級者設定(DEC-010)で上書き可能
+    sets: ctx.tuning?.defaultSets ?? DEFAULT_SETS,
     suggestedReps: reps,
     suggestedWeightKg: weightKg,
     intervalSec: intervalSecFor(reps, exercise.movementType),
@@ -158,17 +160,32 @@ export function generateMenu(ctx: EngineContext, request: MenuRequest): Generate
   const estimated = estimatedMinutes(adjusted)
   const isShortened = !isRestDay && isShortenedMenu(estimated, request.availableMinutes, excludedRecovering.length > 0)
 
-  // 説明文(DEC-006: 休養日・短縮時は指定文言を優先)
-  const muscleSummary = muscles
+  // 説明文(DEC-006: 休養日・短縮時は指定文言を優先)。
+  // 対象行はrationaleと分離して返し、短縮通知時も併記できるようにする(DEC-010 §3-2)
+  const muscleParts = muscles
     .map((m) => `${MUSCLE_GROUP_LABELS[m]}(回復${freshness[m]}%)`)
     .join('・')
+  const muscleSummary = muscles.length > 0 ? `今日の対象: ${muscleParts}` : ''
   const rationale = isRestDay
     ? `${MENU_COPY.restDayTitle}。${MENU_COPY.restDayReason}`
     : muscles.length === 0
       ? '実施可能な部位がありません。痛みフラグや器具設定を確認してください'
       : isShortened
         ? MENU_COPY.shortenedNotice(estimated, recoveringListLabel(excludedRecovering))
-        : `今日の対象: ${muscleSummary}。回復状況と使える時間から構成しました`
+        : `${muscleSummary}。回復状況と使える時間から構成しました`
+
+  // 回復予測(DEC-010 §3-1): 除外部位のうち最短で100%に到達するもの。tuningの回復時間を反映
+  const stimulusByMuscle = new Map(ctx.muscleStimuli.map((s) => [s.muscle, s]))
+  let soonestRecovery: GeneratedMenu['soonestRecovery']
+  for (const e of excludedRecovering) {
+    const hours = hoursUntilRecovered(
+      e.freshness,
+      effectiveRecoveryHours(e.muscle, stimulusByMuscle.get(e.muscle)?.setCount ?? 0, ctx.tuning),
+    )
+    if (!soonestRecovery || hours < soonestRecovery.hoursUntilRecovered) {
+      soonestRecovery = { muscle: e.muscle, hoursUntilRecovered: hours }
+    }
+  }
 
   return {
     items: adjusted,
@@ -180,6 +197,8 @@ export function generateMenu(ctx: EngineContext, request: MenuRequest): Generate
     isShortened,
     excludedRecoveringMuscles: excludedRecovering,
     isRestDay,
+    muscleSummary,
+    soonestRecovery,
   }
 }
 

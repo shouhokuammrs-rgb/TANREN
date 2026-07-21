@@ -146,6 +146,59 @@ describe('generateMenu: 回復優先の短縮(DEC-006)', () => {
   })
 })
 
+describe('generateMenu: 上級者設定(DEC-010)', () => {
+  it('基本セット数4 → 生成メニューの全種目がsets=4', () => {
+    const menu = generateMenu(makeCtx({ tuning: { defaultSets: 4 } }), {
+      availableMinutes: 90,
+      targetMuscles: [],
+      condition: 'normal',
+    })
+    expect(menu.items.length).toBeGreaterThan(0)
+    expect(menu.items.every((i) => i.sets === 4)).toBe(true)
+  })
+
+  it('tuning未指定は従来と同一挙動(回帰: sets=3)', () => {
+    const menu = generateMenu(makeCtx(), {
+      availableMinutes: 90,
+      targetMuscles: [],
+      condition: 'normal',
+    })
+    expect(menu.items.every((i) => i.sets === 3)).toBe(true)
+  })
+
+  it('回復予測(§3-1): soonestRecoveryは最短部位を返し、回復時間オーバーライドを反映する', () => {
+    // backを36h前・中ボリューム(係数1)で刺激 → デフォルト72hでは50%・残り36h
+    const stimuli: MuscleStimulus[] = [{ muscle: 'back', at: hoursAgo(36), setCount: 8 }]
+    const request: MenuRequest = { availableMinutes: 60, targetMuscles: [], condition: 'normal' }
+
+    const menu = generateMenu(makeCtx({ muscleStimuli: stimuli }), request)
+    expect(menu.soonestRecovery?.muscle).toBe('back')
+    expect(menu.soonestRecovery?.hoursUntilRecovered).toBeCloseTo(36, 5)
+
+    // 回復時間48hに短縮 → 36h経過で75%・残り12h(freshnessと予測の両方に反映)
+    const tuned = generateMenu(
+      makeCtx({ muscleStimuli: stimuli, tuning: { largeRecoveryHours: 48 } }),
+      request,
+    )
+    expect(tuned.excludedRecoveringMuscles.find((e) => e.muscle === 'back')?.freshness).toBe(75)
+    expect(tuned.soonestRecovery?.hoursUntilRecovered).toBeCloseTo(12, 5)
+  })
+
+  it('対象行の分離(§3-2): 短縮時もmuscleSummaryで「今日の対象」を参照できる', () => {
+    const ctx = makeCtx({
+      muscleStimuli: ALL_MUSCLES.filter((m) => m !== 'chest').map((muscle) => ({
+        muscle,
+        at: hoursAgo(24),
+        setCount: 8,
+      })),
+    })
+    const menu = generateMenu(ctx, { availableMinutes: 60, targetMuscles: [], condition: 'normal' })
+    expect(menu.isShortened).toBe(true)
+    expect(menu.rationale).toContain('回復中のため')
+    expect(menu.muscleSummary).toBe('今日の対象: 胸(回復100%)')
+  })
+})
+
 describe('recoveringListLabel / isShortenedMenu(DEC-006)', () => {
   const ex = (muscles: MuscleGroup[]) => muscles.map((muscle) => ({ muscle, freshness: 50 }))
 

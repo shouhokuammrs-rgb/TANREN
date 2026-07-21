@@ -8,7 +8,7 @@ import {
 } from '../constants/engine'
 import type { Exercise, MovementPattern } from '../db/types'
 import { calibratedWeightKg } from './calibration'
-import type { ExerciseHistoryEntry } from './types'
+import type { EngineTuning, ExerciseHistoryEntry } from './types'
 
 /**
  * 希望重量を器具設定の刻みにスナップする。
@@ -73,15 +73,19 @@ function stepIndexOf(weightKg: number, sortedSteps: number[]): number {
 }
 
 /**
- * 直近から遡って「2ステップ以上の増量」が何回連続しているか(ISS-013b暴走防止)。
- * chainは新しい順のセッション重量列
+ * 直近から遡って「jumpSteps以上の増量」が何回連続しているか(ISS-013b暴走防止)。
+ * chainは新しい順のセッション重量列。jumpStepsは上級者設定(DEC-010)で上書き可能
  */
-function consecutiveDoubleJumps(chainWeightsKg: number[], sortedSteps: number[]): number {
+function consecutiveDoubleJumps(
+  chainWeightsKg: number[],
+  sortedSteps: number[],
+  jumpSteps: number = SLACK_JUMP_STEPS,
+): number {
   let count = 0
   for (let i = 0; i + 1 < chainWeightsKg.length; i++) {
     const diff =
       stepIndexOf(chainWeightsKg[i], sortedSteps) - stepIndexOf(chainWeightsKg[i + 1], sortedSteps)
-    if (diff >= SLACK_JUMP_STEPS) count++
+    if (diff >= jumpSteps) count++
     else break
   }
   return count
@@ -103,6 +107,7 @@ export function suggestWeightReps(
   stepsKg: number[],
   patternBase1Rm: Partial<Record<MovementPattern, number>> = {},
   olderEntries: ExerciseHistoryEntry[] = [],
+  tuning?: EngineTuning,
 ): WeightRepsSuggestion {
   const usesDumbbell = exercise.requiredEquipment.includes('dumbbell')
   const { repRangeMin, repRangeMax } = exercise
@@ -148,9 +153,12 @@ export function suggestWeightReps(
         .map((e) => e.sets.find((s) => s.weightKg !== undefined)?.weightKg)
         .filter((w): w is number => w !== undefined),
     ]
+    // 増量ステップ数は上級者設定(DEC-010)で上書き可能
+    const slackJumpSteps = tuning?.slackJumpSteps ?? SLACK_JUMP_STEPS
     const jumpSteps =
-      lastSetSlack && consecutiveDoubleJumps(pastWeights, sorted) < MAX_CONSECUTIVE_DOUBLE_JUMPS
-        ? SLACK_JUMP_STEPS
+      lastSetSlack &&
+      consecutiveDoubleJumps(pastWeights, sorted, slackJumpSteps) < MAX_CONSECUTIVE_DOUBLE_JUMPS
+        ? slackJumpSteps
         : 1
     let nextWeight = currentWeight
     for (let i = 0; i < jumpSteps; i++) {

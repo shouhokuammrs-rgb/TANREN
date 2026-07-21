@@ -216,6 +216,29 @@ describe('ダブルプログレッション', () => {
     })
   })
 
+  it('上級者設定(DEC-010): 増量ステップ1なら最終セット余裕ありでも1ステップ', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[1].hadSlack = true
+    expect(
+      suggestWeightReps(dumbbellPress, last, 58, STEPS, {}, [], { slackJumpSteps: 1 }),
+    ).toEqual({ weightKg: 13, reps: 6 })
+  })
+
+  it('上級者設定(DEC-010): 増量ステップ3なら3段上げる', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[1].hadSlack = true
+    // 11.5 → 13 → 14.5 → 16
+    expect(
+      suggestWeightReps(dumbbellPress, last, 58, STEPS, {}, [], { slackJumpSteps: 3 }),
+    ).toEqual({ weightKg: 16, reps: 6 })
+  })
+
   it('snapToSteps: nearestは最寄りの刻み', () => {
     expect(snapToSteps(12.77, STEPS, 'nearest')).toBe(13)
     expect(snapToSteps(12.2, STEPS, 'nearest')).toBe(11.5)
