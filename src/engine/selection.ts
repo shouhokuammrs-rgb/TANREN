@@ -1,6 +1,7 @@
 // 部位決定(F-04-2)と種目選択(F-04-3)
 
 import {
+  FRESHNESS_READY_THRESHOLD,
   FRESHNESS_WARN_THRESHOLD,
   MAX_EXERCISES_PER_MUSCLE,
   MUSCLES_BY_TIME,
@@ -17,16 +18,28 @@ export function muscleCountForTime(availableMinutes: number): number {
   return entry ? entry.muscleCount : 1
 }
 
+/** おまかせで除外した回復中部位(UIの短縮理由表示に使う・DEC-006) */
+export interface ExcludedRecoveringMuscle {
+  muscle: MuscleGroup
+  freshness: number
+}
+
 export interface MuscleSelection {
   muscles: MuscleGroup[]
   warnings: string[]
+  /** おまかせで除外した回復中(フレッシュネス100%未満)の部位。回復が進んでいる順 */
+  excludedRecovering: ExcludedRecoveringMuscle[]
+  /** おまかせで全部位が回復中→休養日を提案(DEC-006) */
+  isRestDay: boolean
 }
 
 /**
  * 対象部位を決める。
  * - 痛みフラグの部位は指定・おまかせ問わず除外(警告を出す)
- * - おまかせ: フレッシュネス降順で時間に応じた部位数を選ぶ。全部位が疲労時も最善の部位を選び警告
- * - 指定: そのまま採用しつつ、フレッシュネス不足には警告
+ * - おまかせ(DEC-006: 時間希望より回復を優先): 完全回復(READY閾値以上)の部位のみを
+ *   優先度順で選ぶ。要求部位数に満たなくても回復中部位で繰り上げ補充はしない。
+ *   全部位が回復中なら休養日を提案する(isRestDay)
+ * - 指定: そのまま採用しつつ、フレッシュネス不足には警告(ユーザー判断を尊重)
  */
 export function selectMuscles(
   ctx: EngineContext,
@@ -53,7 +66,7 @@ export function selectMuscles(
         )
       }
     }
-    return { muscles: usable, warnings }
+    return { muscles: usable, warnings, excludedRecovering: [], isRestDay: false }
   }
 
   // おまかせ: 優先度スコア(F-03)×フレッシュネス の降順(優先度未設定は全部位1.0)
@@ -65,16 +78,20 @@ export function selectMuscles(
     .sort((a, b) => combined(b) - combined(a))
   const count = muscleCountForTime(availableMinutes)
 
-  const fresh = candidates.filter((m) => freshness[m] >= FRESHNESS_WARN_THRESHOLD)
-  let selected = fresh.slice(0, count)
-  if (selected.length === 0 && candidates.length > 0) {
-    // 全部位疲労: それでも最もフレッシュな部位を選び、警告を付ける
-    selected = candidates.slice(0, 1)
-    warnings.push(
-      '全部位が回復途中です。最も回復している部位を軽めに刺激するメニューにしました',
-    )
+  const fresh = candidates.filter((m) => freshness[m] >= FRESHNESS_READY_THRESHOLD)
+  const selected = fresh.slice(0, count)
+  const excludedRecovering = candidates
+    .filter((m) => freshness[m] < FRESHNESS_READY_THRESHOLD)
+    .map((m) => ({ muscle: m, freshness: freshness[m] }))
+    .sort((a, b) => b.freshness - a.freshness)
+
+  return {
+    muscles: selected,
+    warnings,
+    excludedRecovering,
+    // 選べる部位がゼロ=全部位回復中(候補自体がない場合は休養ではなく設定の問題なので除く)
+    isRestDay: selected.length === 0 && candidates.length > 0,
   }
-  return { muscles: selected, warnings }
 }
 
 /** 器具設定(ダンベル有無・ベンチ角度範囲)で実施可能かを判定する */

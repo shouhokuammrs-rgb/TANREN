@@ -1,7 +1,16 @@
 // メニュー生成エンジンの調整用定数(要件F-04)。Eiichiの体感フィードバックで頻繁に調整が入る前提
 
-/** この値未満のフレッシュネス(%)の部位は「おまかせ」で原則選ばない。指定時は警告を出す */
+/** 部位指定モードで、この値未満のフレッシュネス(%)の部位に警告を出す(ユーザー判断は尊重) */
 export const FRESHNESS_WARN_THRESHOLD = 50
+
+/**
+ * おまかせ選択の対象になるフレッシュネス(%)の下限(DEC-006: 時間希望より回復を優先)。
+ * 100=完全回復のみ。体感フィードバックで調整する前提(例: 95に緩めると端数回復を許容)
+ */
+export const FRESHNESS_READY_THRESHOLD = 100
+
+/** 推定時間が希望時間×この係数を下回ったら短縮通知を出す(DEC-006) */
+export const SHORTENED_NOTICE_RATIO = 0.8
 
 /** 使える時間(分)→ 同時に狙う部位数 */
 export const MUSCLES_BY_TIME: { maxMinutes: number; muscleCount: number }[] = [
