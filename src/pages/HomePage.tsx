@@ -1,13 +1,17 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
+import BodySvg from '../components/BodySvg'
 import FreshnessBodyMap from '../components/FreshnessBodyMap'
+import { growthPaint } from '../components/growthPaint'
 import Modal from '../components/Modal'
-import { MUSCLE_CHART_ORDER } from '../constants/charts'
+import { MUSCLE_CHART_ORDER, RECOVERY_SLOT_COLORS } from '../constants/charts'
 import {
   APP_NAME,
   DASHBOARD_COPY,
+  GROWTH_COPY,
   HOME_COPY,
+  MUSCLE_GROUP_LABELS,
   SETTINGS_COPY,
   SETUP_COPY,
   STORAGE_COPY,
@@ -23,10 +27,19 @@ import {
   listBodyStats,
   loadEngineContext,
   loadGoal,
+  loadGrowthSessions,
   setSetting,
   weeklyVolumeHistory,
 } from '../db/queries'
-import { muscleFreshnessMap } from '../engine'
+import type { MuscleGroup } from '../db/types'
+import {
+  effectiveRecoveryHours,
+  hoursUntilRecovered,
+  muscleFreshnessMap,
+  muscleGrowthMap,
+  type EngineContext,
+  type MuscleGrowth,
+} from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 
 // Rechartsは重いので遅延チャンクに分離(初期表示を軽く保つ)
@@ -55,8 +68,15 @@ export default function HomePage() {
     () => (chartMode === 'week' ? weeklyVolumeHistory() : dailyVolumeHistory()),
     [chartMode],
   )
-  const freshness = useLiveQuery(async () => muscleFreshnessMap(await loadEngineContext()))
+  const engineCtx = useLiveQuery(() => loadEngineContext())
+  const freshness = engineCtx ? muscleFreshnessMap(engineCtx) : undefined
   const bodyStats = useLiveQuery(listBodyStats)
+  // DEC-011: 成長カード(ミニ人体図・30日固定)
+  const growthSessions = useLiveQuery(() => loadGrowthSessions())
+  const growth30 = useMemo(
+    () => muscleGrowthMap(growthSessions ?? [], 30, new Date()),
+    [growthSessions],
+  )
 
   const volumeData = volumeHistory?.map((p) => {
     const row: Record<string, number | string> = { label: p.weekLabel }
@@ -128,7 +148,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* CTA(§5: moltenピル+グロー) */}
+      {/* 成長カード(DEC-011/4b): ミニ人体図+上位3部位。タップで成長ビューへ */}
+      <GrowthCard growth={growth30} />
+
+      {/* CTA(§5: moltenピル+グロー)。成長カード・回復スロットより視覚優先 */}
       <Link
         to="/workout"
         className="pill-molten flex h-16 w-full items-center justify-center text-[17px]"
@@ -207,8 +230,106 @@ export default function HomePage() {
         📷 {DASHBOARD_COPY.photos}
       </Link>
 
+      {/* 回復予測スロット(DEC-011/4b): 最下部固定。成長=熱色と混同しない鈍色表現 */}
+      {engineCtx && freshness && <RecoveryForecastSlot ctx={engineCtx} freshness={freshness} />}
+
       {weightModal && <WeightModal onClose={() => setWeightModal(false)} />}
     </section>
+  )
+}
+
+const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
+
+/** 成長カード(DEC-011/4b): ミニ人体図(FRONT・30日固定)+上位3部位の変化率要約 */
+function GrowthCard({ growth }: { growth: Record<MuscleGroup, MuscleGrowth> }) {
+  const top3 = ALL_MUSCLES.filter((m) => growth[m].hasEnoughData)
+    .sort((a, b) => (growth[b].growthRate ?? 0) - (growth[a].growthRate ?? 0))
+    .slice(0, 3)
+
+  return (
+    <Link to="/growth" className="card-ember flex gap-4 p-4">
+      <BodySvg side="front" className="h-28 w-auto shrink-0" paint={(m) => growthPaint(growth[m])} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <span className="label-mono text-[10px] text-molten-bright">{GROWTH_COPY.cardTitle}</span>
+          <span className="label-mono text-[11px] tracking-normal text-accent-dim">
+            {GROWTH_COPY.cardDetail}
+          </span>
+        </div>
+        {top3.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            {top3.map((m) => (
+              <div key={m} className="flex items-baseline justify-between">
+                <span className="text-[13px] font-bold text-ink">{MUSCLE_GROUP_LABELS[m]}</span>
+                <span className="label-mono text-sm font-bold tracking-normal text-molten-bright">
+                  {GROWTH_COPY.deltaPct(growth[m].growthRate ?? 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs leading-relaxed text-ink-dim">{GROWTH_COPY.cardEmpty}</p>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+/** 回復予測スロット(DEC-011/4b)。DEC-010のhoursUntilRecoveredを再利用(tuning反映込み) */
+function RecoveryForecastSlot({
+  ctx,
+  freshness,
+}: {
+  ctx: EngineContext
+  freshness: Record<MuscleGroup, number>
+}) {
+  const recovering = ALL_MUSCLES.filter((m) => freshness[m] < 100)
+    .map((m) => {
+      const setCount = ctx.muscleStimuli.find((s) => s.muscle === m)?.setCount ?? 0
+      return {
+        muscle: m,
+        freshness: freshness[m],
+        hours: hoursUntilRecovered(freshness[m], effectiveRecoveryHours(m, setCount, ctx.tuning)),
+      }
+    })
+    .sort((a, b) => a.hours - b.hours)
+    .slice(0, 3)
+
+  return (
+    <div className="rounded-card border border-line-ember/60 p-4">
+      <p className="label-mono text-[10px] text-ink-dim">{GROWTH_COPY.recoveryTitle}</p>
+      {recovering.length === 0 ? (
+        <p className="mt-2 text-xs" style={{ color: RECOVERY_SLOT_COLORS.recovered }}>
+          {GROWTH_COPY.recoveryAllReady}
+        </p>
+      ) : (
+        <div className="mt-2.5 flex flex-col gap-2.5">
+          {recovering.map((r) => (
+            <div key={r.muscle} className="flex items-center justify-between">
+              <span className="text-[13px] font-bold text-ink-mid">
+                {MUSCLE_GROUP_LABELS[r.muscle]}
+              </span>
+              <span className="flex items-center gap-2.5">
+                <span className="h-1.5 w-28 overflow-hidden rounded-pill bg-line-ember/60">
+                  <span
+                    className="block h-full"
+                    style={{ width: `${r.freshness}%`, background: RECOVERY_SLOT_COLORS.bar }}
+                  />
+                </span>
+                <span
+                  className="label-mono w-20 text-right text-xs tracking-normal"
+                  style={{ color: RECOVERY_SLOT_COLORS.bar }}
+                >
+                  {r.hours < 24
+                    ? GROWTH_COPY.recoveryHours(Math.max(1, Math.ceil(r.hours)))
+                    : GROWTH_COPY.recoveryDays(Math.ceil(r.hours / 24))}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

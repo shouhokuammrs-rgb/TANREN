@@ -52,6 +52,40 @@ export function VolumeChart({ data }: { data: Record<string, number | string>[] 
   )
 }
 
+/** e1RM推移(DEC-011)。データ点=セッション。溶鉄ストローク+ホットな点 */
+export function GrowthChart({
+  data,
+  height = 150,
+}: {
+  data: { label: string; e1rm: number }[]
+  height?: number
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
+        <CartesianGrid stroke="#241812" vertical={false} />
+        <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={AXIS_TICK}
+          axisLine={false}
+          tickLine={false}
+          domain={['dataMin - 2', 'dataMax + 2']}
+          tickFormatter={(v: number) => `${Math.round(v)}`}
+        />
+        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#d9cfc6' }} />
+        <Line
+          type="monotone"
+          dataKey="e1rm"
+          name="e1RM(kg)"
+          stroke="#FF5C1A"
+          strokeWidth={2.5}
+          dot={{ r: 4, fill: '#FFE3CC', stroke: '#0b0907', strokeWidth: 1.5 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
 export function WeightChart({ data }: { data: { date: string; weightKg?: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={160}>

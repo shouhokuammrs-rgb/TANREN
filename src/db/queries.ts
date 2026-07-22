@@ -31,6 +31,7 @@ import {
   type ExerciseSummary,
   type PastSetInput,
 } from '../engine'
+import type { GrowthSessionInput } from '../engine/growth'
 import { loadEngineTuning } from '../utils/engineTuning'
 
 /** エンジン入力のスナップショットを組み立てる */
@@ -576,6 +577,35 @@ export async function dailyVolumeHistory(days = 14, now = new Date()): Promise<W
     }
   }
   return points
+}
+
+/** 成長ビュー(DEC-011)の入力: 完了/中断セッションの種目別セット実績。期間フィルタはエンジン側で行う */
+export async function loadGrowthSessions(): Promise<GrowthSessionInput[]> {
+  const exercises = await db.exercises.toArray()
+  const exerciseById = new Map(exercises.map((e) => [e.id!, e]))
+  const sessions = (await db.sessions.orderBy('startedAt').toArray()).filter(
+    (s) => s.status === 'completed' || s.status === 'aborted',
+  )
+  const result: GrowthSessionInput[] = []
+  for (const session of sessions) {
+    const ses = await db.session_exercises.where('sessionId').equals(session.id!).toArray()
+    for (const se of ses) {
+      const exercise = exerciseById.get(se.exerciseId)
+      if (!exercise) continue
+      const sets = (await db.sets.where('sessionExerciseId').equals(se.id!).toArray())
+        .filter((s) => s.completedAt !== undefined)
+        .map((s) => ({ weightKg: s.actualWeightKg ?? s.suggestedWeightKg, reps: s.actualReps }))
+      if (sets.length === 0) continue
+      result.push({
+        performedAt: session.startedAt,
+        exerciseId: exercise.id!,
+        exerciseName: exercise.name,
+        muscle: exercise.primaryMuscle,
+        sets,
+      })
+    }
+  }
+  return result
 }
 
 /** アプリ設定(ISS-012)。UI設定のうちバックアップに含めたいものはlocalStorageではなくここへ */

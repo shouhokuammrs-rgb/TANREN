@@ -9,6 +9,7 @@ import { isPreviewHost, productionUrl } from './utils/env'
 import HomePage from './pages/HomePage'
 import WorkoutPage from './pages/WorkoutPage'
 import ActiveWorkoutPage from './pages/ActiveWorkoutPage'
+import GrowthPage from './pages/GrowthPage'
 import LogPage from './pages/LogPage'
 import LogDetailPage from './pages/LogDetailPage'
 import SettingsPage from './pages/SettingsPage'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/summary/:id" element={<SummaryPage />} />
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/photos" element={<PhotosPage />} />
+          <Route path="/growth" element={<GrowthPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
