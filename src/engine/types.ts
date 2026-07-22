@@ -1,5 +1,23 @@
 import type { Condition, Exercise, MovementPattern, MuscleGroup } from '../db/types'
 
+/**
+ * エンジン上級者設定(DEC-010)。埋め込み定数を上書きする体感調整用オーバーライド。
+ * エンジンは `ctx.tuning?.x ?? デフォルト定数` で解決する(エンジン内でストレージは読まない)。
+ * 許容範囲は constants/engine.ts の ENGINE_TUNING_RANGES(UI側でclampして保存)
+ */
+export interface EngineTuning {
+  /** 大筋群の基準回復時間(h)。デフォルト72 */
+  largeRecoveryHours?: number
+  /** 小筋群の基準回復時間(h)。デフォルト48 */
+  smallRecoveryHours?: number
+  /** おまかせ選択の回復下限(%)。デフォルト100 */
+  freshnessReadyThreshold?: number
+  /** 「余裕あり」時の増量ステップ数。デフォルト2 */
+  slackJumpSteps?: number
+  /** 基本セット数。デフォルト3 */
+  defaultSets?: number
+}
+
 /** 過去ログ1セット分の実績 */
 export interface SetPerformance {
   weightKg?: number
@@ -48,6 +66,8 @@ export interface EngineContext {
   patternBase1Rm?: Partial<Record<MovementPattern, number>>
   /** ギャップ分析(F-03)由来の部位別優先度スコア。未設定なら全部位1.0 */
   priorityScores?: Record<MuscleGroup, number>
+  /** 上級者設定(DEC-010)。未設定なら全デフォルト定数で従来挙動 */
+  tuning?: EngineTuning
 }
 
 export interface MenuRequest {
@@ -88,4 +108,8 @@ export interface GeneratedMenu {
   excludedRecoveringMuscles: { muscle: MuscleGroup; freshness: number }[]
   /** 全部位が回復中→休養日を提案(DEC-006) */
   isRestDay: boolean
+  /** 「今日の対象: 胸(回復100%)」の対象行。短縮通知時も併記できるようrationaleと分離(DEC-010 §3-2) */
+  muscleSummary: string
+  /** 除外部位のうち最短で回復するものの予測(休養日・短縮通知の1行表示用。DEC-010 §3-1) */
+  soonestRecovery?: { muscle: MuscleGroup; hoursUntilRecovered: number }
 }

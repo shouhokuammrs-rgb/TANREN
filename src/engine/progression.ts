@@ -8,7 +8,7 @@ import {
 } from '../constants/engine'
 import type { Exercise, MovementPattern } from '../db/types'
 import { calibratedWeightKg } from './calibration'
-import type { ExerciseHistoryEntry } from './types'
+import type { EngineTuning, ExerciseHistoryEntry } from './types'
 
 /**
  * 希望重量を器具設定の刻みにスナップする。
@@ -73,15 +73,19 @@ function stepIndexOf(weightKg: number, sortedSteps: number[]): number {
 }
 
 /**
- * 直近から遡って「2ステップ以上の増量」が何回連続しているか(ISS-013b暴走防止)。
- * chainは新しい順のセッション重量列
+ * 直近から遡って「jumpSteps以上の増量」が何回連続しているか(ISS-013b暴走防止)。
+ * chainは新しい順のセッション重量列。jumpStepsは上級者設定(DEC-010)で上書き可能
  */
-function consecutiveDoubleJumps(chainWeightsKg: number[], sortedSteps: number[]): number {
+function consecutiveDoubleJumps(
+  chainWeightsKg: number[],
+  sortedSteps: number[],
+  jumpSteps: number = SLACK_JUMP_STEPS,
+): number {
   let count = 0
   for (let i = 0; i + 1 < chainWeightsKg.length; i++) {
     const diff =
       stepIndexOf(chainWeightsKg[i], sortedSteps) - stepIndexOf(chainWeightsKg[i + 1], sortedSteps)
-    if (diff >= SLACK_JUMP_STEPS) count++
+    if (diff >= jumpSteps) count++
     else break
   }
   return count
@@ -91,7 +95,8 @@ function consecutiveDoubleJumps(chainWeightsKg: number[], sortedSteps: number[])
  * 直近実績からダブルプログレッションで次回の重量・レップを提案する。
  * - 実績なし: 初期重量+レップ下限
  * - 全セット達成かつレップ上限到達: 次の重量ステップ+レップ下限
- *   (「余裕あり」付きなら2ステップ増量。ただし連続2回まで: ISS-013b)
+ *   (最終記録セットが「余裕あり」なら2ステップ増量。ただし連続2回まで: ISS-013b/DEC-007。
+ *    途中セットの余裕は疲労が乗っていないため信号として採用しない)
  * - 全セット達成: 同重量でレップ+1(「余裕あり」単独では増量しない=レップ先行の原則)
  * - 未達成あり: 同重量・同レップで再挑戦
  */
@@ -102,6 +107,7 @@ export function suggestWeightReps(
   stepsKg: number[],
   patternBase1Rm: Partial<Record<MovementPattern, number>> = {},
   olderEntries: ExerciseHistoryEntry[] = [],
+  tuning?: EngineTuning,
 ): WeightRepsSuggestion {
   const usesDumbbell = exercise.requiredEquipment.includes('dumbbell')
   const { repRangeMin, repRangeMax } = exercise
@@ -137,8 +143,9 @@ export function suggestWeightReps(
       // 自重種目は上限で頭打ち(Phase 2以降で難易度バリエーション対応を検討)
       return { reps: repRangeMax }
     }
-    // 「余裕あり」(ISS-013b): 上限到達+余裕なら2ステップ増量。ただし連続2回まで
-    const anySlack = recordedSets.some((s) => s.hadSlack === true)
+    // 「余裕あり」(ISS-013b/DEC-007): 疲労が乗った最終記録セットの余裕のみを増量トリガーにする。
+    // 上限到達+最終セット余裕なら2ステップ増量。ただし連続2回まで
+    const lastSetSlack = recordedSets[recordedSets.length - 1].hadSlack === true
     const sorted = [...stepsKg].sort((a, b) => a - b)
     const pastWeights = [
       currentWeight,
@@ -146,9 +153,12 @@ export function suggestWeightReps(
         .map((e) => e.sets.find((s) => s.weightKg !== undefined)?.weightKg)
         .filter((w): w is number => w !== undefined),
     ]
+    // 増量ステップ数は上級者設定(DEC-010)で上書き可能
+    const slackJumpSteps = tuning?.slackJumpSteps ?? SLACK_JUMP_STEPS
     const jumpSteps =
-      anySlack && consecutiveDoubleJumps(pastWeights, sorted) < MAX_CONSECUTIVE_DOUBLE_JUMPS
-        ? SLACK_JUMP_STEPS
+      lastSetSlack &&
+      consecutiveDoubleJumps(pastWeights, sorted, slackJumpSteps) < MAX_CONSECUTIVE_DOUBLE_JUMPS
+        ? slackJumpSteps
         : 1
     let nextWeight = currentWeight
     for (let i = 0; i < jumpSteps; i++) {

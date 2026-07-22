@@ -31,6 +31,7 @@ import {
   type ExerciseSummary,
   type PastSetInput,
 } from '../engine'
+import { loadEngineTuning } from '../utils/engineTuning'
 
 /** エンジン入力のスナップショットを組み立てる */
 export async function loadEngineContext(now = new Date()): Promise<EngineContext> {
@@ -120,6 +121,8 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     activeInjuries: [...new Set(injuries.map((i) => i.bodyPart))],
     patternBase1Rm: patternBase1RmFrom(strengthMarks),
     priorityScores: priorityScores(latestGoal),
+    // 上級者設定(DEC-010)。エンジンは純関数のままにするため、読み込みはここで行う
+    tuning: loadEngineTuning(),
   }
 }
 

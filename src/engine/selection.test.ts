@@ -72,4 +72,23 @@ describe('selectMuscles(おまかせ・DEC-006: 回復優先)', () => {
     const result = selectMuscles(ctxWith({ activeInjuries: ['chest'] }), [], 45, freshness)
     expect(result.excludedRecovering.map((e) => e.muscle)).toEqual(['back'])
   })
+
+  it('上級者設定(DEC-010): 回復下限を95に緩めるとフレッシュネス96%の部位が選ばれる', () => {
+    // chestのみ96%・他は全て回復不足 → デフォルト(100)では休養日
+    const freshness = freshnessWith(
+      Object.fromEntries(ALL.map((m) => [m, m === 'chest' ? 96 : 40])),
+    )
+    const strict = selectMuscles(ctxWith(), [], 60, freshness)
+    expect(strict.isRestDay).toBe(true)
+
+    const tuned = selectMuscles(
+      ctxWith({ tuning: { freshnessReadyThreshold: 95 } }),
+      [],
+      60,
+      freshness,
+    )
+    expect(tuned.muscles).toEqual(['chest'])
+    expect(tuned.isRestDay).toBe(false)
+    expect(tuned.excludedRecovering.map((e) => e.muscle)).not.toContain('chest')
+  })
 })

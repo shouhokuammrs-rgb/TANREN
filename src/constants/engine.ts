@@ -1,11 +1,15 @@
-// メニュー生成エンジンの調整用定数(要件F-04)。Eiichiの体感フィードバックで頻繁に調整が入る前提
+// メニュー生成エンジンの調整用定数(要件F-04)。Eiichiの体感フィードバックで頻繁に調整が入る前提。
+// 一部はDEC-010で「上級者設定」のデフォルト値に降格(EngineContext.tuningで上書き可能)
+
+import { RECOVERY_HOURS } from './recovery'
+import type { EngineTuning } from '../engine/types'
 
 /** 部位指定モードで、この値未満のフレッシュネス(%)の部位に警告を出す(ユーザー判断は尊重) */
 export const FRESHNESS_WARN_THRESHOLD = 50
 
 /**
  * おまかせ選択の対象になるフレッシュネス(%)の下限(DEC-006: 時間希望より回復を優先)。
- * 100=完全回復のみ。体感フィードバックで調整する前提(例: 95に緩めると端数回復を許容)
+ * 100=完全回復のみ。上級者設定で上書き可能なデフォルト値(DEC-010。例: 95で端数回復を許容)
  */
 export const FRESHNESS_READY_THRESHOLD = 100
 
@@ -26,7 +30,7 @@ export const SET_EXEC_SEC = 45
 /** 種目間の移行・セットアップ時間の見積り(秒)。重量変更・ベンチ角度調整を含む */
 export const EXERCISE_SETUP_SEC = 90
 
-/** 1種目の基本セット数 */
+/** 1種目の基本セット数。上級者設定で上書き可能なデフォルト値(DEC-010) */
 export const DEFAULT_SETS = 3
 /** セット削減時の下限 */
 export const MIN_SETS = 2
@@ -56,7 +60,22 @@ export const VOLUME_RECOVERY_FACTORS: { maxSets: number; factor: number }[] = [
 /** initialWeightFactor未設定のダンベル種目に使う保守的な既定係数 */
 export const DEFAULT_INITIAL_WEIGHT_FACTOR = 0.1
 
-/** 「余裕あり」フィードバック(ISS-013b): 上限レップ到達+余裕あり時の増量ステップ数 */
+/** 「余裕あり」時の増量ステップ数(ISS-013b)。上級者設定で上書き可能なデフォルト値(DEC-010) */
 export const SLACK_JUMP_STEPS = 2
 /** 2ステップ増量の連続適用上限(暴走防止)。超えたら通常の1ステップ進行に戻す */
 export const MAX_CONSECUTIVE_DOUBLE_JUMPS = 2
+
+/**
+ * 上級者設定(DEC-010)の許容範囲とデフォルト値。範囲外はUI側でclampして保存する。
+ * これ以外の定数(時間見積り・部位数テーブル等)は設定化しない
+ */
+export const ENGINE_TUNING_RANGES: Record<
+  keyof EngineTuning,
+  { min: number; max: number; default: number }
+> = {
+  largeRecoveryHours: { min: 24, max: 120, default: RECOVERY_HOURS.large },
+  smallRecoveryHours: { min: 24, max: 120, default: RECOVERY_HOURS.small },
+  freshnessReadyThreshold: { min: 50, max: 100, default: FRESHNESS_READY_THRESHOLD },
+  slackJumpSteps: { min: 1, max: 3, default: SLACK_JUMP_STEPS },
+  defaultSets: { min: 2, max: 5, default: DEFAULT_SETS },
+}

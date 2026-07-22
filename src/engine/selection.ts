@@ -78,10 +78,12 @@ export function selectMuscles(
     .sort((a, b) => combined(b) - combined(a))
   const count = muscleCountForTime(availableMinutes)
 
-  const fresh = candidates.filter((m) => freshness[m] >= FRESHNESS_READY_THRESHOLD)
+  // 回復下限は上級者設定(DEC-010)で上書き可能
+  const readyThreshold = ctx.tuning?.freshnessReadyThreshold ?? FRESHNESS_READY_THRESHOLD
+  const fresh = candidates.filter((m) => freshness[m] >= readyThreshold)
   const selected = fresh.slice(0, count)
   const excludedRecovering = candidates
-    .filter((m) => freshness[m] < FRESHNESS_READY_THRESHOLD)
+    .filter((m) => freshness[m] < readyThreshold)
     .map((m) => ({ muscle: m, freshness: freshness[m] }))
     .sort((a, b) => b.freshness - a.freshness)
 

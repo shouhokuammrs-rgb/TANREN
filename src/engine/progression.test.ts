@@ -145,15 +145,27 @@ describe('ダブルプログレッション', () => {
     })
   })
 
-  it('「余裕あり」(ISS-013b): 上限到達+余裕→2ステップ増量', () => {
+  it('「余裕あり」(DEC-007): 最終セットに余裕+上限到達→2ステップ増量', () => {
     const last = history([
       { weightKg: 11.5, reps: 12, achieved: true },
       { weightKg: 11.5, reps: 12, achieved: true },
     ])
-    last.sets[0].hadSlack = true
+    last.sets[1].hadSlack = true // 疲労が乗った最終セットの余裕が信号
     // 11.5 → 13(1段) → 14.5(2段)
     expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
       weightKg: 14.5,
+      reps: 6,
+    })
+  })
+
+  it('「余裕あり」(DEC-007): 1セット目のみ余裕(最終セットは余裕なし)→通常の1ステップ', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[0].hadSlack = true // 疲労のない1セット目の余裕は信号として採用しない
+    expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
+      weightKg: 13,
       reps: 6,
     })
   })
@@ -169,12 +181,12 @@ describe('ダブルプログレッション', () => {
     })
   })
 
-  it('「余裕あり」: 上限未達なら増量しない(レップ先行の原則)', () => {
+  it('「余裕あり」: 最終セットに余裕でも上限未達なら増量しない(レップ先行の原則)', () => {
     const last = history([
       { weightKg: 11.5, reps: 9, achieved: true },
       { weightKg: 11.5, reps: 9, achieved: true },
     ])
-    last.sets[0].hadSlack = true
+    last.sets[1].hadSlack = true
     expect(suggestWeightReps(dumbbellPress, last, 58, STEPS)).toEqual({
       weightKg: 11.5,
       reps: 10,
@@ -202,6 +214,29 @@ describe('ダブルプログレッション', () => {
       weightKg: 16,
       reps: 6,
     })
+  })
+
+  it('上級者設定(DEC-010): 増量ステップ1なら最終セット余裕ありでも1ステップ', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[1].hadSlack = true
+    expect(
+      suggestWeightReps(dumbbellPress, last, 58, STEPS, {}, [], { slackJumpSteps: 1 }),
+    ).toEqual({ weightKg: 13, reps: 6 })
+  })
+
+  it('上級者設定(DEC-010): 増量ステップ3なら3段上げる', () => {
+    const last = history([
+      { weightKg: 11.5, reps: 12, achieved: true },
+      { weightKg: 11.5, reps: 12, achieved: true },
+    ])
+    last.sets[1].hadSlack = true
+    // 11.5 → 13 → 14.5 → 16
+    expect(
+      suggestWeightReps(dumbbellPress, last, 58, STEPS, {}, [], { slackJumpSteps: 3 }),
+    ).toEqual({ weightKg: 16, reps: 6 })
   })
 
   it('snapToSteps: nearestは最寄りの刻み', () => {
