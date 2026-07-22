@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #050403; font-family: 'Noto Sans JP', sans-serif; }
+  a { color: #FF7A33; text-decoration: none; }
+  a:hover { color: #FFA05C; }
+  @keyframes emberPulse { 0%,100% { opacity: .85; } 50% { opacity: 1; } }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</helmet>
+
+<section style="padding: 48px 56px 64px; display: flex; flex-direction: column; gap: 32px; background: #050403;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 1000px;">
+    <div style="font: 500 12px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FF5C1A;">TURN 2 — DEC-011: 3a「熱の人体図」で確定 / 磨き込み</div>
+    <div style="font: 900 28px 'Noto Sans JP', sans-serif; color: #F5EFE8;">成長ビュー 磨き込み + ダッシュボード組み込み</div>
+    <div style="font: 400 14px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;"><a href="#4a">4a 成長ビュー 完成版</a>=期間切替(30日/90日)+グラフカードタップでフルスクリーン推移 / <a href="#4b">4b ダッシュボード組み込み</a>=回復予測(最下部固定スロット)との共存検証。すべて実動です。</div>
+  </div>
+
+  <div style="display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap;">
+
+    <!-- ============ 4a 成長ビュー 完成版 ============ -->
+    <div id="4a" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">4a</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">成長ビュー 完成版 — 期間切替+フルスクリーン推移</span>
+      </div>
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; position: relative;" data-screen-label="4a 成長ビュー 完成版">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / 成長</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">部位別の伸び</div>
+          </div>
+          <div style="display: flex; border: 1px solid #3A2213; border-radius: 999px; padding: 3px; gap: 2px;">
+            <div style="font: 700 12px 'IBM Plex Mono', monospace; color: {{ p30fg }}; background: {{ p30bg }}; border-radius: 999px; padding: 6px 14px; cursor: pointer;" onClick="{{ setP30 }}">30日</div>
+            <div style="font: 700 12px 'IBM Plex Mono', monospace; color: {{ p90fg }}; background: {{ p90bg }}; border-radius: 999px; padding: 6px 14px; cursor: pointer;" onClick="{{ setP90 }}">90日</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 18px; padding: 18px 24px 0;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <svg width="140" height="222" viewBox="0 0 120 190">
+              <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+              <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+              <sc-for list="{{ front4 }}" as="r" hint-placeholder-count="8">
+                <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}" style="cursor: pointer; filter: {{ r.glow }};" onClick="{{ r.pick }}"></path>
+              </sc-for>
+            </svg>
+            <span style="font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #6B5A4C;">FRONT</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <svg width="140" height="222" viewBox="0 0 120 190">
+              <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+              <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+              <sc-for list="{{ back4 }}" as="r" hint-placeholder-count="5">
+                <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}" style="cursor: pointer; filter: {{ r.glow }};" onClick="{{ r.pick }}"></path>
+              </sc-for>
+            </svg>
+            <span style="font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #6B5A4C;">BACK</span>
+          </div>
+        </div>
+
+        <div style="padding: 14px 24px 0; display: flex; flex-direction: column; gap: 6px;">
+          <div style="height: 8px; border-radius: 4px; background: linear-gradient(90deg, #1C140E, #5A2E14, #8A431C, #C2521C, #FF5C1A, #FFB300);"></div>
+          <div style="display: flex; justify-content: space-between; font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .18em; color: #6B5A4C;">
+            <span>データ不足</span><span>0%</span><span>+6%</span><span>+12%以上(月換算)</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; padding: 16px 24px 0; flex-wrap: wrap;">
+          <sc-for list="{{ chips4 }}" as="c" hint-placeholder-count="6">
+            <div style="display: flex; align-items: baseline; gap: 6px; border: 1px solid {{ c.border }}; border-style: {{ c.borderStyle }}; background: {{ c.bg }}; border-radius: 999px; padding: 8px 14px; cursor: pointer;" onClick="{{ c.pick }}">
+              <span style="font: 700 12px 'Noto Sans JP', sans-serif; color: {{ c.fg }};">{{ c.name }}</span>
+              <span style="font: 700 11px 'IBM Plex Mono', monospace; color: {{ c.deltaColor }};">{{ c.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding: 16px 24px 0;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; cursor: pointer;" style-hover="border-color: #FF5C1A;" onClick="{{ openFS }}">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">{{ chart4.name }} — E1RM 推移</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C;">拡大 ↗</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span style="font: 400 40px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 20px rgba(255,92,26,.4); font-variant-numeric: tabular-nums;">{{ chart4.now }}</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG e1RM</span>
+              <span style="font: 700 14px 'IBM Plex Mono', monospace; color: {{ chart4.deltaColor }};">{{ chart4.delta }}</span>
+            </div>
+            <sc-if value="{{ chart4.hasLine }}" hint-placeholder-val="{{ true }}">
+              <svg width="100%" height="110" viewBox="0 0 300 120" preserveAspectRatio="none">
+                <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+                <polyline points="{{ chart4.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+                <sc-for list="{{ chart4.dots }}" as="d" hint-placeholder-count="6">
+                  <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+                </sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+                <span>{{ chart4.startLabel }}</span><span>{{ chart4.endLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ chart4.noLine }}" hint-placeholder-val="{{ false }}">
+              <div style="border: 1px dashed #3A2213; border-radius: 10px; padding: 18px; text-align: center; font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #8A5A3C;">推移を表示するにはセッションがあと {{ chart4.needed }} 回必要です({{ chart4.count }}/3)</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 24px 28px;">
+          <div style="border: 1px dashed #241812; border-radius: 14px; padding: 14px; text-align: center; font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .2em; color: #4A3A2C;">回復予測エリア(予約)— 別機能</div>
+        </div>
+
+        <sc-if value="{{ fsOn }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; inset: 0; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); display: flex; flex-direction: column; animation: riseIn .3s ease-out; z-index: 10;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">E1RM 推移 / {{ fsPeriodLabel }}</div>
+                <div style="font: 900 24px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ chart4.name }}</div>
+              </div>
+              <div style="width: 40px; height: 40px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ closeFS }}">✕</div>
+            </div>
+            <div style="padding: 18px 24px 0; display: flex; align-items: baseline; gap: 10px;">
+              <span style="font: 400 64px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 28px rgba(255,92,26,.5); font-variant-numeric: tabular-nums;">{{ chart4.now }}</span>
+              <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #B06A3E;">KG e1RM</span>
+              <span style="font: 700 17px 'IBM Plex Mono', monospace; color: {{ chart4.deltaColor }};">{{ chart4.delta }}</span>
+            </div>
+            <div style="padding: 14px 24px 0;">
+              <svg width="100%" height="230" viewBox="0 0 300 200" preserveAspectRatio="none">
+                <line x1="0" y1="185" x2="300" y2="185" stroke="#241812" stroke-width="1"></line>
+                <line x1="0" y1="110" x2="300" y2="110" stroke="#1A110B" stroke-width="1" stroke-dasharray="3 5"></line>
+                <line x1="0" y1="35" x2="300" y2="35" stroke="#1A110B" stroke-width="1" stroke-dasharray="3 5"></line>
+                <polyline points="{{ chartFS.line }}" fill="none" stroke="#FF5C1A" stroke-width="3" stroke-linejoin="round" style="filter: drop-shadow(0 0 8px rgba(255,92,26,.5));"></polyline>
+                <sc-for list="{{ chartFS.dots }}" as="d" hint-placeholder-count="6">
+                  <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="4" fill="#FFE3CC"></circle>
+                </sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C; padding-top: 4px;">
+                <span>{{ chart4.startLabel }}</span><span>{{ chart4.endLabel }}</span>
+              </div>
+            </div>
+            <div style="flex: 1; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 0; overflow: hidden;">
+              <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C; padding-bottom: 8px;">セッション履歴</div>
+              <sc-for list="{{ fsSessions }}" as="s" hint-placeholder-count="5">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 11px 4px; border-bottom: 1px solid #1A110B;">
+                  <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #8A5A3C;">{{ s.date }}</span>
+                  <div style="display: flex; align-items: baseline; gap: 10px;">
+                    <span style="font: 700 15px 'IBM Plex Mono', monospace; color: #ECE7E1; font-variant-numeric: tabular-nums;">{{ s.val }} kg</span>
+                    <span style="font: 700 12px 'IBM Plex Mono', monospace; color: {{ s.diffColor }}; width: 48px; text-align: right;">{{ s.diff }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">4a 補足:</b> 期間切替は右上セグメント(30日/90日)。マップの色は期間に依らず「月換算の伸び率」でエンコードし、期間を切り替えても色の意味が変わらないようにした。グラフカードタップでフルスクリーン推移(セッション履歴付き)へ。riseIn(.3s)で遷移。</div>
+    </div>
+
+    <!-- ============ 4b ダッシュボード組み込み ============ -->
+    <div id="4b" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">4b</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">ダッシュボード組み込み — 回復予測との共存</span>
+      </div>
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="4b ダッシュボード組み込み">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="font: 500 13px 'IBM Plex Mono', monospace; letter-spacing: .32em; color: #FF5C1A;">TANREN</div>
+          <div style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C;">7月22日(水)</div>
+        </div>
+
+        <div style="padding: 20px 24px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">連続記録</div>
+            <div style="display: flex; align-items: baseline; gap: 5px;">
+              <span style="font: 400 36px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 20px rgba(255,92,26,.35);">14</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">日</span>
+            </div>
+          </div>
+          <div style="border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">今週ボリューム</div>
+            <div style="display: flex; align-items: baseline; gap: 5px;">
+              <span style="font: 400 36px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 20px rgba(255,92,26,.35);">21.2</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">t</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 14px 24px 0;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; gap: 16px; cursor: pointer;" style-hover="border-color: #FF5C1A;">
+            <svg width="76" height="120" viewBox="0 0 120 190" style="flex-shrink: 0;">
+              <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+              <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+              <sc-for list="{{ frontDash }}" as="r" hint-placeholder-count="8">
+                <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}"></path>
+              </sc-for>
+            </svg>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">成長 — 直近30日</span>
+                <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C;">詳細 →</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">胸</span>
+                  <span style="font: 700 14px 'IBM Plex Mono', monospace; color: #FF7A33;">+12.2%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">脚</span>
+                  <span style="font: 700 14px 'IBM Plex Mono', monospace; color: #FF7A33;">+9.3%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">背中</span>
+                  <span style="font: 700 14px 'IBM Plex Mono', monospace; color: #FF7A33;">+8.3%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 14px 24px 0;">
+          <div style="border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">今日のメニュー — プッシュデイ</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C;">約45分</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">ベンチプレス</span>
+              <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #B06A3E;">5セット</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">オーバーヘッドプレス</span>
+              <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #B06A3E;">4セット</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; padding: 14px 24px 16px;">
+          <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 19px; text-align: center; font: 900 17px 'Noto Sans JP', sans-serif; letter-spacing: .06em; cursor: pointer; box-shadow: 0 0 36px rgba(255,92,26,.4);" style-hover="background: #FF7A33;">今日のトレを始める</div>
+
+          <div style="border: 1px solid #241812; background: rgba(255,255,255,.015); border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 9px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #6B5A4C;">回復予測</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #D9CFC6;">胸</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 110px; height: 5px; background: #241812; border-radius: 3px; overflow: hidden;"><div style="width: 65%; height: 100%; background: #8A5A3C;"></div></div>
+                <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #8A5A3C; width: 76px; text-align: right;">あと18時間</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #D9CFC6;">脚</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 110px; height: 5px; background: #241812; border-radius: 3px; overflow: hidden;"><div style="width: 100%; height: 100%; background: #6B5A4C;"></div></div>
+                <span style="font: 500 12px 'IBM Plex Mono', monospace; color: #D9CFC6; width: 76px; text-align: right;">回復済み</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; border-top: 1px solid #241812; padding: 12px 12px 24px;">
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: #FF5C1A;"></span>
+            <span style="font: 700 11px 'Noto Sans JP', sans-serif; color: #FFE3CC;">ホーム</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: transparent;"></span>
+            <span style="font: 500 11px 'Noto Sans JP', sans-serif; color: #6B5A4C;">記録</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: transparent;"></span>
+            <span style="font: 500 11px 'Noto Sans JP', sans-serif; color: #6B5A4C;">成長</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: transparent;"></span>
+            <span style="font: 500 11px 'Noto Sans JP', sans-serif; color: #6B5A4C;">設定</span>
+          </div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">4b 補足:</b> 成長カードはミニ人体図+上位3部位のみに要約し、タップで4aへ遷移。回復予測は最下部の固定スロットに配置し、成長(溶鉄の彩度)と区別するため無彩色寄りの減light表現(#8A5A3C系バー)に抑えた — 熱い色=成長、鈍い色=回復待ち、と色の意味を分離。CTAより下に置くことで「今日やる」導線を妨げない。</div>
+    </div>
+
+  </div>
+</section>
+
+<section style="padding: 48px 56px 96px; display: flex; flex-direction: column; gap: 32px; background: #050403; min-height: 100vh;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 1000px;">
+    <div style="font: 500 12px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FF5C1A;">TANREN — GROWTH VIEW / DEC-009 / 390PX</div>
+    <div style="font: 900 28px 'Noto Sans JP', sans-serif; color: #F5EFE8;">成長可視化 コンセプト3案 — 部位別 e1RM</div>
+    <div style="font: 400 14px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;"><a href="#3a">3a 熱の人体図</a>=ボディマップがヒーロー / <a href="#3b">3b 数字ヒーロー</a>=最伸長部位の変化率が主役 / <a href="#3c">3c リンググリッド</a>=炉心リングの語彙を成長に転用。部位タップで e1RM 推移グラフが切り替わります(実動)。</div>
+  </div>
+
+  <div style="display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap;">
+
+    <!-- ============ 3a 熱の人体図 ============ -->
+    <div id="3a" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">3a</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">熱の人体図 — マップがヒーロー</span>
+      </div>
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="3a 熱の人体図">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / 成長</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">部位別の伸び</div>
+          </div>
+          <div style="font: 700 12px 'IBM Plex Mono', monospace; color: #FF7A33; border: 1px solid #3A2213; padding: 7px 12px; border-radius: 6px;">直近30日</div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 18px; padding: 18px 24px 0;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <svg width="140" height="222" viewBox="0 0 120 190">
+              <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+              <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+              <sc-for list="{{ frontA }}" as="r" hint-placeholder-count="8">
+                <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}" style="cursor: pointer; filter: {{ r.glow }};" onClick="{{ r.pick }}"></path>
+              </sc-for>
+            </svg>
+            <span style="font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #6B5A4C;">FRONT</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+            <svg width="140" height="222" viewBox="0 0 120 190">
+              <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+              <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+              <sc-for list="{{ backA }}" as="r" hint-placeholder-count="5">
+                <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}" style="cursor: pointer; filter: {{ r.glow }};" onClick="{{ r.pick }}"></path>
+              </sc-for>
+            </svg>
+            <span style="font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #6B5A4C;">BACK</span>
+          </div>
+        </div>
+
+        <div style="padding: 14px 24px 0; display: flex; flex-direction: column; gap: 6px;">
+          <div style="height: 8px; border-radius: 4px; background: linear-gradient(90deg, #1C140E, #5A2E14, #8A431C, #C2521C, #FF5C1A, #FFB300);"></div>
+          <div style="display: flex; justify-content: space-between; font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .18em; color: #6B5A4C;">
+            <span>データ不足</span><span>0%</span><span>+6%</span><span>+12%以上</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; padding: 16px 24px 0; flex-wrap: wrap;">
+          <sc-for list="{{ chipsA }}" as="c" hint-placeholder-count="6">
+            <div style="display: flex; align-items: baseline; gap: 6px; border: 1px solid {{ c.border }}; border-style: {{ c.borderStyle }}; background: {{ c.bg }}; border-radius: 999px; padding: 8px 14px; cursor: pointer;" onClick="{{ c.pick }}">
+              <span style="font: 700 12px 'Noto Sans JP', sans-serif; color: {{ c.fg }};">{{ c.name }}</span>
+              <span style="font: 700 11px 'IBM Plex Mono', monospace; color: {{ c.deltaColor }};">{{ c.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding: 16px 24px 0;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">{{ chartA.name }} — E1RM 推移</span>
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; color: #8A5A3C;">セッション毎</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span style="font: 400 40px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 20px rgba(255,92,26,.4); font-variant-numeric: tabular-nums;">{{ chartA.now }}</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG e1RM</span>
+              <span style="font: 700 14px 'IBM Plex Mono', monospace; color: {{ chartA.deltaColor }};">{{ chartA.delta }}</span>
+            </div>
+            <sc-if value="{{ chartA.hasLine }}" hint-placeholder-val="{{ true }}">
+              <svg width="100%" height="120" viewBox="0 0 300 120" preserveAspectRatio="none">
+                <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+                <polyline points="{{ chartA.line }}" fill="none" stroke="url(#gvA)" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+                <sc-for list="{{ chartA.dots }}" as="d" hint-placeholder-count="6">
+                  <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+                </sc-for>
+                <defs>
+                  <linearGradient id="gvA" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#8A431C"></stop>
+                    <stop offset="100%" stop-color="#FF5C1A"></stop>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+                <span>{{ chartA.startLabel }}</span><span>{{ chartA.endLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ chartA.noLine }}" hint-placeholder-val="{{ false }}">
+              <div style="border: 1px dashed #3A2213; border-radius: 10px; padding: 18px; text-align: center; font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #8A5A3C;">推移を表示するにはセッションがあと {{ chartA.needed }} 回必要です({{ chartA.count }}/3)</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 24px 28px;">
+          <div style="border: 1px dashed #241812; border-radius: 14px; padding: 14px; text-align: center; font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .2em; color: #4A3A2C;">回復予測エリア(予約)— 別機能</div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 「どこが伸びているか」を開いた瞬間に答えるため、人体図を唯一のヒーローに据えた案。伸び率を熱の色(暗→溶鉄→金)にエンコードし、炉心の「熱=活動」の世界観を成長の意味論にそのまま接続する。データ不足の部位は「冷えた鉄」= 無彩色+破線で明示し、チップに残り回数を出して次の行動につなげる。回復予測は最下部に固定スロットを予約し、マップの色エンコーディング(成長)と混同しないよう分離する。</div>
+    </div>
+
+    <!-- ============ 3b 数字ヒーロー ============ -->
+    <div id="3b" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">3b</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">数字ヒーロー — 最伸長部位が主役</span>
+      </div>
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="3b 数字ヒーロー">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / 成長 — 直近30日</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">いちばん伸びた部位</div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 16px; padding: 14px 24px 0;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font: 700 15px 'Noto Sans JP', sans-serif; color: #D9CFC6;">{{ heroB.name }}</div>
+            <div style="font: 400 64px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 28px rgba(255,92,26,.5); font-variant-numeric: tabular-nums;">{{ heroB.delta }}</div>
+            <div style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">E1RM {{ heroB.range }}</div>
+          </div>
+          <svg width="96" height="152" viewBox="0 0 120 190">
+            <circle cx="60" cy="14" r="9" fill="#241812"></circle>
+            <rect x="55" y="24" width="10" height="8" rx="3" fill="#241812"></rect>
+            <sc-for list="{{ frontB }}" as="r" hint-placeholder-count="8">
+              <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="{{ r.stroke }}" stroke-width="1.5" stroke-dasharray="{{ r.dash }}" style="cursor: pointer; filter: {{ r.glow }};" onClick="{{ r.pick }}"></path>
+            </sc-for>
+          </svg>
+        </div>
+
+        <div style="padding: 14px 24px 0; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">部位ランキング</div>
+          <sc-for list="{{ rowsB }}" as="row" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 24px 56px 1fr 72px 58px; align-items: center; gap: 8px; border: 1px solid {{ row.border }}; background: {{ row.bg }}; border-radius: 12px; padding: 12px 14px; cursor: pointer;" onClick="{{ row.pick }}">
+              <span style="font: 400 18px 'Anton', sans-serif; color: #6B5A4C;">{{ row.rank }}</span>
+              <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ row.name }}</span>
+              <svg width="100%" height="22" viewBox="0 0 64 22" preserveAspectRatio="none">
+                <polyline points="{{ row.spark }}" fill="none" stroke="#FF7A33" stroke-width="1.8" stroke-linejoin="round"></polyline>
+              </svg>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C; text-align: right;">{{ row.now }}kg</span>
+              <span style="font: 700 13px 'IBM Plex Mono', monospace; color: {{ row.deltaColor }}; text-align: right;">{{ row.delta }}</span>
+            </div>
+          </sc-for>
+          <div style="border: 1px dashed #3A2213; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #8A5A3C;">体幹</span>
+              <span style="font: 400 11px 'Noto Sans JP', sans-serif; color: #6B5A4C;">計測中 — あと2回で表示</span>
+            </div>
+            <div style="display: flex; gap: 5px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #FF5C1A;"></span>
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #3A2213;"></span>
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #3A2213;"></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 24px 28px;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">{{ chartB.name }} — E1RM 推移</span>
+              <span style="font: 700 13px 'IBM Plex Mono', monospace; color: {{ chartB.deltaColor }};">{{ chartB.delta }}</span>
+            </div>
+            <sc-if value="{{ chartB.hasLine }}" hint-placeholder-val="{{ true }}">
+              <svg width="100%" height="100" viewBox="0 0 300 120" preserveAspectRatio="none">
+                <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+                <polyline points="{{ chartB.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+                <sc-for list="{{ chartB.dots }}" as="d" hint-placeholder-count="6">
+                  <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+                </sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+                <span>{{ chartB.startLabel }}</span><span>{{ chartB.endLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ chartB.noLine }}" hint-placeholder-val="{{ false }}">
+              <div style="border: 1px dashed #3A2213; border-radius: 10px; padding: 16px; text-align: center; font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #8A5A3C;">セッションがあと {{ chartB.needed }} 回必要です({{ chartB.count }}/3)</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 炉心の「数字がヒーロー」の原則を成長ビューにも貫いた案。最も伸びた部位の変化率を Anton の大型数字で一点突破させ、達成感を最初の1秒で渡す。全部位はランキング+スパークラインで俯瞰でき、人体図は補助(選択UI)に格下げ。データ不足部位はランキングから除外して「計測中」枠に隔離し、進捗ドットで残り回数を示す — 不確かな数字を順位に混ぜない。回復予測はヒーロー領域と競合しないランキング下・別カードとして追加可能。</div>
+    </div>
+
+    <!-- ============ 3c リンググリッド ============ -->
+    <div id="3c" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">3c</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">リンググリッド — 炉心の語彙を転用</span>
+      </div>
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="3c リンググリッド">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / 成長</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">部位リング</div>
+          </div>
+          <div style="font: 700 12px 'IBM Plex Mono', monospace; color: #FF7A33; border: 1px solid #3A2213; padding: 7px 12px; border-radius: 6px;">直近30日</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 18px 24px 0;">
+          <sc-for list="{{ ringsC }}" as="g" hint-placeholder-count="6">
+            <div style="border: 1px solid {{ g.border }}; background: {{ g.bg }}; border-radius: 14px; padding: 12px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;" onClick="{{ g.pick }}">
+              <div style="position: relative; width: 64px; height: 64px;">
+                <svg width="64" height="64" viewBox="0 0 64 64" style="transform: rotate(-90deg);">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#241812" stroke-width="6"></circle>
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="{{ g.ringColor }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ g.dashArray }}" style="filter: {{ g.glow }};"></circle>
+                </svg>
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 12px 'IBM Plex Mono', monospace; color: {{ g.centerColor }};">{{ g.center }}</div>
+              </div>
+              <span style="font: 700 12px 'Noto Sans JP', sans-serif; color: #D9CFC6;">{{ g.name }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding: 10px 24px 0; font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .18em; color: #6B5A4C; text-align: center;">リング1周 = 30日で +12%(月次目標)</div>
+
+        <div style="padding: 18px 24px 0;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">{{ chartC.name }} — E1RM 推移</span>
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; color: #8A5A3C;">セッション毎</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span style="font: 400 40px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 20px rgba(255,92,26,.4); font-variant-numeric: tabular-nums;">{{ chartC.now }}</span>
+              <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG e1RM</span>
+              <span style="font: 700 14px 'IBM Plex Mono', monospace; color: {{ chartC.deltaColor }};">{{ chartC.delta }}</span>
+            </div>
+            <sc-if value="{{ chartC.hasLine }}" hint-placeholder-val="{{ true }}">
+              <svg width="100%" height="110" viewBox="0 0 300 120" preserveAspectRatio="none">
+                <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+                <polyline points="{{ chartC.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+                <sc-for list="{{ chartC.dots }}" as="d" hint-placeholder-count="6">
+                  <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+                </sc-for>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+                <span>{{ chartC.startLabel }}</span><span>{{ chartC.endLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ chartC.noLine }}" hint-placeholder-val="{{ false }}">
+              <div style="border: 1px dashed #3A2213; border-radius: 10px; padding: 18px; text-align: center; font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #8A5A3C;">推移を表示するにはセッションがあと {{ chartC.needed }} 回必要です({{ chartC.count }}/3)</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 24px 28px;">
+          <div style="border: 1px dashed #241812; border-radius: 14px; padding: 14px; text-align: center; font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .2em; color: #4A3A2C;">回復予測エリア(予約)— 別機能</div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 実行画面のタイマーリングという既習のUI語彙を成長メトリクスに転用し、アプリ全体の視覚的一貫性を最大化する案。リング1周=「30日で+12%」の月次目標に正規化することで、部位間の絶対重量差(脚150kg vs 腕39kg)に影響されない公平な比較ができる。データ不足部位はリングを点滅破線+中央にセッション進捗(1/3)で表現し、同じ部品のまま状態だけを変える。人体図を持たない代わりにグリッド自体が全身の一覧になるが、要件のマップ要素が必要なら3a のマップを上部に薄く併置する拡張も可能。回復予測は将来的に各リングの外周に第2リングとして重ねられる拡張性も持つ。</div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { selA: 'chest', selB: 'chest', selC: 'legs', sel4: 'chest', period4: '30', fs4: false };
+
+  parts() {
+    return [
+      { id: 'chest', name: '胸', series: [82, 83, 85, 84, 87, 89, 92], s90: [74, 75, 76, 78, 79, 80, 82, 83, 85, 84, 87, 89, 92] },
+      { id: 'back', name: '背中', series: [120, 122, 121, 125, 127, 130], s90: [108, 110, 112, 113, 115, 117, 120, 122, 121, 125, 127, 130] },
+      { id: 'legs', name: '脚', series: [140, 144, 143, 150, 153], s90: [122, 126, 128, 131, 135, 138, 140, 144, 143, 150, 153] },
+      { id: 'shoulders', name: '肩', series: [56, 57, 56, 58, 59], s90: [52, 53, 53, 54, 55, 56, 57, 56, 58, 59] },
+      { id: 'arms', name: '腕', series: [38, 38, 39, 39], s90: [36, 36, 37, 37, 38, 38, 39, 39] },
+      { id: 'core', name: '体幹', series: [60], s90: [60] },
+    ];
+  }
+  seriesOf(p, period) { return period === '90' ? p.s90 : p.series; }
+  // 色は常に「月換算の伸び率」でエンコード(期間切替で色の意味が変わらない)
+  monthlyPct(s, period) {
+    const raw = this.pct(s);
+    return raw === null ? null : raw * (period === '90' ? 1 / 3 : 1);
+  }
+  pct(s) { return s.length >= 3 ? (s[s.length - 1] / s[0] - 1) * 100 : null; }
+  color(p) {
+    if (p === null) return '#1C140E';
+    if (p < 3) return '#5A2E14'; if (p < 6) return '#8A431C';
+    if (p < 9) return '#C2521C'; if (p < 12) return '#FF5C1A';
+    return '#FFB300';
+  }
+  deltaStr(p) { return p === null ? '—' : '+' + p.toFixed(1) + '%'; }
+  rr(x, y, w, h, r) {
+    return `M${x + r},${y} h${w - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - 2 * r} a${r},${r} 0 0 1 -${r},${r} h${-(w - 2 * r)} a${r},${r} 0 0 1 -${r},-${r} v${-(h - 2 * r)} a${r},${r} 0 0 1 ${r},-${r} Z`;
+  }
+  circ(cx, cy, r) { return `M${cx - r},${cy} a${r},${r} 0 1 0 ${2 * r},0 a${r},${r} 0 1 0 -${2 * r},0 Z`; }
+
+  regions(view) {
+    // view: 'front' | 'back' — geometry in viewBox 0 0 120 190
+    if (view === 'front') return [
+      { part: 'shoulders', d: this.circ(32, 42, 10) },
+      { part: 'shoulders', d: this.circ(88, 42, 10) },
+      { part: 'chest', d: this.rr(42, 32, 36, 24, 7) },
+      { part: 'arms', d: this.rr(16, 56, 12, 42, 6) },
+      { part: 'arms', d: this.rr(92, 56, 12, 42, 6) },
+      { part: 'core', d: this.rr(46, 60, 28, 26, 6) },
+      { part: 'legs', d: this.rr(40, 92, 17, 56, 8) },
+      { part: 'legs', d: this.rr(63, 92, 17, 56, 8) },
+    ];
+    return [
+      { part: 'shoulders', d: this.circ(32, 42, 10) },
+      { part: 'shoulders', d: this.circ(88, 42, 10) },
+      { part: 'back', d: this.rr(42, 32, 36, 54, 8) },
+      { part: 'arms', d: this.rr(16, 56, 12, 42, 6) },
+      { part: 'arms', d: this.rr(92, 56, 12, 42, 6) },
+      { part: 'legs', d: this.rr(40, 92, 17, 56, 8) },
+      { part: 'legs', d: this.rr(63, 92, 17, 56, 8) },
+    ];
+  }
+
+  mapRegions(view, sel, pick, period) {
+    const byId = Object.fromEntries(this.parts().map(p => [p.id, p]));
+    return this.regions(view).map(r => {
+      const p = byId[r.part];
+      const g = period ? this.monthlyPct(this.seriesOf(p, period), period) : this.pct(p.series);
+      return {
+        d: r.d,
+        fill: this.color(g),
+        stroke: sel === r.part ? '#FFE3CC' : (g === null ? '#3A2213' : 'none'),
+        dash: g === null ? '3 3' : 'none',
+        glow: g !== null && g >= 9 ? 'drop-shadow(0 0 6px rgba(255,92,26,.6))' : 'none',
+        pick: () => pick(r.part),
+      };
+    });
+  }
+
+  chart(sel, period, box) {
+    period = period || '30';
+    box = box || { baseY: 105, plot: 88 };
+    const p = this.parts().find(x => x.id === sel);
+    const s = this.seriesOf(p, period), g = this.pct(s);
+    const out = {
+      name: p.name, now: s[s.length - 1].toFixed(1).replace(/\.0$/, ''),
+      delta: this.deltaStr(g), deltaColor: g === null ? '#8A5A3C' : '#FF7A33',
+      hasLine: s.length >= 3, noLine: s.length < 3,
+      count: String(s.length), needed: String(Math.max(0, 3 - s.length)),
+      startLabel: period === '90' ? '4月23日' : '6月22日', endLabel: '7月21日', line: '', dots: [],
+    };
+    if (out.hasLine) {
+      const min = Math.min(...s), max = Math.max(...s), span = Math.max(1, max - min);
+      const pts = s.map((v, i) => {
+        const cx = 8 + (284 * i) / (s.length - 1);
+        const cy = box.baseY - ((v - min) / span) * box.plot;
+        return { cx: cx.toFixed(1), cy: cy.toFixed(1) };
+      });
+      out.dots = pts;
+      out.line = pts.map(d => d.cx + ',' + d.cy).join(' ');
+    }
+    return out;
+  }
+
+  sessions(sel, period) {
+    const p = this.parts().find(x => x.id === sel);
+    const s = this.seriesOf(p, period);
+    const days = period === '90' ? 90 : 30;
+    const end = new Date(2026, 6, 21);
+    return s.map((v, i) => {
+      const d = new Date(end.getTime() - days * ((s.length - 1 - i) / Math.max(1, s.length - 1)) * 86400000);
+      const diff = i === 0 ? null : v - s[i - 1];
+      return {
+        date: (d.getMonth() + 1) + '月' + d.getDate() + '日',
+        val: v.toFixed(1).replace(/\.0$/, ''),
+        diff: diff === null ? '—' : (diff >= 0 ? '+' : '') + diff.toFixed(1).replace(/\.0$/, ''),
+        diffColor: diff === null || diff === 0 ? '#6B5A4C' : (diff > 0 ? '#FF7A33' : '#8A5A3C'),
+      };
+    }).reverse().slice(0, 6);
+  }
+
+  spark(s) {
+    const min = Math.min(...s), max = Math.max(...s), span = Math.max(1, max - min);
+    return s.map((v, i) => {
+      const x = 2 + (60 * i) / (s.length - 1);
+      const y = 19 - ((v - min) / span) * 16;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+  }
+
+  renderVals() {
+    const parts = this.parts();
+    const pickA = id => this.setState({ selA: id });
+    const pickB = id => this.setState({ selB: id });
+    const pickC = id => this.setState({ selC: id });
+
+    // 3a
+    const chipsA = parts.map(p => {
+      const g = this.pct(p.series);
+      const sel = this.state.selA === p.id;
+      return {
+        name: p.name, delta: g === null ? 'あと' + (3 - p.series.length) + '回' : this.deltaStr(g),
+        deltaColor: g === null ? '#6B5A4C' : '#FF7A33',
+        fg: g === null ? '#8A5A3C' : '#F5EFE8',
+        border: sel ? '#FF5C1A' : '#3A2213',
+        borderStyle: g === null ? 'dashed' : 'solid',
+        bg: sel ? 'rgba(255,92,26,.1)' : 'transparent',
+        pick: () => pickA(p.id),
+      };
+    });
+
+    // 3b ranking (data-sufficient only, sorted)
+    const ranked = parts.filter(p => this.pct(p.series) !== null)
+      .sort((a, b) => this.pct(b.series) - this.pct(a.series));
+    const hero = ranked[0];
+    const rowsB = ranked.map((p, i) => {
+      const g = this.pct(p.series);
+      const sel = this.state.selB === p.id;
+      return {
+        rank: String(i + 1), name: p.name, spark: this.spark(p.series),
+        now: String(p.series[p.series.length - 1]),
+        delta: this.deltaStr(g), deltaColor: '#FF7A33',
+        border: sel ? '#FF5C1A' : '#241812',
+        bg: sel ? 'rgba(255,92,26,.08)' : 'rgba(255,255,255,.015)',
+        pick: () => pickB(p.id),
+      };
+    });
+
+    // 3c rings: full circle = +12% / 30d. C = 2π·26 = 163.4
+    const ringsC = parts.map(p => {
+      const g = this.pct(p.series);
+      const sel = this.state.selC === p.id;
+      const low = g === null;
+      const frac = low ? 0 : Math.min(1, g / 12);
+      return {
+        name: p.name,
+        ringColor: low ? '#3A2213' : (g >= 12 ? '#FFB300' : '#FF5C1A'),
+        dashArray: low ? '3 6' : (163.4 * frac).toFixed(1) + ' 163.4',
+        glow: !low && g >= 9 ? 'drop-shadow(0 0 5px rgba(255,92,26,.6))' : 'none',
+        center: low ? p.series.length + '/3' : this.deltaStr(g),
+        centerColor: low ? '#6B5A4C' : '#FFE3CC',
+        border: sel ? '#FF5C1A' : '#241812',
+        bg: sel ? 'rgba(255,92,26,.08)' : 'transparent',
+        pick: () => pickC(p.id),
+      };
+    });
+
+    // ===== Turn 2 (DEC-011): 4a/4b =====
+    const pick4 = id => this.setState({ sel4: id });
+    const period = this.state.period4;
+    const chips4 = parts.map(p => {
+      const s = this.seriesOf(p, period);
+      const g = this.pct(s);
+      const sel = this.state.sel4 === p.id;
+      return {
+        name: p.name, delta: g === null ? 'あと' + (3 - s.length) + '回' : this.deltaStr(g),
+        deltaColor: g === null ? '#6B5A4C' : '#FF7A33',
+        fg: g === null ? '#8A5A3C' : '#F5EFE8',
+        border: sel ? '#FF5C1A' : '#3A2213',
+        borderStyle: g === null ? 'dashed' : 'solid',
+        bg: sel ? 'rgba(255,92,26,.1)' : 'transparent',
+        pick: () => pick4(p.id),
+      };
+    });
+
+    return {
+      // 4a
+      front4: this.mapRegions('front', this.state.sel4, pick4, period),
+      back4: this.mapRegions('back', this.state.sel4, pick4, period),
+      chips4,
+      chart4: this.chart(this.state.sel4, period),
+      chartFS: this.chart(this.state.sel4, period, { baseY: 185, plot: 150 }),
+      fsSessions: this.sessions(this.state.sel4, period),
+      fsOn: this.state.fs4,
+      fsPeriodLabel: period === '90' ? '直近90日' : '直近30日',
+      p30fg: period === '30' ? '#0B0907' : '#8A5A3C', p30bg: period === '30' ? '#FF5C1A' : 'transparent',
+      p90fg: period === '90' ? '#0B0907' : '#8A5A3C', p90bg: period === '90' ? '#FF5C1A' : 'transparent',
+      setP30: () => this.setState({ period4: '30' }),
+      setP90: () => this.setState({ period4: '90' }),
+      openFS: () => { if (this.chart(this.state.sel4, period).hasLine) this.setState({ fs4: true }); },
+      closeFS: () => this.setState({ fs4: false }),
+      // 4b
+      frontDash: this.mapRegions('front', null, () => {}, '30'),
+
+      frontA: this.mapRegions('front', this.state.selA, pickA),
+      backA: this.mapRegions('back', this.state.selA, pickA),
+      frontB: this.mapRegions('front', this.state.selB, pickB),
+      chipsA, rowsB, ringsC,
+      heroB: {
+        name: hero.name,
+        delta: this.deltaStr(this.pct(hero.series)),
+        range: hero.series[0] + '→' + hero.series[hero.series.length - 1] + 'kg / 30日',
+      },
+      chartA: this.chart(this.state.selA),
+      chartB: this.chart(this.state.selB),
+      chartC: this.chart(this.state.selC),
+    };
+  }
+}
+</script>
+</body>
+</html>
