@@ -413,6 +413,38 @@ export const DASHBOARD_COPY = {
   photos: '写真比較',
 }
 
+// DEC-011: 成長ビュー「熱の人体図」
+export const GROWTH_COPY = {
+  brandLabel: 'TANREN / 成長',
+  title: '部位別の伸び',
+  back: '← ホーム',
+  periodLabel: (days: number) => `${days}日`,
+  sideFront: 'FRONT',
+  sideBack: 'BACK',
+  legendInsufficient: 'データ不足',
+  legendHigh: '+12%以上(月換算)',
+  // 変化率チップ・グラフは実測%表示(色エンコーディングのみ月換算)
+  deltaPct: (rate: number) => `${rate >= 0 ? '+' : ''}${(rate * 100).toFixed(1)}%`,
+  chipNeedMore: (n: number) => `あと${n}回`,
+  chartTitle: (muscleLabel: string) => `${muscleLabel} — E1RM 推移`,
+  anchorNote: (name: string) => `基準種目: ${name}`,
+  expand: '拡大 ↗',
+  e1rmUnit: 'KG e1RM',
+  needMoreSessions: (needed: number, count: number) =>
+    `推移を表示するにはセッションがあと${needed}回必要です(${count}/3)`,
+  fsHeader: (days: number) => `E1RM 推移 / 直近${days}日`,
+  historyTitle: 'セッション履歴',
+  // ダッシュボード組み込み(4b)
+  cardTitle: '成長 — 直近30日',
+  cardDetail: '詳細 →',
+  cardEmpty: 'まだ成長データがありません。同じ種目を3回記録すると熱が見えてきます',
+  recoveryTitle: '回復予測',
+  recoveryReady: '回復済み',
+  recoveryHours: (h: number) => `あと${h}時間`,
+  recoveryDays: (d: number) => `あと約${d}日`,
+  recoveryAllReady: '全部位が回復済みです',
+}
+
 export const PHOTO_COPY = {
   title: '写真比較',
   add: '写真を追加',
