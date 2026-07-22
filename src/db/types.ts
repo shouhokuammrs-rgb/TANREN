@@ -78,6 +78,22 @@ export interface Equipment {
   note?: string
 }
 
+/**
+ * 部位内の強調区分(DEC-012)。管理単位は7部位のまま、種目選択のローテーションにだけ使う。
+ * 胸: upper/mid/lower、肩: front/side/rear、腕: biceps/triceps、脚: quad/ham_glute
+ */
+export type ExerciseEmphasis =
+  | 'upper'
+  | 'mid'
+  | 'lower'
+  | 'front'
+  | 'side'
+  | 'rear'
+  | 'biceps'
+  | 'triceps'
+  | 'quad'
+  | 'ham_glute'
+
 export interface Exercise {
   id?: number
   name: string
@@ -85,6 +101,8 @@ export interface Exercise {
   muscleGroups: MuscleGroup[]
   movementType: MovementType
   movementPattern: MovementPattern
+  /** 部位内の強調区分(DEC-012)。undefined=中立(ローテーション評価の対象外だが選択可能) */
+  emphasis?: ExerciseEmphasis
   requiredEquipment: EquipmentType[]
   repRangeMin: number
   repRangeMax: number

@@ -60,6 +60,9 @@ export const VOLUME_RECOVERY_FACTORS: { maxSets: number; factor: number }[] = [
 /** initialWeightFactor未設定のダンベル種目に使う保守的な既定係数 */
 export const DEFAULT_INITIAL_WEIGHT_FACTOR = 0.1
 
+/** 強調ローテーション(DEC-012): LRU評価の対象にする部位ごとの直近セッション数 */
+export const EMPHASIS_HISTORY_SESSIONS = 3
+
 /** 「余裕あり」時の増量ステップ数(ISS-013b)。上級者設定で上書き可能なデフォルト値(DEC-010) */
 export const SLACK_JUMP_STEPS = 2
 /** 2ステップ増量の連続適用上限(暴走防止)。超えたら通常の1ステップ進行に戻す */

@@ -9,8 +9,45 @@ import {
 } from '../constants/engine'
 import { freshnessBucketOf } from '../constants/charts'
 import { FRESHNESS_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
-import type { Condition, Exercise, MuscleGroup } from '../db/types'
+import type { Condition, Exercise, ExerciseEmphasis, MuscleGroup } from '../db/types'
 import type { EngineContext } from './types'
+
+/**
+ * 強調ローテーションスコア(DEC-012・小さいほど優先)。
+ * 直近セッションに出現していない強調が最優先(0)、出現済みは古いものほど優先(LRU)。
+ * 中立(undefined)は未出現と同順位=この層では差を付けず、次層(実績→ID)で決まる
+ */
+export function emphasisRotationScore(
+  emphasis: ExerciseEmphasis | undefined,
+  recentNewestFirst: ExerciseEmphasis[],
+): number {
+  if (emphasis === undefined) return 0
+  const index = recentNewestFirst.indexOf(emphasis)
+  return index === -1 ? 0 : recentNewestFirst.length - index
+}
+
+/**
+ * 種目候補の共通コンパレータ(DEC-012)。生成(candidatesByMuscle)と入れ替え(alternativesFor)で
+ * 同一の並びを保証する。優先順位: コンパウンド → 強調ローテーション → 実績あり → ID(決定性)
+ */
+export function compareCandidates(
+  ctx: EngineContext,
+  muscle: MuscleGroup,
+): (a: Exercise, b: Exercise) => number {
+  const recent = ctx.recentEmphasis?.get(muscle) ?? []
+  return (a, b) => {
+    if (a.movementType !== b.movementType) {
+      return a.movementType === 'compound' ? -1 : 1
+    }
+    const rotation =
+      emphasisRotationScore(a.emphasis, recent) - emphasisRotationScore(b.emphasis, recent)
+    if (rotation !== 0) return rotation
+    const aHist = ctx.lastPerformance.has(a.id!) ? 0 : 1
+    const bHist = ctx.lastPerformance.has(b.id!) ? 0 : 1
+    if (aHist !== bHist) return aHist - bHist
+    return a.id! - b.id!
+  }
+}
 
 /** 使える時間から同時に狙う部位数を決める */
 export function muscleCountForTime(availableMinutes: number): number {
@@ -132,15 +169,7 @@ export function candidatesByMuscle(
       .filter((e) => !e.muscleGroups.some((m) => injured.has(m)))
       // 疲れ気味: レップ上限が低い=高重量前提の種目を回避(F-04-6)
       .filter((e) => condition !== 'tired' || e.repRangeMax > TIRED_AVOID_REP_MAX)
-      .sort((a, b) => {
-        if (a.movementType !== b.movementType) {
-          return a.movementType === 'compound' ? -1 : 1
-        }
-        const aHist = ctx.lastPerformance.has(a.id!) ? 0 : 1
-        const bHist = ctx.lastPerformance.has(b.id!) ? 0 : 1
-        if (aHist !== bHist) return aHist - bHist
-        return a.id! - b.id!
-      })
+      .sort(compareCandidates(ctx, muscle))
       .slice(0, MAX_EXERCISES_PER_MUSCLE)
     result.set(muscle, list)
   }

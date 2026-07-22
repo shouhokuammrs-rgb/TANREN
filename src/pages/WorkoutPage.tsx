@@ -6,6 +6,7 @@ import Modal from '../components/Modal'
 import { FRESHNESS_BUCKETS, freshnessBucketOf } from '../constants/charts'
 import {
   CONDITION_LABELS,
+  EMPHASIS_LABELS,
   FRESHNESS_COPY,
   HEARING_COPY,
   MEAL_TIMING_LABELS,
@@ -395,7 +396,11 @@ export default function WorkoutPage() {
 
   const onPick = (exercise: Exercise) => {
     if (!picker) return
-    const newItem: MenuItem = { exerciseId: exercise.id!, ...prescriptionFor(exercise, ctx) }
+    const newItem: MenuItem = {
+      exerciseId: exercise.id!,
+      emphasis: exercise.emphasis,
+      ...prescriptionFor(exercise, ctx),
+    }
     if (picker.mode === 'swap') {
       updateItems(menu.items.map((item, i) => (i === picker.itemIndex ? newItem : item)))
     } else {
@@ -465,6 +470,12 @@ export default function WorkoutPage() {
                   </p>
                   <p className="mt-0.5 text-xs text-ink-dim">
                     {MUSCLE_GROUP_LABELS[ex.primaryMuscle]}・{MOVEMENT_TYPE_LABELS[ex.movementType]}
+                    {/* 強調区分チップ(DEC-012)。中立種目はチップなし */}
+                    {item.emphasis && (
+                      <span className="ml-1.5 rounded-chip border border-line-ember px-1.5 py-0.5 text-[10px] text-ink-mid">
+                        {EMPHASIS_LABELS[item.emphasis]}
+                      </span>
+                    )}
                   </p>
                 </button>
                 <div className="text-right text-sm">

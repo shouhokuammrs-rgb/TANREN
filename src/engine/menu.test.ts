@@ -9,7 +9,7 @@ import {
   recoveringListLabel,
 } from './menu'
 import { muscleFreshnessMap } from './freshness'
-import { selectMuscles } from './selection'
+import { candidatesByMuscle, selectMuscles } from './selection'
 import type { EngineContext, MenuRequest, MuscleStimulus } from './types'
 
 const STEPS = [2.5, 4, 5.5, 7, 8.5, 10, 11.5, 13, 14.5, 16, 17.5, 19, 20.5, 22, 24]
@@ -196,6 +196,40 @@ describe('generateMenu: 上級者設定(DEC-010)', () => {
     expect(menu.isShortened).toBe(true)
     expect(menu.rationale).toContain('回復中のため')
     expect(menu.muscleSummary).toBe('今日の対象: 胸(回復100%)')
+  })
+})
+
+describe('generateMenu: 強調ローテーション(DEC-012・実マスタ)', () => {
+  it('前回midなら胸の先頭候補が未出現の強調(インクライン=upper)に切り替わる', () => {
+    const ctx = makeCtx({ recentEmphasis: new Map([['chest', ['mid']]]) })
+    const menu = generateMenu(ctx, { availableMinutes: 30, targetMuscles: ['chest'], condition: 'normal' })
+    const byId = new Map(EXERCISES.map((e) => [e.id, e]))
+    const first = byId.get(menu.items[0].exerciseId)!
+    expect(first.name).toBe('インクラインダンベルプレス')
+    expect(menu.items[0].emphasis).toBe('upper')
+  })
+
+  it('recentEmphasisなしは従来の並び(回帰: フラットプレスが先頭)', () => {
+    const menu = generateMenu(makeCtx(), { availableMinutes: 30, targetMuscles: ['chest'], condition: 'normal' })
+    const byId = new Map(EXERCISES.map((e) => [e.id, e]))
+    expect(byId.get(menu.items[0].exerciseId)!.name).toBe('ダンベルベンチプレス')
+  })
+
+  it('alternativesForと生成(candidatesByMuscle)の並びが一貫する', () => {
+    const ctx = makeCtx({ recentEmphasis: new Map([['chest', ['mid', 'upper']]]) })
+    const candidates = candidatesByMuscle(ctx, ['chest'], 'normal').get('chest')!
+    const alternatives = alternativesFor(ctx, 'chest', [])
+    expect(alternatives.slice(0, candidates.length).map((e) => e.id)).toEqual(
+      candidates.map((e) => e.id),
+    )
+  })
+
+  it('未出現のisolation(インクラインフライ)が出現済みcompound(フラットプレス)を追い越さない', () => {
+    const ctx = makeCtx({ recentEmphasis: new Map([['chest', ['mid']]]) })
+    const names = alternativesFor(ctx, 'chest', []).map((e) => e.name)
+    expect(names.indexOf('ダンベルベンチプレス')).toBeLessThan(
+      names.indexOf('インクラインダンベルフライ'),
+    )
   })
 })
 
