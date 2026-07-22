@@ -37,6 +37,20 @@ export const MOVEMENT_TYPE_LABELS = {
   isolation: 'アイソレーション',
 } as const
 
+// 部位内の強調区分(DEC-012)。メニューの種目行チップ表示用
+export const EMPHASIS_LABELS = {
+  upper: '上部',
+  mid: '中部',
+  lower: '下部',
+  front: 'フロント',
+  side: 'サイド',
+  rear: 'リア',
+  biceps: '二頭',
+  triceps: '三頭',
+  quad: '前もも',
+  ham_glute: '裏もも・尻',
+} as const
+
 export const MOVEMENT_PATTERN_LABELS = {
   horizontal_press: '水平プレス',
   vertical_press: '垂直プレス',

@@ -1,7 +1,7 @@
-// 部位選択(DEC-006: 回復優先)のユニットテスト
+// 部位選択(DEC-006: 回復優先)と強調ローテーション(DEC-012)のユニットテスト
 import { describe, expect, it } from 'vitest'
-import type { MuscleGroup } from '../db/types'
-import { selectMuscles } from './selection'
+import type { Exercise, ExerciseEmphasis, MovementType, MuscleGroup } from '../db/types'
+import { candidatesByMuscle, compareCandidates, emphasisRotationScore, selectMuscles } from './selection'
 import type { EngineContext } from './types'
 
 const ALL: MuscleGroup[] = ['chest', 'back', 'shoulders', 'arms', 'legs', 'abs', 'glutes']
@@ -90,5 +90,91 @@ describe('selectMuscles(おまかせ・DEC-006: 回復優先)', () => {
     expect(tuned.muscles).toEqual(['chest'])
     expect(tuned.isRestDay).toBe(false)
     expect(tuned.excludedRecovering.map((e) => e.muscle)).not.toContain('chest')
+  })
+})
+
+// ===== 強調ローテーション(DEC-012) =====
+
+function exercise(
+  id: number,
+  muscle: MuscleGroup,
+  movementType: MovementType,
+  emphasis?: ExerciseEmphasis,
+): Exercise {
+  return {
+    id,
+    name: `種目${id}`,
+    primaryMuscle: muscle,
+    muscleGroups: [muscle],
+    movementType,
+    movementPattern: movementType === 'compound' ? 'horizontal_press' : 'isolation',
+    emphasis,
+    requiredEquipment: ['dumbbell'],
+    repRangeMin: 8,
+    repRangeMax: 12,
+    isActive: 1,
+    formCues: [],
+    commonMistake: '',
+  }
+}
+
+function emphasisCtx(
+  exercises: Exercise[],
+  recent: ExerciseEmphasis[],
+  overrides: Partial<EngineContext> = {},
+): EngineContext {
+  return ctxWith({
+    exercises,
+    dumbbellStepsKg: [10, 12],
+    recentEmphasis: new Map([['chest' as MuscleGroup, recent]]),
+    ...overrides,
+  })
+}
+
+describe('emphasisRotationScore(DEC-012・LRU)', () => {
+  it('未出現と中立は0(最優先)、出現済みは新しいほど大きい(後回し)', () => {
+    expect(emphasisRotationScore(undefined, ['mid'])).toBe(0)
+    expect(emphasisRotationScore('upper', ['mid'])).toBe(0)
+    // 新しい順 [upper, mid]: midは古い=1、upperは直近=2
+    expect(emphasisRotationScore('mid', ['upper', 'mid'])).toBe(1)
+    expect(emphasisRotationScore('upper', ['upper', 'mid'])).toBe(2)
+  })
+})
+
+describe('candidatesByMuscle: 強調ローテーション(DEC-012)', () => {
+  const flatPress = exercise(1, 'chest', 'compound', 'mid')
+  const inclinePress = exercise(2, 'chest', 'compound', 'upper')
+  const declinePress = exercise(3, 'chest', 'compound', 'lower')
+
+  it('前回midなら未出現(upper/lower)の種目が上位に来る', () => {
+    const ctx = emphasisCtx([flatPress, inclinePress, declinePress], ['mid'])
+    const list = candidatesByMuscle(ctx, ['chest'], 'normal').get('chest')!
+    expect(list.map((e) => e.id)).toEqual([2, 3]) // 未出現のupper/lower(同点はID順)
+  })
+
+  it('未出現が最優先、出現済みは古い順(LRU)', () => {
+    // 新しい順 [upper, mid] → lower(未出現) → mid(古い) → upper(直近)
+    const ctx = emphasisCtx([flatPress, inclinePress, declinePress], ['upper', 'mid'])
+    const sorted = [flatPress, inclinePress, declinePress].sort(compareCandidates(ctx, 'chest'))
+    expect(sorted.map((e) => e.id)).toEqual([3, 1, 2])
+  })
+
+  it('コンパウンド優先はローテーションより上位(未出現のisolationが出現済みcompoundを追い越さない)', () => {
+    const inclineFly = exercise(4, 'chest', 'isolation', 'upper')
+    const ctx = emphasisCtx([inclineFly, flatPress], ['mid'])
+    const sorted = [inclineFly, flatPress].sort(compareCandidates(ctx, 'chest'))
+    expect(sorted.map((e) => e.id)).toEqual([1, 4])
+  })
+
+  it('中立のみの部位は現行の並びのまま(回帰: 実績→ID)', () => {
+    const rowA = exercise(11, 'back', 'compound')
+    const rowB = exercise(12, 'back', 'compound')
+    const withHistory = new Map([[12, { exerciseId: 12, performedAt: new Date(), sets: [] }]])
+    const base = ctxWith({ exercises: [rowA, rowB], dumbbellStepsKg: [10], lastPerformance: withHistory })
+    const withRotation = { ...base, recentEmphasis: new Map() }
+    const sortedBase = [rowA, rowB].sort(compareCandidates(base, 'back')).map((e) => e.id)
+    const sortedRotation = [rowA, rowB].sort(compareCandidates(withRotation, 'back')).map((e) => e.id)
+    expect(sortedBase).toEqual([12, 11]) // 実績あり優先
+    expect(sortedRotation).toEqual(sortedBase)
   })
 })

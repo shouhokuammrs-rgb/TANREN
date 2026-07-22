@@ -109,6 +109,29 @@ describe('deleteSession(ISS-008)', () => {
   })
 })
 
+describe('recentEmphasis(DEC-012): 部位ごとの直近セッションの強調区分', () => {
+  beforeEach(async () => {
+    await db.open()
+    await clearLogs()
+  })
+
+  it('直近3セッション分の強調を新しい順で返す(それ以前は落ちる)', async () => {
+    await createCompletedSession(BENCH, 8, 11.5) // mid(4セッション目=対象外)
+    await createCompletedSession('インクラインダンベルプレス', 6, 10) // upper
+    await createCompletedSession(BENCH, 4, 13) // mid
+    await createCompletedSession('デクラインダンベルプレス', 1, 11.5) // lower(最新)
+
+    const ctx = await loadEngineContext()
+    expect(ctx.recentEmphasis?.get('chest')).toEqual(['lower', 'mid', 'upper'])
+  })
+
+  it('中立種目しかない部位は空のまま(背中の回帰)', async () => {
+    await createCompletedSession('ワンハンドダンベルロウ', 1, 13)
+    const ctx = await loadEngineContext()
+    expect(ctx.recentEmphasis?.get('back')).toBeUndefined()
+  })
+})
+
 describe('ボリューム集計(ISS-012): 週別/日別履歴', () => {
   // 2026-07-13(月)が今週の開始。7/12(日)は前週=7/6週に入る
   const now = new Date('2026-07-17T12:00:00')

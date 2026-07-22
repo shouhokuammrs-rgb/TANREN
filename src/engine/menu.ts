@@ -17,6 +17,7 @@ import { intervalSecFor } from './interval'
 import { snapToSteps, suggestWeightReps } from './progression'
 import {
   candidatesByMuscle,
+  compareCandidates,
   isExerciseAvailable,
   selectMuscles,
   type ExcludedRecoveringMuscle,
@@ -52,7 +53,10 @@ export function prescriptionFor(exercise: Exercise, ctx: EngineContext): Prescri
   }
 }
 
-/** 入れ替え・追加用の代替候補: 同部位かつ器具・痛みフラグの条件を満たす種目 */
+/**
+ * 入れ替え・追加用の代替候補: 同部位かつ器具・痛みフラグの条件を満たす種目。
+ * 並びは生成と同じ共通コンパレータ(DEC-012: コンパウンド→強調ローテーション→実績→ID)
+ */
 export function alternativesFor(
   ctx: EngineContext,
   muscle: MuscleGroup,
@@ -65,7 +69,7 @@ export function alternativesFor(
     .filter((e) => !exclude.has(e.id!))
     .filter((e) => isExerciseAvailable(e, ctx))
     .filter((e) => !e.muscleGroups.some((m) => injured.has(m)))
-    .sort((a, b) => (a.movementType === b.movementType ? a.id! - b.id! : a.movementType === 'compound' ? -1 : 1))
+    .sort(compareCandidates(ctx, muscle))
 }
 
 /** 疲れ気味: 総セット数を係数分に削減する(各種目MIN_SETSまで。それでも超える場合は後ろの種目を削る) */
@@ -126,7 +130,11 @@ export function generateMenu(ctx: EngineContext, request: MenuRequest): Generate
     for (const muscle of muscles) {
       const exercise = candidates.get(muscle)?.[depth]
       if (!exercise) continue
-      const item: MenuItem = { exerciseId: exercise.id!, ...prescriptionFor(exercise, ctx) }
+      const item: MenuItem = {
+        exerciseId: exercise.id!,
+        emphasis: exercise.emphasis,
+        ...prescriptionFor(exercise, ctx),
+      }
       const cost = itemDurationSec(item)
       if (usedSec + cost <= budgetSec) {
         items.push(item)

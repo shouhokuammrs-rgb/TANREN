@@ -1,4 +1,10 @@
-import type { Condition, Exercise, MovementPattern, MuscleGroup } from '../db/types'
+import type {
+  Condition,
+  Exercise,
+  ExerciseEmphasis,
+  MovementPattern,
+  MuscleGroup,
+} from '../db/types'
 
 /**
  * エンジン上級者設定(DEC-010)。埋め込み定数を上書きする体感調整用オーバーライド。
@@ -68,6 +74,11 @@ export interface EngineContext {
   priorityScores?: Record<MuscleGroup, number>
   /** 上級者設定(DEC-010)。未設定なら全デフォルト定数で従来挙動 */
   tuning?: EngineTuning
+  /**
+   * 部位ごとの直近セッションで使った強調区分(新しい順・DEC-012)。
+   * DB層が直近EMPHASIS_HISTORY_SESSIONS回分から組み立てる。未設定なら現行の並び
+   */
+  recentEmphasis?: Map<MuscleGroup, ExerciseEmphasis[]>
 }
 
 export interface MenuRequest {
@@ -91,6 +102,8 @@ export interface Prescription {
 
 export interface MenuItem extends Prescription {
   exerciseId: number
+  /** 種目の強調区分(DEC-012)。UIのチップ表示用。中立種目はundefined */
+  emphasis?: ExerciseEmphasis
 }
 
 export interface GeneratedMenu {

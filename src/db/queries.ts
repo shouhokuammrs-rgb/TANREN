@@ -5,6 +5,7 @@ import type {
   BodyStat,
   Condition,
   Exercise,
+  ExerciseEmphasis,
   Goal,
   MealTiming,
   MuscleGroup,
@@ -14,6 +15,7 @@ import type {
   SessionExercise,
   SetRecord,
 } from './types'
+import { EMPHASIS_HISTORY_SESSIONS } from '../constants/engine'
 import type {
   EngineContext,
   ExerciseHistoryEntry,
@@ -58,6 +60,9 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
   const entriesByExercise = new Map<number, ExerciseHistoryEntry[]>()
   const stimulusByMuscle = new Map<MuscleGroup, MuscleStimulus>()
   const exerciseById = new Map(exercises.map((e) => [e.id!, e]))
+  // 強調ローテーション(DEC-012): 部位ごとの直近セッションで使った強調区分(新しい順)
+  const recentEmphasis = new Map<MuscleGroup, ExerciseEmphasis[]>()
+  const emphasisSessionCount = new Map<MuscleGroup, number>()
 
   for (const session of sessions) {
     const sessionExercises = await db.session_exercises
@@ -65,6 +70,7 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
       .equals(session.id!)
       .toArray()
     const muscleSetCount = new Map<MuscleGroup, number>()
+    const sessionEmphasis = new Map<MuscleGroup, ExerciseEmphasis[]>()
 
     for (const se of sessionExercises) {
       const sets = await db.sets.where('sessionExerciseId').equals(se.id!).toArray()
@@ -87,15 +93,28 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
         entriesByExercise.set(se.exerciseId, entries)
       }
 
-      const muscle = exerciseById.get(se.exerciseId)?.primaryMuscle
+      const exercise = exerciseById.get(se.exerciseId)
+      const muscle = exercise?.primaryMuscle
       if (muscle) {
         muscleSetCount.set(muscle, (muscleSetCount.get(muscle) ?? 0) + completed.length)
+        if (exercise.emphasis !== undefined) {
+          sessionEmphasis.set(muscle, [...(sessionEmphasis.get(muscle) ?? []), exercise.emphasis])
+        }
       }
     }
 
     for (const [muscle, setCount] of muscleSetCount) {
       if (!stimulusByMuscle.has(muscle)) {
         stimulusByMuscle.set(muscle, { muscle, at: session.startedAt, setCount })
+      }
+      // その部位を扱った直近EMPHASIS_HISTORY_SESSIONS回分だけLRU評価の対象にする
+      const count = emphasisSessionCount.get(muscle) ?? 0
+      if (count < EMPHASIS_HISTORY_SESSIONS) {
+        emphasisSessionCount.set(muscle, count + 1)
+        const emphases = sessionEmphasis.get(muscle)
+        if (emphases && emphases.length > 0) {
+          recentEmphasis.set(muscle, [...(recentEmphasis.get(muscle) ?? []), ...emphases])
+        }
       }
     }
   }
@@ -124,6 +143,7 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     priorityScores: priorityScores(latestGoal),
     // 上級者設定(DEC-010)。エンジンは純関数のままにするため、読み込みはここで行う
     tuning: loadEngineTuning(),
+    recentEmphasis,
   }
 }
 
