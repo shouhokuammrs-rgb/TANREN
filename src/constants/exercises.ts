@@ -110,6 +110,9 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
     name: 'デクラインプッシュアップ',
     searchKeyword: '足上げ腕立て伏せ やり方',
+    // 強調はupper(DEC-012 PM裁定): 足上げにより押す角度がインクラインプレス相当になるため。
+    // 「デクライン系=lower」ルールはベンチ種目の命名前提で、プッシュアップでは名前と実態が逆転する
+    emphasis: 'upper',
     primaryMuscle: 'chest',
     muscleGroups: ['chest', 'shoulders', 'arms'],
     movementType: 'compound',
