@@ -28,7 +28,8 @@ import { autoCloudBackup } from '../utils/cloudBackup'
 import { toastSyncResult } from '../utils/cloudToast'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 import { useWakeLock } from '../hooks/useWakeLock'
-import { audioReady, countBeep, finishChime, unlockAudio } from '../utils/audio'
+import { audioReady, countBeep, finishChime, prepBeep, unlockAudio } from '../utils/audio'
+import { evaluatePrepAlarm, isPrepPhase } from '../utils/prepAlarm'
 import { vibrate } from '../utils/vibrate'
 
 const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
@@ -68,6 +69,7 @@ export default function ActiveWorkoutPage() {
   const [autoTimer] = useLocalSetting('autoStartTimer', true)
   const [dumbbellSteps, setDumbbellSteps] = useState<number[]>([])
   const lastBeepSecRef = useRef<number | null>(null)
+  const prepFiredRef = useRef(false)
 
   useWakeLock(workout !== null)
 
@@ -106,6 +108,13 @@ export default function ActiveWorkoutPage() {
       const rest = mode.endAt - Date.now()
       setSoundOk(audioReady())
       const restSec = Math.ceil(rest / 1000)
+      // 準備アラーム(残り20秒・1回。延長で再武装): 音+軽いバイブ。視覚表示はRestingView側
+      const prep = evaluatePrepAlarm(restSec, mode.totalSec, prepFiredRef.current)
+      prepFiredRef.current = prep.fired
+      if (prep.fire) {
+        prepBeep()
+        vibrate([200, 100, 200])
+      }
       if (rest > 0 && restSec <= 3 && lastBeepSecRef.current !== restSec) {
         lastBeepSecRef.current = restSec
         countBeep()
@@ -162,6 +171,7 @@ export default function ActiveWorkoutPage() {
       setMode({ kind: 'logging' })
     } else if (autoTimer && position.set.intervalSec) {
       lastBeepSecRef.current = null
+      prepFiredRef.current = false
       setMode({
         kind: 'resting',
         endAt: Date.now() + position.set.intervalSec * 1000,
@@ -508,6 +518,8 @@ function RestingView({
   const remainingSec = Math.ceil(remainingMs / 1000)
   const progress = mode.totalSec > 0 ? remainingMs / (mode.totalSec * 1000) : 0
   const draftWeight = next.set.actualWeightKg ?? next.set.suggestedWeightKg
+  // 準備アラーム(残り20秒)の視覚フォールバック: 熱が上がる方向の控えめな変化+1行表示
+  const prep = !mode.finished && isPrepPhase(remainingSec, mode.totalSec)
 
   return (
     <div className={`anim-rise space-y-5 ${mode.finished ? 'anim-pulse' : ''}`}>
@@ -528,7 +540,11 @@ function RestingView({
           height="300"
           viewBox="0 0 300 300"
           aria-hidden="true"
-          style={{ filter: 'drop-shadow(0 0 12px rgba(255,92,26,.65))' }}
+          style={{
+            filter: prep
+              ? 'drop-shadow(0 0 18px rgba(255,92,26,.9))'
+              : 'drop-shadow(0 0 12px rgba(255,92,26,.65))',
+          }}
         >
           <defs>
             {/* 溶鉄グラデ(§1・45°) */}
@@ -559,6 +575,11 @@ function RestingView({
           </p>
           <p className="num-hero glow-text text-[88px] leading-none">{remainingSec}</p>
           <p className="label-mono text-[11px] tracking-normal text-ink-dim">/ {mode.totalSec}s</p>
+          {prep && (
+            <p className="label-mono anim-pulse mt-1 text-[11px] text-molten-bright">
+              🔔 {TIMER_COPY.prepNotice}
+            </p>
+          )}
         </div>
       </div>
 

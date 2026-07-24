@@ -49,6 +49,15 @@ export function countBeep(): void {
   tone(880, 120)
 }
 
+/**
+ * 準備アラーム(残り20秒)。低め660Hzの短い2連で、
+ * カウント音(880Hz単発)・終了チャイム(3音上昇)と聞き分けられる控えめな音
+ */
+export function prepBeep(): void {
+  tone(660, 120, 0.3)
+  setTimeout(() => tone(660, 120, 0.3), 150)
+}
+
 /** インターバル終了音 */
 export function finishChime(): void {
   tone(660, 200)
