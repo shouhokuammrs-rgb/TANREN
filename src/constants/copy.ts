@@ -243,6 +243,8 @@ export const FINISH_COPY = {
 export const TIMER_COPY = {
   resting: 'インターバル中',
   finished: '次のセットへ!',
+  // 準備アラーム(残り20秒)。バイブ・音非対応環境の視覚フォールバック兼用
+  prepNotice: 'そろそろ準備',
   skip: 'スキップ',
   secondsSuffix: '秒',
   soundSuspended: '音が停止中。タップで有効化(終了は点滅でも知らせます)',
