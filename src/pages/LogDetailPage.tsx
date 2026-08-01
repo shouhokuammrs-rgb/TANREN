@@ -11,7 +11,16 @@ import {
   WORKOUT_COPY,
   formatDate,
 } from '../constants/copy'
-import { deleteSession, loadWorkout, updateSessionNotes } from '../db/queries'
+import {
+  addLoggedSet,
+  deleteLoggedSet,
+  deleteSession,
+  loadWorkout,
+  updateLoggedSet,
+  updateSessionNotes,
+} from '../db/queries'
+import type { SetRecord } from '../db/types'
+import { autoCloudBackup } from '../utils/cloudBackup'
 
 export default function LogDetailPage() {
   const { id } = useParams()
@@ -20,6 +29,8 @@ export default function LogDetailPage() {
   // undefined=読込中 / null=存在しない を区別する
   const workout = useLiveQuery(async () => (await loadWorkout(sessionId)) ?? null, [sessionId])
   const [editing, setEditing] = useState(false)
+  // ログの事後編集(ISS-020): セット編集モード
+  const [editingSets, setEditingSets] = useState(false)
 
   if (workout === undefined) {
     return <p className="pt-10 text-center text-sm text-ink-dim">…</p>
@@ -45,7 +56,13 @@ export default function LogDetailPage() {
         </Link>
         <div className="mt-1 flex items-baseline justify-between">
           <h1 className="text-2xl font-bold">{formatDate(session.startedAt)}</h1>
-          <span className="text-xs text-ink-dim">{SESSION_STATUS_LABELS[session.status]}</span>
+          <span className="text-xs text-ink-dim">
+            {/* 編集済みの控えめな表示(ISS-020・updatedAtで判定) */}
+            {session.updatedAt && (
+              <span className="mr-2 text-[10px] text-ink-dim/70">{LOG_COPY.editedMark}</span>
+            )}
+            {SESSION_STATUS_LABELS[session.status]}
+          </span>
         </div>
         {session.muscles && session.muscles.length > 0 && (
           <p className="mt-1 text-sm text-molten-bright">
@@ -54,36 +71,73 @@ export default function LogDetailPage() {
         )}
       </div>
 
+      {/* セット編集モード切替(ISS-020) */}
+      {entries.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="h-11 rounded-chip border border-line-ember px-4 text-xs text-ink-mid active:border-molten active:text-molten"
+            onClick={() => {
+              if (editingSets) {
+                // 編集を終えたタイミングでクラウドへ再アップロード(未ログイン時はno-op)
+                void autoCloudBackup()
+              }
+              setEditingSets((v) => !v)
+            }}
+          >
+            {editingSets ? LOG_COPY.editSetsDone : LOG_COPY.editSets}
+          </button>
+        </div>
+      )}
+
       <ul className="space-y-3">
         {entries.map((entry) => (
           <li key={entry.sessionExercise.id} className="rounded-card bg-ember-tint border border-line-ember p-4">
             <p className="font-semibold">{entry.exercise.name}</p>
             <ul className="mt-2 space-y-1">
-              {entry.sets.map((set) => (
-                <li key={set.id} className="flex items-center justify-between text-sm">
-                  <span className="text-ink-dim">{WORKOUT_COPY.setLabel(set.setNumber)}</span>
-                  {set.completedAt ? (
-                    <span>
-                      {set.actualWeightKg !== undefined ? `${set.actualWeightKg}kg × ` : ''}
-                      {set.actualReps}
-                      {WORKOUT_COPY.repsUnit}
-                      {set.isPr && (
-                        <span className="ml-1.5 rounded bg-molten px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          PR
+              {entry.sets.map((set) =>
+                editingSets ? (
+                  <SetEditorRow
+                    key={set.id}
+                    set={set}
+                    exerciseName={entry.exercise.name}
+                    isLastSet={entry.sets.length === 1}
+                  />
+                ) : (
+                  <li key={set.id} className="flex items-center justify-between text-sm">
+                    <span className="text-ink-dim">{WORKOUT_COPY.setLabel(set.setNumber)}</span>
+                    {set.completedAt ? (
+                      <span>
+                        {set.actualWeightKg !== undefined ? `${set.actualWeightKg}kg × ` : ''}
+                        {set.actualReps}
+                        {WORKOUT_COPY.repsUnit}
+                        {set.isPr && (
+                          <span className="ml-1.5 rounded bg-molten px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            PR
+                          </span>
+                        )}
+                        <span
+                          className={`ml-2 text-xs ${set.achieved ? 'text-achieved' : 'text-adjusting'}`}
+                        >
+                          {set.achieved ? LOG_COPY.achievedMark : LOG_COPY.missedMark}
                         </span>
-                      )}
-                      <span
-                        className={`ml-2 text-xs ${set.achieved ? 'text-achieved' : 'text-adjusting'}`}
-                      >
-                        {set.achieved ? LOG_COPY.achievedMark : LOG_COPY.missedMark}
                       </span>
-                    </span>
-                  ) : (
-                    <span className="text-xs text-ink-dim">{LOG_COPY.notDone}</span>
-                  )}
-                </li>
-              ))}
+                    ) : (
+                      <span className="text-xs text-ink-dim">{LOG_COPY.notDone}</span>
+                    )}
+                  </li>
+                ),
+              )}
             </ul>
+            {editingSets && (
+              <button
+                type="button"
+                className="mt-2 h-11 w-full rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
+                onClick={() => void addLoggedSet(entry.sessionExercise.id!)}
+              >
+                {LOG_COPY.addSet}
+              </button>
+            )}
             {entry.sessionExercise.note && (
               <p className="mt-2 rounded-chip bg-line-ember/40 p-2 text-xs text-ink-mid">
                 {entry.sessionExercise.note}
@@ -163,6 +217,84 @@ export default function LogDetailPage() {
         {LOG_COPY.deleteSession}
       </button>
     </section>
+  )
+}
+
+/**
+ * セット編集行(ISS-020): ±ステッパーで即時保存(Dexie liveQueryが再描画)。
+ * weightは0.5kg刻み・repsは1刻み・下限は正の値。自重セットはrepsのみ。
+ * 未実施セットは削除のみ可。最後の1セットの削除は種目記録ごと消えるため確認ダイアログ
+ */
+function SetEditorRow({
+  set,
+  exerciseName,
+  isLastSet,
+}: {
+  set: SetRecord
+  exerciseName: string
+  isLastSet: boolean
+}) {
+  const onDelete = async () => {
+    if (isLastSet && !window.confirm(LOG_COPY.deleteExerciseConfirm(exerciseName))) return
+    await deleteLoggedSet(set.id!)
+  }
+  const step = (field: 'weight' | 'reps', dir: 1 | -1) => {
+    if (set.completedAt === undefined || set.actualReps === undefined) return
+    void updateLoggedSet(set.id!, {
+      weightKg:
+        field === 'weight' && set.actualWeightKg !== undefined
+          ? set.actualWeightKg + dir * 0.5
+          : set.actualWeightKg,
+      reps: field === 'reps' ? set.actualReps + dir : set.actualReps,
+    })
+  }
+  const stepButton = (label: string, onClick: () => void) => (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="flex h-11 w-9 items-center justify-center"
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-pill border border-line-ember text-sm text-ink-mid">
+        {label.endsWith('+') ? '+' : '−'}
+      </span>
+    </button>
+  )
+  return (
+    <li className="flex items-center justify-between text-sm">
+      <span className="text-ink-dim">{WORKOUT_COPY.setLabel(set.setNumber)}</span>
+      <span className="flex items-center">
+        {set.completedAt ? (
+          <>
+            {set.actualWeightKg !== undefined && (
+              <>
+                {stepButton(`セット${set.setNumber} 重量−`, () => step('weight', -1))}
+                <span className="label-mono min-w-[52px] text-center text-sm font-bold tracking-normal text-ink">
+                  {set.actualWeightKg}kg
+                </span>
+                {stepButton(`セット${set.setNumber} 重量+`, () => step('weight', 1))}
+                <span className="mx-0.5 text-ink-dim">×</span>
+              </>
+            )}
+            {stepButton(`セット${set.setNumber} レップ−`, () => step('reps', -1))}
+            <span className="label-mono min-w-[30px] text-center text-sm font-bold tracking-normal text-ink">
+              {set.actualReps}
+            </span>
+            {stepButton(`セット${set.setNumber} レップ+`, () => step('reps', 1))}
+          </>
+        ) : (
+          <span className="text-xs text-ink-dim">{LOG_COPY.notDone}</span>
+        )}
+        <button
+          type="button"
+          aria-label={LOG_COPY.deleteSetLabel(set.setNumber)}
+          onClick={() => void onDelete()}
+          className="ml-1 flex h-11 w-9 items-center justify-center text-destructive"
+        >
+          ✕
+        </button>
+      </span>
+    </li>
   )
 }
 

@@ -271,6 +271,14 @@ export const LOG_COPY = {
     `睡眠 ${start}〜${end}(${hours.toFixed(1)}時間)`,
   deleteSession: 'このセッションを削除',
   deleteConfirm: 'このセッションを削除しますか?元に戻せません',
+  // ログの事後編集(ISS-020)
+  editSets: '記録を編集',
+  editSetsDone: '編集を終える',
+  addSet: '+ セット追加',
+  editedMark: '編集済み',
+  deleteSetLabel: (n: number) => `セット${n}を削除`,
+  deleteExerciseConfirm: (name: string) =>
+    `最後のセットを削除すると「${name}」の記録ごと消えます。よろしいですか?`,
 }
 
 export const SETTINGS_COPY = {

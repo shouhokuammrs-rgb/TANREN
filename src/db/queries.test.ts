@@ -3,17 +3,22 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import {
+  addLoggedSet,
   dailyVolumeHistory,
+  deleteLoggedSet,
   deleteSession,
   judgeGoal,
   loadEngineContext,
+  loadGrowthSessions,
   recordReachedGoals,
   resumeMuscleGoal,
   saveMuscleGoal,
+  updateLoggedSet,
   weeklyVolumeHistory,
 } from './queries'
+import { CLOUD_PENDING_KEY } from '../constants/cloud'
 import { GOAL_COEF } from '../constants/goals'
-import { generateMenu } from '../engine'
+import { generateMenu, goalTrendByMuscle } from '../engine'
 
 async function clearLogs() {
   await db.sets.clear()
@@ -328,5 +333,104 @@ describe('ゴール到達検知と鏡チェックの判定記録(Phase 7-5b)', (
     // 次のセッション記録保存で正規の到達検知が走る
     expect(await recordReachedGoals(sessionId)).toEqual(['chest'])
     expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['reached'])
+  })
+})
+
+describe('ログの事後編集(ISS-020)', () => {
+  beforeEach(async () => {
+    await db.open()
+    await clearLogs()
+    await db.settings.clear()
+  })
+
+  async function firstEntry(sessionId: number) {
+    const se = (await db.session_exercises.where('sessionId').equals(sessionId).toArray())[0]
+    const sets = await db.sets.where('sessionExerciseId').equals(se.id!).sortBy('setNumber')
+    return { se, sets }
+  }
+
+  it('セット編集: weightは0.5kg刻みに丸め・achievedは記録時と同じ規則で再判定・編集済みマーク', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 11.5) // 提案11.5kg×8
+    const { sets } = await firstEntry(sessionId)
+
+    await updateLoggedSet(sets[0].id!, { weightKg: 13.3, reps: 10 })
+    const edited = (await db.sets.get(sets[0].id!))!
+    expect(edited.actualWeightKg).toBe(13.5) // 13.3 → 0.5刻み丸め
+    expect(edited.actualReps).toBe(10)
+    expect(edited.achieved).toBe(true) // 13.5≥11.5 かつ 10≥8
+
+    // 提案未満に下げたらachieved=false
+    await updateLoggedSet(sets[1].id!, { weightKg: 11.5, reps: 5 })
+    expect((await db.sets.get(sets[1].id!))?.achieved).toBe(false)
+
+    // 編集済みマーク(updatedAt)+クラウド再アップロード対象
+    expect((await db.sessions.get(sessionId))?.updatedAt).toBeInstanceOf(Date)
+    const pending = await db.settings.get(CLOUD_PENDING_KEY)
+    expect(pending?.value).toBe(true)
+  })
+
+  it('セット編集: reps0以下・weight0以下は無視(no-op)', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 11.5)
+    const { sets } = await firstEntry(sessionId)
+    await updateLoggedSet(sets[0].id!, { weightKg: 11.5, reps: 0 })
+    await updateLoggedSet(sets[0].id!, { weightKg: 0, reps: 8 })
+    const set = (await db.sets.get(sets[0].id!))!
+    expect(set.actualWeightKg).toBe(11.5)
+    expect(set.actualReps).toBe(8)
+    expect((await db.sessions.get(sessionId))?.updatedAt).toBeUndefined()
+  })
+
+  it('自重セット(weightなし)はrepsのみ編集できweightはundefinedのまま', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 11.5)
+    const { sets } = await firstEntry(sessionId)
+    // 自重相当のセットを用意(weight実績なし)
+    await db.sets.update(sets[0].id!, { actualWeightKg: undefined, suggestedWeightKg: undefined })
+    await updateLoggedSet(sets[0].id!, { reps: 15 })
+    const set = (await db.sets.get(sets[0].id!))!
+    expect(set.actualWeightKg).toBeUndefined()
+    expect(set.actualReps).toBe(15)
+  })
+
+  it('セット追加: 直近の完了セットを複製して末尾に追加(完了扱い・setNumber連番)', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 13)
+    const { se } = await firstEntry(sessionId)
+    const newId = await addLoggedSet(se.id!)
+    expect(newId).toBeDefined()
+    const sets = await db.sets.where('sessionExerciseId').equals(se.id!).sortBy('setNumber')
+    expect(sets).toHaveLength(4)
+    const added = sets[3]
+    expect(added.setNumber).toBe(4)
+    expect(added.actualWeightKg).toBe(13)
+    expect(added.actualReps).toBe(8)
+    expect(added.completedAt).toBeInstanceOf(Date)
+  })
+
+  it('セット削除: 残りのsetNumberが1から詰め直される', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 13)
+    const { se, sets } = await firstEntry(sessionId)
+    const result = await deleteLoggedSet(sets[1].id!) // 2番目を削除
+    expect(result.exerciseRemoved).toBe(false)
+    const rest = await db.sets.where('sessionExerciseId').equals(se.id!).sortBy('setNumber')
+    expect(rest.map((s) => s.setNumber)).toEqual([1, 2])
+  })
+
+  it('最後の1セットを削除すると種目記録ごと消える', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 13, { setCount: 1 })
+    const { se, sets } = await firstEntry(sessionId)
+    const result = await deleteLoggedSet(sets[0].id!)
+    expect(result.exerciseRemoved).toBe(true)
+    expect(await db.session_exercises.get(se.id!)).toBeUndefined()
+    expect(await db.sets.where('sessionExerciseId').equals(se.id!).count()).toBe(0)
+  })
+
+  it('派生値反映: 編集後の値で成長点列・現在e1RMが再計算される(再計算コードなしの自動反映)', async () => {
+    const sessionId = await createCompletedSession(BENCH, 1, 14.5) // e1RM 14.5×(1+8/30)≒18.4
+    const before = goalTrendByMuscle(await loadGrowthSessions(), new Date()).chest?.currentE1Rm
+    expect(before).toBeCloseTo(14.5 * (1 + 8 / 30), 5)
+
+    const { sets } = await firstEntry(sessionId)
+    for (const s of sets) await updateLoggedSet(s.id!, { weightKg: 16, reps: 10 })
+    const after = goalTrendByMuscle(await loadGrowthSessions(), new Date()).chest?.currentE1Rm
+    expect(after).toBeCloseTo(16 * (1 + 10 / 30), 5)
   })
 })

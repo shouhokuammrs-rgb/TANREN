@@ -17,6 +17,7 @@ import type {
   SessionExercise,
   SetRecord,
 } from './types'
+import { CLOUD_PENDING_KEY } from '../constants/cloud'
 import { EMPHASIS_HISTORY_SESSIONS } from '../constants/engine'
 import { GOAL_COEF, isGoalTargetMuscle } from '../constants/goals'
 import type {
@@ -336,6 +337,91 @@ export async function recordSet(
     hadSlack: actual.hadSlack || undefined,
     completedAt: new Date(),
   })
+}
+
+// ===== ログの事後編集(ISS-020) =====
+
+/**
+ * 編集済みマーク: セッションにupdatedAtを立て、クラウドバックアップの
+ * 再アップロード対象(pending)にする(次回起動のretryPendingCloudBackupが拾う)
+ */
+async function markSessionEdited(sessionId: number): Promise<void> {
+  await db.sessions.update(sessionId, { updatedAt: new Date() })
+  await setSetting(CLOUD_PENDING_KEY, true)
+}
+
+/**
+ * 完了セットの実績を編集する(ISS-020)。weightは0.5kg刻みに丸め、reps・weightの
+ * 0以下は無視。achievedは記録時(recordSet)と同じ規則で再判定する。
+ * 派生値(e1RM・成長・ゴール進捗)は純関数のため自動反映——再計算コードは足さない。
+ * PR演出・goal_eventsの遡及再判定はしない(v1)
+ */
+export async function updateLoggedSet(
+  setId: number,
+  patch: { weightKg?: number; reps: number },
+): Promise<void> {
+  const set = await db.sets.get(setId)
+  if (!set || set.completedAt === undefined) return
+  const reps = Math.round(patch.reps)
+  if (reps <= 0) return
+  const weightKg =
+    patch.weightKg === undefined ? undefined : Math.round(patch.weightKg * 2) / 2
+  if (weightKg !== undefined && weightKg <= 0) return
+  const achieved =
+    (set.suggestedReps === undefined || reps >= set.suggestedReps) &&
+    (set.suggestedWeightKg === undefined ||
+      weightKg === undefined ||
+      weightKg >= set.suggestedWeightKg)
+  await db.sets.update(setId, { actualWeightKg: weightKg, actualReps: reps, achieved })
+  const se = await db.session_exercises.get(set.sessionExerciseId)
+  if (se) await markSessionEdited(se.sessionId)
+}
+
+/**
+ * セット追加(ISS-020): 直近の完了セットの値を複製して末尾に追加(完了扱い)。
+ * 完了セットがない種目には追加しない
+ */
+export async function addLoggedSet(sessionExerciseId: number): Promise<number | undefined> {
+  const sets = await db.sets.where('sessionExerciseId').equals(sessionExerciseId).sortBy('setNumber')
+  const base = [...sets].reverse().find((s) => s.completedAt !== undefined)
+  if (!base) return undefined
+  const last = sets[sets.length - 1]
+  const id = (await db.sets.add({
+    sessionExerciseId,
+    setNumber: last.setNumber + 1,
+    suggestedWeightKg: base.suggestedWeightKg,
+    suggestedReps: base.suggestedReps,
+    intervalSec: base.intervalSec,
+    actualWeightKg: base.actualWeightKg,
+    actualReps: base.actualReps,
+    achieved: base.achieved,
+    completedAt: new Date(),
+  })) as number
+  const se = await db.session_exercises.get(sessionExerciseId)
+  if (se) await markSessionEdited(se.sessionId)
+  return id
+}
+
+/**
+ * セット削除(ISS-020): 残りのsetNumberを1から詰め直す。
+ * 種目のセットが0になる場合は種目記録ごと削除(確認ダイアログはUI側の責務)
+ */
+export async function deleteLoggedSet(setId: number): Promise<{ exerciseRemoved: boolean }> {
+  const set = await db.sets.get(setId)
+  if (!set) return { exerciseRemoved: false }
+  const se = await db.session_exercises.get(set.sessionExerciseId)
+  await db.sets.delete(setId)
+  const rest = await db.sets.where('sessionExerciseId').equals(set.sessionExerciseId).sortBy('setNumber')
+  if (rest.length === 0) {
+    await db.session_exercises.delete(set.sessionExerciseId)
+    if (se) await markSessionEdited(se.sessionId)
+    return { exerciseRemoved: true }
+  }
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i].setNumber !== i + 1) await db.sets.update(rest[i].id!, { setNumber: i + 1 })
+  }
+  if (se) await markSessionEdited(se.sessionId)
+  return { exerciseRemoved: false }
 }
 
 export async function undoSet(setId: number): Promise<void> {

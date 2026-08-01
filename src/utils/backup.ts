@@ -71,7 +71,7 @@ type TableName = (typeof TABLES)[number]
 const DATE_FIELDS: Partial<Record<TableName, string[]>> = {
   profiles: ['createdAt', 'updatedAt'],
   goals: ['createdAt'],
-  sessions: ['startedAt', 'endedAt'],
+  sessions: ['startedAt', 'endedAt', 'updatedAt'],
   sets: ['completedAt'],
   photos: ['takenAt'],
   body_stats: ['measuredAt'],

@@ -181,6 +181,8 @@ export interface Session {
   conditionNote?: string
   /** 次回への申し送り */
   handoverNote?: string
+  /** ログの事後編集(ISS-020)の「編集済み」マーク。編集履歴は保持しない */
+  updatedAt?: Date
 }
 
 export interface SessionExercise {
