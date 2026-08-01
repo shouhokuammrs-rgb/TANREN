@@ -383,19 +383,6 @@ export const TUNING_COPY = {
   },
 } as const
 
-export const GOAL_TYPE_LABELS = {
-  lean: '細マッチョ',
-  bulk: 'バルクアップ',
-  health: '体力・健康維持',
-  focus: '部位特化',
-} as const
-
-export const AVOID_REASON_LABELS = {
-  injury: '怪我',
-  dislike: '好みでない',
-  developed: '十分発達',
-} as const
-
 export const POSE_LABELS = {
   front: '正面',
   side: '横',
@@ -404,36 +391,26 @@ export const POSE_LABELS = {
 
 export const SETUP_COPY = {
   title: '初期セットアップ',
-  banner: 'セットアップが未完了です。目標を設定すると「おまかせ」があなた仕様になります',
-  bannerCta: 'セットアップする',
+  // ISS-023: バナー判定はmuscle_goals基準・導線は設定①(部位別ゴール)へ
+  banner: '部位別ゴールが未設定です。設定すると「おまかせ」があなたの目標に合わせて調整されます',
+  bannerCta: 'ゴールを設定する',
   bannerSkip: 'あとで',
   stepProfile: 'プロフィール',
   heightCm: '身長(cm)',
   weightKg: '体重(kg)',
   bodyFatPct: '体脂肪率(%・任意)',
-  stepGoal: '目標ボディ',
-  focusParts: '特化したい部位(複数可)',
   stepPhotos: '現状写真(任意・あとで撮ってもOK)',
   photoHint: 'ビフォーアフター比較用。ローカル保存のみで外部送信されません',
-  stepHearing: '部位のヒヤリング',
-  wantParts: '鍛えたい部位(複数可)',
-  avoidParts: '鍛えたくない部位(タップで理由を選択)',
+  stepInjury: '怪我・違和感',
   injuryParts: '怪我・違和感のある部位(自動で回避されます)',
   injuryNote: '違和感の内容(任意)',
+  // ISS-023: ウィザード末尾の1行案内(Designer指定)
+  finalNote: '部位別ゴールは、設定からいつでも決められます。',
   next: '次へ',
   backStep: '戻る',
   skip: 'スキップ',
-  finish: '分析して完了',
+  finish: '完了',
   invalidProfile: '身長・体重を正しく入力してください',
-}
-
-export const GAP_COPY = {
-  title: 'あなたの優先部位',
-  top3: (rank: number) => `${rank}位`,
-  weeklyTargets: '週あたり推奨セット数',
-  setsUnit: 'セット',
-  toHome: 'ホームへ',
-  hint: '「おまかせ」生成はこの優先度×回復状況で部位を選びます。目標は設定からいつでも変更できます',
 }
 
 export const SUMMARY_COPY = {

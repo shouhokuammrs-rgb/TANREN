@@ -1,7 +1,6 @@
 // メニュー生成エンジン(UI非依存の純関数群)
 export { calibratedWeightKg, epley1Rm, patternBase1RmFrom } from './calibration'
-export { ALL_MUSCLES, analyzeGap, priorityScores } from './priority'
-export type { GapAnalysis } from './priority'
+export { ALL_MUSCLES } from './priority'
 export { detectPrSetNumbers, setScore, summarizeExercise } from './summary'
 export type { CompletedSetInput, ExerciseSummary, PastSetInput } from './summary'
 export { calcFreshness, effectiveRecoveryHours, hoursUntilRecovered, muscleFreshnessMap } from './freshness'

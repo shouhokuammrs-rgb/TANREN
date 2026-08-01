@@ -6,7 +6,6 @@ import type {
   Condition,
   Exercise,
   ExerciseEmphasis,
-  Goal,
   GoalLevel,
   MealTiming,
   MuscleGoal,
@@ -179,16 +178,7 @@ export async function updateProfile(patch: {
   }
 }
 
-/** 最新の目標設定(F-01/F-03)。未設定ならundefined */
-export async function loadGoal() {
-  const goals = await db.goals.toArray()
-  return goals.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
-}
-
-/** 目標の保存(セットアップウィザード/設定からの変更)。履歴として追加する */
-export async function saveGoal(goal: Omit<Goal, 'id' | 'createdAt'>): Promise<void> {
-  await db.goals.add({ ...goal, createdAt: new Date() })
-}
+// 旧目標(goalsテーブル)の読み書きはISS-023で撤去。DBレコードは互換のため残置
 
 /** 筋力の目安の登録(ISS-002) */
 export async function addStrengthMark(input: {

@@ -16,7 +16,7 @@ import {
 } from '../constants/copy'
 import { db } from '../db/db'
 import { lastExportAt, shouldRemindExport } from '../utils/backup'
-import { loadEngineContext, loadGoal, loadGrowthSessions } from '../db/queries'
+import { loadEngineContext, loadGrowthSessions } from '../db/queries'
 import { generateMenu, muscleFreshnessMap, weeklyTopGain } from '../engine'
 import { useLocalSetting } from '../hooks/useLocalSetting'
 
@@ -24,7 +24,8 @@ export default function HomePage() {
   const [bannerDismissed, setBannerDismissed] = useLocalSetting('setupBannerDismissed', false)
   const [mirrorOpen, setMirrorOpen] = useState(false)
 
-  const goal = useLiveQuery(async () => (await loadGoal()) ?? null)
+  // ISS-023: セットアップバナーの判定はmuscle_goals基準(旧goalsテーブルは読まない)
+  const muscleGoalCount = useLiveQuery(() => db.muscle_goals.count())
   const exportReminder = useLiveQuery(async () => {
     const hasData = (await db.sessions.count()) > 0
     return { show: shouldRemindExport(lastExportAt(), hasData), never: lastExportAt() === null }
@@ -73,12 +74,14 @@ export default function HomePage() {
         </span>
       </header>
 
-      {goal === null && !bannerDismissed && (
-        <div className="card-ember p-3">
+      {/* 部位別ゴール未設定バナー(ISS-023): muscle_goals 0件のみ表示・導線は設定①。
+          鏡チェックバナー(#FFB300)と区別する鈍色枠(Designer指定) */}
+      {muscleGoalCount === 0 && !bannerDismissed && (
+        <div className="rounded-[12px] border border-[#3A2213] p-3">
           <p className="text-sm text-ink-mid">{SETUP_COPY.banner}</p>
           <div className="mt-2 flex gap-2">
             <Link
-              to="/setup"
+              to="/settings"
               className="pill-molten flex h-11 flex-1 items-center justify-center text-sm"
             >
               {SETUP_COPY.bannerCta}
