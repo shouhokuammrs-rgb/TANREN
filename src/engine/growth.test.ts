@@ -275,3 +275,68 @@ describe('growthHeatOf(熱の色スケール・境界値)', () => {
     expect(GROWTH_HEAT_SCALE).toHaveLength(5)
   })
 })
+
+// ===== ホームの成長1行サマリー(DEC-015 §3-4) =====
+import { weeklyTopGain } from './growth'
+
+function gainSession(
+  muscle: 'chest' | 'back',
+  daysAgo: number,
+  weightKg: number,
+  name = `${muscle}-lift`,
+): GrowthSessionInput {
+  return {
+    performedAt: new Date(Date.now() - daysAgo * 24 * 3_600_000),
+    exerciseId: muscle === 'chest' ? 1 : 2,
+    exerciseName: name,
+    muscle,
+    sets: [{ weightKg, reps: 10 }],
+  }
+}
+
+describe('weeklyTopGain(直近7日で上昇幅最大の部位)', () => {
+  const now = new Date()
+
+  it('上昇幅が最大の部位を選ぶ(kg差・小数第1位)', () => {
+    const result = weeklyTopGain(
+      [
+        gainSession('chest', 10, 13), // 基準
+        gainSession('chest', 1, 14.5), // +1.5kg → e1RM差 +2.0
+        gainSession('back', 10, 13),
+        gainSession('back', 1, 13.5), // +0.5kg
+      ],
+      now,
+    )
+    expect(result?.muscle).toBe('chest')
+    expect(result?.gainKg).toBeCloseTo((14.5 - 13) * (1 + 10 / 30), 1)
+  })
+
+  it('全部位横ばい以下ならnull(ブロック非表示)', () => {
+    expect(
+      weeklyTopGain([gainSession('chest', 10, 14.5), gainSession('chest', 1, 14.5)], now),
+    ).toBeNull()
+    expect(
+      weeklyTopGain([gainSession('chest', 10, 14.5), gainSession('chest', 1, 13)], now),
+    ).toBeNull()
+  })
+
+  it('直近7日に記録がない部位・7日前以前の基準がない部位は対象外', () => {
+    // 記録が古い(8日前が最新)
+    expect(weeklyTopGain([gainSession('chest', 20, 10), gainSession('chest', 8, 14.5)], now)).toBeNull()
+    // 直近7日の記録しかない(比較基準なし)
+    expect(weeklyTopGain([gainSession('chest', 2, 14.5)], now)).toBeNull()
+  })
+
+  it('自重(レップ指標)セッションは対象外', () => {
+    const bodyweight: GrowthSessionInput = {
+      performedAt: new Date(),
+      exerciseId: 9,
+      exerciseName: 'プランク',
+      muscle: 'abs',
+      bodyweight: true,
+      sets: [{ reps: 30 }],
+    }
+    const old: GrowthSessionInput = { ...bodyweight, performedAt: new Date(Date.now() - 10 * 24 * 3_600_000), sets: [{ reps: 10 }] }
+    expect(weeklyTopGain([old, bodyweight], new Date())).toBeNull()
+  })
+})

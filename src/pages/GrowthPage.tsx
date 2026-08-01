@@ -1,16 +1,18 @@
-// 成長ビュー「熱の人体図」(DEC-011 / 4a完成版準拠)。
-// 人体図(FRONT/BACK)がヒーロー。伸び率を熱の色にエンコードし、部位チップ→推移グラフ→
-// フルスクリーン推移(セッション履歴付き)と掘り下げる。算出はengine/growth.tsに隔離
+// 成長タブ(DEC-011「熱の人体図」+ DEC-015 §2でタブ昇格)。
+// セグメント[成長/写真]+ヘッダー体重チップ。人体図(FRONT/BACK)がヒーロー。
+// 伸び率を熱の色にエンコードし、部位チップ→推移グラフ→フルスクリーン推移と掘り下げる
 import { Suspense, lazy, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import BodySvg from '../components/BodySvg'
+import PhotoCompare from '../components/PhotoCompare'
 import { growthPaint } from '../components/growthPaint'
 import { GROWTH_COLD, GROWTH_HEAT_SCALE, GROWTH_MIN_SESSIONS, GROWTH_PERIODS } from '../constants/charts'
 import { GROWTH_COPY, MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import { db } from '../db/db'
-import { loadGrowthSessions } from '../db/queries'
+import { addBodyWeight, loadGrowthSessions } from '../db/queries'
 import type { MuscleGroup } from '../db/types'
+import { showToast } from '../utils/toast'
 import {
   chartGoalLineKg,
   goalProgress,
@@ -34,6 +36,11 @@ export default function GrowthPage() {
   const [periodDays, setPeriodDays] = useState<number>(GROWTH_PERIODS[0])
   const [selected, setSelected] = useState<MuscleGroup | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  // セグメント(§2-4): 既定は成長。保持しない(旧/photosリダイレクトの?seg=photoのみ写真で開く)
+  const [searchParams] = useSearchParams()
+  const [seg, setSeg] = useState<'growth' | 'photo'>(
+    searchParams.get('seg') === 'photo' ? 'photo' : 'growth',
+  )
 
   const sessions = useLiveQuery(() => loadGrowthSessions())
   const growthMap = useMemo(
@@ -97,32 +104,58 @@ export default function GrowthPage() {
 
   return (
     <section className="space-y-4">
-      <Link to="/" className="inline-block py-1 text-xs text-ink-dim active:text-ink-mid">
-        {GROWTH_COPY.back}
-      </Link>
-
-      {/* ヘッダー: タイトル+期間セグメント(30日/90日) */}
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="label-mono text-[10px] text-accent-dim">{GROWTH_COPY.brandLabel}</p>
-          <h1 className="text-[22px] font-black leading-tight text-ink">{GROWTH_COPY.title}</h1>
+      {/* ヘッダー(§2-2): キッカー+見出し+期間セグメント。体重チップは2段目右 */}
+      <header>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="label-mono text-[10px] text-accent-dim">{GROWTH_COPY.brandLabel}</p>
+            <h1 className="text-[22px] font-black leading-tight text-ink">{GROWTH_COPY.title}</h1>
+          </div>
+          <div className="flex gap-0.5 rounded-pill border border-line-ember p-1">
+            {GROWTH_PERIODS.map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setPeriodDays(days)}
+                className={`label-mono rounded-pill px-3.5 py-2 text-xs font-bold tracking-normal ${
+                  periodDays === days ? 'bg-molten text-forge-black' : 'text-ink-dim'
+                }`}
+              >
+                {GROWTH_COPY.periodLabel(days)}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-0.5 rounded-pill border border-line-ember p-1">
-          {GROWTH_PERIODS.map((days) => (
-            <button
-              key={days}
-              type="button"
-              onClick={() => setPeriodDays(days)}
-              className={`label-mono rounded-pill px-3.5 py-2 text-xs font-bold tracking-normal ${
-                periodDays === days ? 'bg-molten text-forge-black' : 'text-ink-dim'
-              }`}
-            >
-              {GROWTH_COPY.periodLabel(days)}
-            </button>
-          ))}
+        <div className="mt-2 flex justify-end">
+          <WeightChip />
         </div>
       </header>
 
+      {/* セグメント[成長|写真](§2-4): 既定は成長・保持しない */}
+      <div className="flex h-9 rounded-pill border border-[#241812] p-[3px]">
+        {(
+          [
+            ['growth', GROWTH_COPY.segGrowth],
+            ['photo', GROWTH_COPY.segPhoto],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setSeg(value)}
+            className={`flex-1 rounded-pill text-xs font-bold ${
+              seg === value ? 'bg-molten text-forge-black' : 'text-[#8A5A3C]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {seg === 'photo' && <PhotoCompare />}
+
+      {seg === 'growth' && (
+        <>
       {/* 人体図ヒーロー(FRONT/BACK)。色=月換算伸び率の熱スケール */}
       <div className="flex items-start justify-center gap-6">
         {(['front', 'back'] as const).map((side) => (
@@ -329,6 +362,89 @@ export default function GrowthPage() {
           </div>
         </div>
       )}
+        </>
+      )}
     </section>
+  )
+}
+
+/**
+ * 体重チップ(DEC-015 §2-3)。設定①の体重と実体共通(addBodyWeight=body_stats追記+profile更新)。
+ * 前回更新から7日以上でmolten枠+「· n日前」。保存で全部位の目標e1RM・進捗が即時再計算される
+ * (targetE1Rmは体重の純関数のためliveQueryで自動反映。器具上限帯33.6kgは不変)
+ */
+function WeightChip() {
+  const profile = useLiveQuery(() => db.profiles.orderBy('id').first())
+  const lastStat = useLiveQuery(async () => {
+    const stats = await db.body_stats.orderBy('measuredAt').toArray()
+    return stats[stats.length - 1] ?? null
+  })
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(58)
+
+  const currentKg = profile?.weightKg ?? 58
+  const lastAt = lastStat?.measuredAt ?? profile?.updatedAt
+  const staleDays =
+    lastAt !== undefined ? Math.floor((Date.now() - lastAt.getTime()) / 86_400_000) : null
+  const stale = staleDays !== null && staleDays >= 7
+
+  const save = async () => {
+    await addBodyWeight(draft)
+    showToast(GROWTH_COPY.weightSaved, 'success')
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(currentKg)
+          setOpen(true)
+        }}
+        className="label-mono rounded-pill border px-3 py-[7px] text-xs font-bold tracking-normal"
+        style={
+          stale
+            ? { borderColor: '#FF5C1A', color: '#FF7A33' }
+            : { borderColor: '#3A2213', color: '#B06A3E' }
+        }
+      >
+        {GROWTH_COPY.weightChip(currentKg.toFixed(1))}
+        {stale && staleDays !== null && ` ${GROWTH_COPY.weightChipStale(staleDays)}`}
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-pill border border-[#3A2213] px-2 py-1">
+      {(
+        [
+          ['−', -0.5],
+          ['+', 0.5],
+        ] as const
+      ).map(([sign, delta], i) => (
+        <button
+          key={sign}
+          type="button"
+          aria-label={`体重${sign}0.5kg`}
+          onClick={() => setDraft((v) => Math.min(200, Math.max(30, Math.round((v + delta) * 2) / 2)))}
+          className={`flex h-11 w-11 items-center justify-center ${i === 0 ? 'order-1' : 'order-3'}`}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-pill border border-[#3A2213] text-ink-mid">
+            {sign}
+          </span>
+        </button>
+      ))}
+      <span className="num-hero order-2 min-w-[72px] text-center text-[28px] leading-none tabular-nums text-[#FFE3CC]">
+        {draft.toFixed(1)}
+      </span>
+      <button
+        type="button"
+        onClick={() => void save()}
+        className="order-4 h-11 px-2 text-sm font-bold text-molten"
+      >
+        {GROWTH_COPY.weightSave}
+      </button>
+    </div>
   )
 }

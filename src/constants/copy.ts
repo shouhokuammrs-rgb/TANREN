@@ -2,9 +2,11 @@
 
 export const APP_NAME = 'TANREN'
 
+// 5タブ化(DEC-015 §1): 390px向けにラベル短縮。アイコンなし
 export const TAB_LABELS = {
   home: 'ホーム',
-  workout: '今日のトレ',
+  workout: '今日',
+  growth: '成長',
   log: 'ログ',
   settings: '設定',
 } as const
@@ -114,6 +116,18 @@ export const HOME_COPY = {
   greeting: ['今日の最適メニューを、', '考えずに。'],
   subtitle: '今日の最適メニューを、考えずに。',
   startCta: '今日のトレを始める',
+  // ホーム再構成(DEC-015 §3)
+  recoveryLabel: '回復ステータス',
+  recoverySummary: (label: string, hours: number) => `あと${hours}時間で ${label} が回復`,
+  recoveryAllReady: '全部位 回復済み',
+  recoveryDone: '回復済み',
+  recoveryHoursLeft: (h: number) => `あと${h}時間`,
+  menuSection: '今日のメニュー',
+  menuEstimate: (min: number) => `想定 約${min}分`,
+  growthSummaryLabel: (label: string) => `今週 ${label}`,
+  growthSummaryGain: (kg: number) => `+${kg}kg`,
+  mirrorBanner: (label: string) => `${label}がゴールに到達しました — 判定する`,
+  mirrorOthers: (n: number) => `他${n}件`,
   statStreak: '連続記録',
   statStreakUnit: '日',
   statWeeklyVolume: '今週ボリューム',
@@ -464,6 +478,13 @@ export const GROWTH_COPY = {
   brandLabel: 'TANREN / 成長',
   title: '部位別の伸び',
   back: '← ホーム',
+  // 成長タブ化(DEC-015 §2): セグメント+体重チップ
+  segGrowth: '成長',
+  segPhoto: '写真',
+  weightChip: (kg: string) => `体重 ${kg}kg ✎`,
+  weightChipStale: (days: number) => `· ${days}日前`,
+  weightSave: '保存',
+  weightSaved: '体重を更新しました',
   periodLabel: (days: number) => `${days}日`,
   sideFront: 'FRONT',
   sideBack: 'BACK',

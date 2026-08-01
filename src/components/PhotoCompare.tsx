@@ -1,7 +1,8 @@
+// 写真比較ビュー(2-5)。IA再設計(DEC-015 §2)で /photos から成長タブの「写真」セグメントへ移設。
+// UIは移設のみ(作り直さない)。ページヘッダー・戻るリンクだけ除去
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link } from 'react-router-dom'
-import { LOG_COPY, PHOTO_COPY, POSE_LABELS, formatDate } from '../constants/copy'
+import { PHOTO_COPY, POSE_LABELS, formatDate } from '../constants/copy'
 import { addPhoto, deletePhoto, listPhotos } from '../db/queries'
 import type { Photo, PhotoPose } from '../db/types'
 import { compressImage } from '../utils/image'
@@ -19,8 +20,7 @@ function usePhotoUrl(photo: Photo | undefined): string | undefined {
   return url
 }
 
-/** 写真比較ビュー(2-5): 2枚並べ+日付スライダー */
-export default function PhotosPage() {
+export default function PhotoCompare() {
   const [pose, setPose] = useState<PhotoPose>('front')
   const [sliderIndex, setSliderIndex] = useState(0)
   const photos = useLiveQuery(() => listPhotos(pose), [pose])
@@ -38,14 +38,7 @@ export default function PhotosPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <div>
-        <Link to="/" className="text-xs text-ink-dim">
-          ← {LOG_COPY.backToList}
-        </Link>
-        <h1 className="mt-1 text-2xl font-bold">{PHOTO_COPY.title}</h1>
-      </div>
-
+    <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
         {POSES.map((p) => (
           <button
@@ -117,7 +110,7 @@ export default function PhotosPage() {
           )}
         </div>
       )}
-    </section>
+    </div>
   )
 }
 

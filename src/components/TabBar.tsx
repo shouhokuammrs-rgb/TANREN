@@ -1,70 +1,55 @@
+// 5タブ化(DEC-015 §1)。アイコンなし・2〜3字ラベル+アクティブドット。
+// 通知(未判定の鏡チェック)は「成長」タブのドットを#FFB300に変える方式(数値バッジなし)
+import { useLiveQuery } from 'dexie-react-hooks'
 import { NavLink } from 'react-router-dom'
 import { TAB_LABELS } from '../constants/copy'
+import { db } from '../db/db'
 
 const TABS = [
-  {
-    to: '/',
-    label: TAB_LABELS.home,
-    // house
-    path: 'M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5',
-  },
-  {
-    to: '/workout',
-    label: TAB_LABELS.workout,
-    // dumbbell
-    path: 'M2 12h2m16 0h2M6 8v8M9 6v12M15 6v12M18 8v8M9 12h6',
-  },
-  {
-    to: '/log',
-    label: TAB_LABELS.log,
-    // chart
-    path: 'M4 4v16h16M8 16v-5m4 5V8m4 8v-3',
-  },
-  {
-    to: '/settings',
-    label: TAB_LABELS.settings,
-    // gear (simplified)
-    path: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-3a7 7 0 0 1-.1 1.2l2 1.6-2 3.4-2.4-1a7 7 0 0 1-2 1.2L14 21h-4l-.5-2.6a7 7 0 0 1-2-1.2l-2.4 1-2-3.4 2-1.6A7 7 0 0 1 5 12a7 7 0 0 1 .1-1.2l-2-1.6 2-3.4 2.4 1a7 7 0 0 1 2-1.2L10 3h4l.5 2.6a7 7 0 0 1 2 1.2l2.4-1 2 3.4-2 1.6A7 7 0 0 1 19 12Z',
-  },
+  { to: '/', label: TAB_LABELS.home },
+  { to: '/workout', label: TAB_LABELS.workout },
+  { to: '/growth', label: TAB_LABELS.growth },
+  { to: '/log', label: TAB_LABELS.log },
+  { to: '/settings', label: TAB_LABELS.settings },
 ]
 
 export default function TabBar() {
+  // 未判定の鏡チェック(状態4)が1つでもあれば成長タブに通知ドット
+  const hasPendingMirror = useLiveQuery(async () => {
+    const goals = await db.muscle_goals.toArray()
+    return goals.some((g) => g.reachedAt !== undefined && g.mode === 'growth')
+  })
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 border-t border-line-ember bg-forge-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto flex max-w-md">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            // タップターゲット44px以上(h-16 = 64px)。アクティブ= text-hot+moltenドット(§5)
-            className={({ isActive }) =>
-              `flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${
-                isActive ? 'font-bold text-text-hot' : 'font-medium text-tab-idle'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d={tab.path} />
-                </svg>
-                {tab.label}
-                <span
-                  className={`h-1 w-1 rounded-pill ${isActive ? 'bg-molten' : 'bg-transparent'}`}
-                />
-              </>
-            )}
-          </NavLink>
-        ))}
+    <nav className="fixed inset-x-0 bottom-0 border-t border-line-ember bg-forge-black/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <div className="mx-auto flex max-w-md py-3">
+        {TABS.map((tab) => {
+          const notify = tab.to === '/growth' && hasPendingMirror === true
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              // タップ領域44px以上。アクティブ=#FFE3CC+ドット(§1)
+              className={({ isActive }) =>
+                `flex min-h-11 flex-1 flex-col items-center justify-center gap-[5px] whitespace-nowrap text-[11px] ${
+                  isActive ? 'font-bold text-[#FFE3CC]' : 'font-medium text-[#6B5A4C]'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className="h-[5px] w-[5px] rounded-pill"
+                    style={{
+                      background: notify ? '#FFB300' : isActive ? '#FF5C1A' : 'transparent',
+                    }}
+                  />
+                  {tab.label}
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </div>
     </nav>
   )

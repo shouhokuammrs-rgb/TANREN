@@ -16,7 +16,6 @@ import SettingsPage from './pages/SettingsPage'
 import DangerZonePage from './pages/DangerZonePage'
 import SetupPage from './pages/SetupPage'
 import SummaryPage from './pages/SummaryPage'
-import PhotosPage from './pages/PhotosPage'
 
 export default function App() {
   // ISS-010: 本番ホストはVITE_PROD_HOSTから取得。未設定なら警告無効(偽陽性防止)
@@ -51,7 +50,8 @@ export default function App() {
           <Route path="/log/:id" element={<LogDetailPage />} />
           <Route path="/summary/:id" element={<SummaryPage />} />
           <Route path="/setup" element={<SetupPage />} />
-          <Route path="/photos" element={<PhotosPage />} />
+          {/* IA再設計(DEC-015 §6): /photos は成長タブの写真セグメントへ */}
+          <Route path="/photos" element={<Navigate to="/growth?seg=photo" replace />} />
           <Route path="/growth" element={<GrowthPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/danger" element={<DangerZonePage />} />

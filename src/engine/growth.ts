@@ -205,3 +205,35 @@ export function muscleGrowthMap(
     ALL_MUSCLES.map((m) => [m, growthForMuscle(m, byMuscle.get(m) ?? [], periodDays)]),
   ) as Record<MuscleGroup, MuscleGrowth>
 }
+
+// ===== ホームの成長1行サマリー(DEC-015 §3-4) =====
+
+export interface WeeklyGain {
+  muscle: MuscleGroup
+  /** 直近7日のe1RM上昇幅(kg・小数第1位) */
+  gainKg: number
+}
+
+/**
+ * 直近7日でe1RM上昇幅が最大の部位を選ぶ(純関数)。
+ * - e1RM指標のみ(自重レップ指標は対象外・kg比較できないため)
+ * - 基準種目の全期間系列で「7日前以前の最新値 → 現在値」の差分を上昇幅とする
+ * - 直近7日に記録がない部位・上昇が0以下の部位は対象外。該当なしはnull(ブロック非表示)
+ */
+export function weeklyTopGain(sessions: GrowthSessionInput[], now: Date): WeeklyGain | null {
+  const e1rmSessions = sessions.filter((s) => !s.bodyweight)
+  const map = muscleGrowthMap(e1rmSessions, 36500, now)
+  const weekAgo = now.getTime() - 7 * 24 * 3_600_000
+  let best: WeeklyGain | null = null
+  for (const muscle of ALL_MUSCLES) {
+    const points = map[muscle].points
+    if (points.length === 0) continue
+    const current = points[points.length - 1]
+    if (current.date.getTime() < weekAgo) continue
+    const baseline = [...points].reverse().find((p) => p.date.getTime() <= weekAgo)
+    if (!baseline) continue // 7日より前の実績がない=比較基準なし
+    const gainKg = Math.round((current.value - baseline.value) * 10) / 10
+    if (gainKg > 0 && (best === null || gainKg > best.gainKg)) best = { muscle, gainKg }
+  }
+  return best
+}
