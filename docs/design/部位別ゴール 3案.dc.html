@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #050403; font-family: 'Noto Sans JP', sans-serif; }
+  a { color: #FF7A33; text-decoration: none; }
+  a:hover { color: #FFA05C; }
+  @keyframes emberPulse { 0%,100% { opacity: .85; } 50% { opacity: 1; } }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</helmet>
+
+<section style="padding: 48px 56px 96px; display: flex; flex-direction: column; gap: 32px; background: #050403; min-height: 100vh;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 1100px;">
+    <div style="font: 500 12px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FF5C1A;">TANREN — 部位別ゴールモデル / PHASE 7 / DEC-013候補 / 390PX</div>
+    <div style="font: 900 28px 'Noto Sans JP', sans-serif; color: #F5EFE8;">部位別ゴール コンセプト3案</div>
+    <div style="font: 400 14px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;"><a href="#5a">5a 輪郭</a>=イラスト主導 / <a href="#5b">5b 目盛</a>=数値主導 / <a href="#5c">5c 鋳型</a>=メタファー主導。各案: 上=ゴール設定、下=到達チェック(鏡)+ゴールライン統合。レベル選択・部位切替・鏡判定・<b style="color: #D9CFC6;">体重入力</b>は実動。片手e1RM表記/ 係数=研究資料§3承認版/ 器具上限帯は全部位一律 33.6kg 固定(体重を変えるとノッチだけが動きます)。</div>
+  </div>
+
+  <div style="display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap;">
+
+    <!-- ============ 5a 輪郭 ============ -->
+    <div id="5a" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">5a</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">輪郭 — 「なりたい形」をシルエットで選ぶ</span>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5a ゴール設定">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / ゴール設定</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">どこまで育てる?</div>
+          </div>
+          <div style="font: 700 12px 'IBM Plex Mono', monospace; color: #8A5A3C;">{{ doneCountA }}/5</div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 14px 24px 0; border: 1px solid #241812; border-radius: 12px; padding: 10px 14px;">
+          <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">体重</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwMinus }}">−</div>
+            <div style="display: flex; align-items: baseline; gap: 4px; min-width: 62px; justify-content: center;">
+              <span style="font: 400 26px/1 'Anton', sans-serif; color: #FFE3CC; font-variant-numeric: tabular-nums;">{{ bw }}</span>
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; color: #B06A3E;">KG</span>
+            </div>
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwPlus }}">+</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; padding: 14px 24px 0; flex-wrap: wrap;">
+          <sc-for list="{{ tabsA }}" as="t" hint-placeholder-count="5">
+            <div style="font: 700 12px 'Noto Sans JP', sans-serif; color: {{ t.fg }}; border: 1px solid {{ t.border }}; background: {{ t.bg }}; border-radius: 999px; padding: 8px 14px; cursor: pointer;" onClick="{{ t.pick }}">{{ t.name }}</div>
+          </sc-for>
+          <div style="font: 500 11px 'Noto Sans JP', sans-serif; color: #4A3A2C; border: 1px dashed #241812; border-radius: 999px; padding: 8px 12px;">尻・腹 — v1対象外</div>
+        </div>
+
+        <div style="padding: 20px 24px 0; display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ levelsA }}" as="lv" hint-placeholder-count="3">
+            <div style="border: 1px solid {{ lv.border }}; background: {{ lv.bg }}; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 16px; cursor: pointer;" onClick="{{ lv.pick }}">
+              <svg width="92" height="66" viewBox="0 0 100 70" style="flex-shrink: 0;">
+                <line x1="6" y1="62" x2="94" y2="62" stroke="#241812" stroke-width="1"></line>
+                <path d="{{ lv.silo }}" fill="{{ lv.siloFill }}" style="filter: {{ lv.siloGlow }};"></path>
+              </svg>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                  <span style="font: 900 15px 'Noto Sans JP', sans-serif; color: {{ lv.nameFg }};">{{ lv.name }}</span>
+                  <span style="font: 700 12px 'IBM Plex Mono', monospace; color: {{ lv.kgFg }};">{{ lv.kg }}kg</span>
+                </div>
+                <div style="font: 400 11px/1.6 'Noto Sans JP', sans-serif; color: #9B928A;">{{ lv.desc }}</div>
+                <sc-if value="{{ lv.capped }}" hint-placeholder-val="{{ false }}">
+                  <div style="font: 500 10px 'IBM Plex Mono', monospace; color: #8A5A3C; border-top: 1px dashed #3A2213; padding-top: 5px; margin-top: 3px;">⚠ 現在の器具では届きません(計測上限 {{ capLabel }}kg)</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding: 14px 24px 0;">
+          <div style="border: 1px solid #3A2213; background: rgba(255,92,26,.05); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">ゴールまで</span>
+              <span style="font: 700 14px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ progA.summary }}</span>
+            </div>
+            <div style="position: relative; height: 6px; background: #241812; border-radius: 3px;">
+              <div style="position: absolute; left: 0; top: 0; height: 6px; width: {{ progA.pctW }}; background: linear-gradient(90deg, #8A431C, #FF5C1A); border-radius: 3px; box-shadow: 0 0 10px rgba(255,92,26,.4);"></div>
+              <div style="position: absolute; left: {{ progA.curX }}; top: -3px; width: 2px; height: 12px; margin-left: -1px; background: #FFE3CC;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font: 500 9px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+              <span>スタート {{ progA.start }}kg</span><span>現在 {{ progA.cur }}kg</span><span>ゴール {{ progA.goal }}kg</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 12px 24px 0; font: 400 10px 'Noto Sans JP', sans-serif; color: #6B5A4C;">※ 見え方は体脂肪率や骨格でも変わります</div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 16px 24px 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border: 1px solid #241812; border-radius: 12px; padding: 12px 16px;">
+            <span style="font: 400 11px 'Noto Sans JP', sans-serif; color: #8A5A3C;">目標値を直接編集(上級者向け)</span>
+            <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #B06A3E; cursor: pointer;">{{ selTargetA }}kg ✎</span>
+          </div>
+          <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 16px 'Noto Sans JP', sans-serif; letter-spacing: .06em; cursor: pointer; box-shadow: 0 0 32px rgba(255,92,26,.35);" style-hover="background: #FF7A33;">次の部位へ →</div>
+        </div>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5a 到達チェック">
+        <div style="padding: 26px 24px 0; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FFB300; animation: emberPulse 2.4s ease-in-out infinite;">GOAL — 到達</div>
+          <div style="font: 900 26px 'Noto Sans JP', sans-serif; color: #F5EFE8;">腕がゴールに到達しました</div>
+          <div style="font: 400 13px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">鏡を見て、いまの形で判定してください。</div>
+        </div>
+        <div style="display: flex; justify-content: center; padding: 18px 24px 0;">
+          <svg width="230" height="140" viewBox="0 0 100 70">
+            <line x1="6" y1="62" x2="94" y2="62" stroke="#241812" stroke-width="1"></line>
+            <path d="{{ mirrorSiloA.d }}" fill="{{ mirrorSiloA.fill }}" style="filter: {{ mirrorSiloA.glow }};"></path>
+          </svg>
+        </div>
+        <div style="display: flex; justify-content: center; gap: 14px; padding: 6px 24px 0; font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">
+          <span>引き締め {{ armsGoalKg }}kg</span><span style="color: #FFB300;">達成 — 現在 {{ armsCur }}kg</span>
+        </div>
+        <sc-if value="{{ mirNoneA }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 24px 24px 0; display: flex; flex-direction: column; gap: 12px; animation: riseIn .3s ease-out;">
+            <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 15px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="background: #FF7A33;" onClick="{{ mirKeepA }}">満足 — 維持モードへ</div>
+            <div style="border: 1px solid #3A2213; color: #D9CFC6; border-radius: 999px; padding: 16px; text-align: center; font: 700 14px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FFE3CC;" onClick="{{ mirUpA }}">物足りない — 1段引き上げる</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mirKeptA }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 24px 24px 0; animation: riseIn .3s ease-out;">
+            <div style="border: 1px solid #57503F; background: rgba(201,183,156,.05); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #C9B79C;">腕 — 維持モード</span>
+                <span style="font: 700 13px 'IBM Plex Mono', monospace; color: #C9B79C;">✓ 完成</span>
+              </div>
+              <div style="font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">打ち上がった鉄は冷めても強い。維持メニュー(週1・現重量)に切り替わります。いつでも再点火できます。</div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mirUppedA }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 24px 24px 0; animation: riseIn .3s ease-out;">
+            <div style="border: 1px solid #FF5C1A; background: rgba(255,92,26,.07); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">腕 — 次のゴール</div>
+              <div style="display: flex; align-items: baseline; gap: 8px;">
+                <span style="font: 900 16px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ armsNextName }}</span>
+                <span style="font: 400 30px 'Anton', sans-serif; color: #FFE3CC;">{{ armsNextKg }}</span>
+                <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG — あと{{ armsNextRemain }}kg</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px 24px 28px;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">胸 — E1RM 推移とゴール</span>
+              <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ goalChart.summary }}</span>
+            </div>
+            <svg width="100%" height="110" viewBox="0 0 300 120" preserveAspectRatio="none">
+              <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+              <line x1="0" y1="{{ goalChart.goalY }}" x2="300" y2="{{ goalChart.goalY }}" stroke="#FFE3CC" stroke-width="1.5" stroke-dasharray="6 5"></line>
+              <polyline points="{{ goalChart.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+              <sc-for list="{{ goalChart.dots }}" as="d" hint-placeholder-count="6">
+                <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+              </sc-for>
+            </svg>
+            <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+              <span>ゴール: しっかり {{ goalChart.goal }}kg(白のライン)</span><span>現在 {{ goalChart.now }}kg</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 「なりたい見た目」から入る案。数値を一切読まなくても、シルエット3段階+生活言語の説明だけで片手選択が完了する。シルエットは部位ごとのパラメトリックな抽象輪郭(写実を避け、鍛冶場の「影絵」トーン)で、選択レベルだけ溶鉄で満たして発光させる。数値編集は最下部に控えめに常設。器具上限は該当レベルのカード内に正直に注記し、選択自体は妨げない。維持モードは「完成した鉄」= 鋼色(#C9B79C系)+✓で、熱スケールとも回復の鈍色とも衝突しない第3の意味色として定義。尻・腹は「v1対象外」を破線チップで控えめに明示。</div>
+    </div>
+
+    <!-- ============ 5b 目盛 ============ -->
+    <div id="5b" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">5b</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">目盛 — 5部位を1画面のゲージで決める</span>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5b ゴール設定">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / 設定 &gt; ゴール</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">部位別ゴール</div>
+          </div>
+        </div>
+
+        <div style="padding: 18px 24px 0; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font: 700 15px 'Noto Sans JP', sans-serif; color: #D9CFC6;">{{ selNameB }}</span>
+            <span style="font: 400 56px/1 'Anton', sans-serif; color: #FFE3CC; text-shadow: 0 0 24px rgba(255,92,26,.45); font-variant-numeric: tabular-nums;">{{ selTargetB }}</span>
+            <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG 目標e1RM(片手)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #8A5A3C;">{{ selLevelB }} = 体重{{ bw }}kg × {{ selCoefB }}</span>
+            <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #B06A3E; border: 1px solid #3A2213; border-radius: 6px; padding: 4px 10px; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;">± 直接編集</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 14px 24px 0; border: 1px solid #241812; border-radius: 12px; padding: 10px 14px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">体重</span>
+            <span style="font: 400 9px 'IBM Plex Mono', monospace; color: #4A3A2C;">ノッチ = 係数 × 体重 / 上限帯 {{ capLabel }}kg は固定</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwMinus }}">−</div>
+            <div style="display: flex; align-items: baseline; gap: 4px; min-width: 58px; justify-content: center;">
+              <span style="font: 400 26px/1 'Anton', sans-serif; color: #FFE3CC; font-variant-numeric: tabular-nums;">{{ bw }}</span>
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; color: #B06A3E;">KG</span>
+            </div>
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwPlus }}">+</div>
+          </div>
+        </div>
+
+        <div style="padding: 18px 24px 0; display: flex; flex-direction: column; gap: 14px;">
+          <sc-for list="{{ rowsB }}" as="row" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; gap: 7px; border: 1px solid {{ row.border }}; background: {{ row.bg }}; border-radius: 14px; padding: 13px 16px; cursor: pointer;" onClick="{{ row.pick }}">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font: 700 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ row.name }}</span>
+                <span style="font: 700 12px 'IBM Plex Mono', monospace; color: {{ row.levelFg }};">{{ row.levelName }} {{ row.target }}kg</span>
+              </div>
+              <div style="position: relative; height: 26px;">
+                <div style="position: absolute; left: 0; right: 0; top: 11px; height: 4px; background: #241812; border-radius: 2px;"></div>
+                <div style="position: absolute; left: {{ row.startPct }}; top: 11px; height: 4px; width: {{ row.curPct }}; background: linear-gradient(90deg, #8A431C, #FF5C1A); border-radius: 2px;"></div>
+                <div style="position: absolute; left: {{ row.startPct }}; top: 7px; width: 2px; height: 12px; background: #57503F;"></div>
+                <sc-if value="{{ row.hasCap }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; top: 8px; height: 10px; left: {{ row.capPct }}; right: 0; background: repeating-linear-gradient(-45deg, #241812 0 3px, transparent 3px 6px); border-radius: 2px;"></div>
+                </sc-if>
+                <sc-for list="{{ row.notches }}" as="n" hint-placeholder-count="3">
+                  <div style="position: absolute; left: {{ n.x }}; top: 4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; border: 2px solid {{ n.ring }}; background: {{ n.fill }}; box-shadow: {{ n.glow }}; cursor: pointer;" onClick="{{ n.pick }}"></div>
+                </sc-for>
+                <div style="position: absolute; left: {{ row.curPct }}; top: 0; width: 2px; height: 26px; margin-left: -1px; background: #FFE3CC;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font: 500 9px 'IBM Plex Mono', monospace; color: #6B5A4C;">現在 {{ row.cur }}kg(白線)</span>
+                <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ row.prSummary }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding: 12px 24px 0; font: 400 10px/1.7 'Noto Sans JP', sans-serif; color: #6B5A4C;">ノッチ(●)= 引き締め / しっかり / がっつり(タップで選択)。斜線帯 = 現器具の計測上限 {{ capLabel }}kg 以上。<br>※ 見え方は体脂肪率や骨格でも変わります</div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 24px 28px;">
+          <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 16px 'Noto Sans JP', sans-serif; letter-spacing: .06em; cursor: pointer; box-shadow: 0 0 32px rgba(255,92,26,.35);" style-hover="background: #FF7A33;">保存する</div>
+        </div>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5b 到達チェック">
+        <div style="padding: 26px 24px 0; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FFB300; animation: emberPulse 2.4s ease-in-out infinite;">GOAL — 到達</div>
+          <div style="font: 900 26px 'Noto Sans JP', sans-serif; color: #F5EFE8;">腕がゴールに到達しました</div>
+          <div style="font: 400 13px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">数字は超えました。最後の判定は鏡で。</div>
+        </div>
+        <div style="padding: 22px 24px 0; display: flex; align-items: baseline; gap: 10px;">
+          <span style="font: 400 84px/1 'Anton', sans-serif; background: linear-gradient(180deg, #FFD98A 0%, #FF7A33 46%, #D8321A 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums;">12.4</span>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font: 500 11px 'IBM Plex Mono', monospace; color: #B06A3E;">KG e1RM</span>
+            <span style="font: 700 13px 'IBM Plex Mono', monospace; color: #FFB300;">目標 {{ armsGoalKg }} — 達成</span>
+          </div>
+        </div>
+        <sc-if value="{{ mirNoneB }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 26px 24px 0; display: flex; flex-direction: column; gap: 12px; animation: riseIn .3s ease-out;">
+            <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 15px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="background: #FF7A33;" onClick="{{ mirKeepB }}">満足 — 維持モードへ</div>
+            <div style="border: 1px solid #3A2213; color: #D9CFC6; border-radius: 999px; padding: 16px; text-align: center; font: 700 14px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FFE3CC;" onClick="{{ mirUpB }}">物足りない — {{ armsNextName }}({{ armsNextKg }}kg)へ</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mirDoneB }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 26px 24px 0; animation: riseIn .3s ease-out;">
+            <div style="border: 1px solid {{ mirCardB.border }}; background: {{ mirCardB.bg }}; border-radius: 14px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: {{ mirCardB.fg }};">{{ mirCardB.label }}</span>
+              <span style="font: 700 13px 'IBM Plex Mono', monospace; color: {{ mirCardB.fg }};">{{ mirCardB.value }}</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px 24px 28px;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">胸 — E1RM 推移とゴール</span>
+              <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ goalChart.summary }}</span>
+            </div>
+            <svg width="100%" height="110" viewBox="0 0 300 120" preserveAspectRatio="none">
+              <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+              <rect x="0" y="{{ goalChart.goalY }}" width="300" height="1.5" fill="#FFE3CC"></rect>
+              <rect x="248" y="{{ goalChart.goalTagY }}" width="52" height="16" rx="3" fill="#FFE3CC"></rect>
+              <polyline points="{{ goalChart.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+              <sc-for list="{{ goalChart.dots }}" as="d" hint-placeholder-count="6">
+                <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+              </sc-for>
+              <text x="274" y="{{ goalChart.goalTagTextY }}" text-anchor="middle" style="font: 700 10px 'IBM Plex Mono', monospace;" fill="#0B0907">{{ goalChart.goal }}kg</text>
+            </svg>
+            <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+              <span>しっかり(体重×0.50)</span><span>あと {{ goalChart.remain }}kg</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 炉心の「数字がヒーロー」を貫き、5部位を1画面のゲージで一望・一括設定できる案(設定画面配置)。各ゲージに現在e1RM(白線)と3つのノッチ(プリセット)を置き、「いまどこで、どこを狙うか」が距離として見える — ゴールライン統合と同じ空間メタファーを設定時から使う。器具上限は斜線帯としてゲージ上に物理的に描画し、届かないノッチが帯の中にあることが一目でわかる(選択は可能)。直接編集はヒーロー数字の隣に常設し、プリセット=ノッチの位置を動かす行為として自然に接続。イラストを持たない代わりに認知負荷が最も低く、上級者に強い。</div>
+    </div>
+
+    <!-- ============ 5c 鋳型 ============ -->
+    <div id="5c" style="display: flex; flex-direction: column; gap: 12px; width: 390px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">5c</span>
+        <span style="font: 700 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">鋳型 — 器を決めて、溶鉄で満たす</span>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5c ゴール設定">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">TANREN / ゴール設定</div>
+            <div style="font: 900 22px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ selNameC }}の鋳型を選ぶ</div>
+          </div>
+          <div style="font: 700 12px 'IBM Plex Mono', monospace; color: #8A5A3C;">{{ selIdxC }}/5</div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 14px 24px 0; border: 1px solid #241812; border-radius: 12px; padding: 10px 14px;">
+          <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">体重 — 鋳型の容量に反映</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwMinus }}">−</div>
+            <div style="display: flex; align-items: baseline; gap: 4px; min-width: 58px; justify-content: center;">
+              <span style="font: 400 26px/1 'Anton', sans-serif; color: #FFE3CC; font-variant-numeric: tabular-nums;">{{ bw }}</span>
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; color: #B06A3E;">KG</span>
+            </div>
+            <div style="width: 32px; height: 32px; border: 1px solid #3A2213; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 15px 'IBM Plex Mono', monospace; color: #D9CFC6; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FF7A33;" onClick="{{ bwPlus }}">+</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; padding: 14px 24px 0;">
+          <sc-for list="{{ tabsC }}" as="t" hint-placeholder-count="5">
+            <div style="font: 700 12px 'Noto Sans JP', sans-serif; color: {{ t.fg }}; border-bottom: 2px solid {{ t.border }}; padding: 6px 4px; cursor: pointer;" onClick="{{ t.pick }}">{{ t.name }}</div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; justify-content: center; align-items: flex-end; gap: 18px; padding: 26px 24px 0;">
+          <sc-for list="{{ moldsC }}" as="m" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;" onClick="{{ m.pick }}">
+              <svg width="{{ m.w }}" height="{{ m.h }}" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d="M18,8 L82,8 L74,92 L26,92 Z" fill="#140B06" stroke="{{ m.stroke }}" stroke-width="3"></path>
+                <clipPath id="{{ m.clipId }}"><path d="M18,8 L82,8 L74,92 L26,92 Z"></path></clipPath>
+                <rect x="0" y="{{ m.fillY }}" width="100" height="100" fill="url(#moltenC)" clip-path="url(#{{ m.clipIdRef }})" style="filter: {{ m.glow }};"></rect>
+              </svg>
+              <span style="font: 700 12px 'Noto Sans JP', sans-serif; color: {{ m.nameFg }};">{{ m.name }}</span>
+              <span style="font: 700 11px 'IBM Plex Mono', monospace; color: {{ m.kgFg }};">{{ m.kg }}kg</span>
+            </div>
+          </sc-for>
+          <svg width="0" height="0"><defs><linearGradient id="moltenC" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFB300"></stop><stop offset="100%" stop-color="#D8321A"></stop></linearGradient></defs></svg>
+        </div>
+        <div style="text-align: center; padding: 8px 24px 0; font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .2em; color: #6B5A4C;">溶鉄の量 = 現在のe1RM({{ selCurC }}kg)</div>
+
+        <div style="padding: 20px 24px 0;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font: 900 14px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ selMoldC.name }}</div>
+            <div style="font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">{{ selMoldC.desc }}</div>
+            <sc-if value="{{ selMoldC.capped }}" hint-placeholder-val="{{ false }}">
+              <div style="font: 500 10px 'IBM Plex Mono', monospace; color: #8A5A3C; border-top: 1px dashed #3A2213; padding-top: 6px;">⚠ この鋳型は現在の器具では満たしきれません(計測上限 {{ capLabel }}kg)</div>
+            </sc-if>
+            <div style="border-top: 1px solid #241812; padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #8A5A3C;">縁まで</span>
+                <span style="font: 700 14px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ progC.summary }}</span>
+              </div>
+              <div style="position: relative; height: 6px; background: #241812; border-radius: 3px;">
+                <div style="position: absolute; left: 0; top: 0; height: 6px; width: {{ progC.pctW }}; background: linear-gradient(90deg, #8A431C, #FF5C1A); border-radius: 3px; box-shadow: 0 0 10px rgba(255,92,26,.4);"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font: 500 9px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+                <span>スタート {{ progC.start }}kg</span><span>現在 {{ progC.cur }}kg</span><span>縁 {{ progC.goal }}kg</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 12px 24px 0; font: 400 10px 'Noto Sans JP', sans-serif; color: #6B5A4C;">※ 見え方は体脂肪率や骨格でも変わります</div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 16px 24px 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border: 1px solid #241812; border-radius: 12px; padding: 12px 16px;">
+            <span style="font: 400 11px 'Noto Sans JP', sans-serif; color: #8A5A3C;">鋳型の容量を直接編集</span>
+            <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #B06A3E; cursor: pointer;">{{ selMoldC.kg }}kg ✎</span>
+          </div>
+          <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 16px 'Noto Sans JP', sans-serif; letter-spacing: .06em; cursor: pointer; box-shadow: 0 0 32px rgba(255,92,26,.35);" style-hover="background: #FF7A33;">この鋳型にする →</div>
+        </div>
+      </div>
+
+      <div style="width: 390px; min-height: 844px; background: radial-gradient(120% 60% at 50% 108%, #2A1006 0%, #140B06 42%, #0B0907 100%); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;" data-screen-label="5c 到達チェック">
+        <div style="padding: 26px 24px 0; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FFB300; animation: emberPulse 2.4s ease-in-out infinite;">GOAL — 鋳型が満ちました</div>
+          <div style="font: 900 26px 'Noto Sans JP', sans-serif; color: #F5EFE8;">腕がゴールに到達しました</div>
+          <div style="font: 400 13px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">鏡を見て、鋳上がりを判定してください。</div>
+        </div>
+        <div style="display: flex; justify-content: center; padding: 20px 24px 0;">
+          <svg width="150" height="150" viewBox="0 0 100 100">
+            <path d="M18,8 L82,8 L74,92 L26,92 Z" fill="{{ moldFillC }}" stroke="{{ moldStrokeC }}" stroke-width="3" style="filter: {{ moldGlowC }};"></path>
+            <sc-if value="{{ mirKeptC }}" hint-placeholder-val="{{ false }}">
+              <text x="50" y="58" text-anchor="middle" style="font: 700 22px 'IBM Plex Mono', monospace;" fill="#0B0907">✓</text>
+            </sc-if>
+          </svg>
+        </div>
+        <sc-if value="{{ mirNoneC }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 24px 24px 0; display: flex; flex-direction: column; gap: 12px; animation: riseIn .3s ease-out;">
+            <div style="background: #FF5C1A; color: #0B0907; border-radius: 999px; padding: 17px; text-align: center; font: 900 15px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="background: #FF7A33;" onClick="{{ mirKeepC }}">満足 — 焼き入れて完成にする</div>
+            <div style="border: 1px solid #3A2213; color: #D9CFC6; border-radius: 999px; padding: 16px; text-align: center; font: 700 14px 'Noto Sans JP', sans-serif; cursor: pointer;" style-hover="border-color: #FF5C1A; color: #FFE3CC;" onClick="{{ mirUpC }}">物足りない — 一回り大きい鋳型へ</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mirKeptC }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 24px 24px 0; text-align: center; animation: riseIn .3s ease-out;">
+            <div style="font: 700 14px 'Noto Sans JP', sans-serif; color: #C9B79C;">焼き入れ完了 — 維持モード</div>
+            <div style="font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #9B928A; padding-top: 4px;">週1回の維持メニューで硬度を保ちます</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ mirUppedC }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 24px 24px 0; text-align: center; animation: riseIn .3s ease-out;">
+            <div style="font: 700 14px 'Noto Sans JP', sans-serif; color: #FF7A33;">{{ armsNextName }}({{ armsNextKg }}kg)の鋳型に交換しました</div>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px 24px 28px;">
+          <div style="background: rgba(255,92,26,.06); border: 1px solid #3A2213; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">胸 — 鋳型の縁まで</span>
+              <span style="font: 700 12px 'IBM Plex Mono', monospace; color: #FFE3CC;">{{ goalChart.summary }}</span>
+            </div>
+            <svg width="100%" height="110" viewBox="0 0 300 120" preserveAspectRatio="none">
+              <rect x="0" y="0" width="300" height="{{ goalChart.goalY }}" fill="rgba(255,227,204,.03)"></rect>
+              <line x1="0" y1="110" x2="300" y2="110" stroke="#241812" stroke-width="1"></line>
+              <line x1="0" y1="{{ goalChart.goalY }}" x2="300" y2="{{ goalChart.goalY }}" stroke="#FFE3CC" stroke-width="1.5"></line>
+              <polyline points="{{ goalChart.line }}" fill="none" stroke="#FF5C1A" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(255,92,26,.5));"></polyline>
+              <sc-for list="{{ goalChart.dots }}" as="d" hint-placeholder-count="6">
+                <circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="3.5" fill="#FFE3CC"></circle>
+              </sc-for>
+            </svg>
+            <div style="display: flex; justify-content: space-between; font: 500 10px 'IBM Plex Mono', monospace; color: #6B5A4C;">
+              <span>縁(実線)= しっかり {{ goalChart.goal }}kg</span><span>縁の上 = あふれ(超過)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font: 400 12px/1.8 'Noto Sans JP', sans-serif; color: #9B928A;"><b style="color: #D9CFC6;">設計意図:</b> 鍛冶場の世界観を機能の意味論まで貫く案。ゴール=「鋳型(器)」、現在のe1RM=「注がれた溶鉄の量」と定義し、3サイズの鋳型から選ぶだけで設定が終わる。到達=鋳型が満ちる、維持=焼き入れ(完成した鉄・鋼色)、引き上げ=一回り大きい鋳型への交換 — ライフサイクル全体がひとつのメタファーで閉じ、通知文・状態表現に説明がいらない。ゴールラインも「鋳型の縁」(実線)として描き、縁より上=あふれ(超過)という直感を与える。器具上限は「この鋳型は満たしきれません」とメタファー内で正直に伝える。抽象度が高いぶん初見の学習コストがあるため、初回のみ生活言語の説明文(カード内)を併記して補う。</div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    goals: { chest: 1, back: 1, shoulders: 1, arms: 0, legs: 1 },
+    selA: 'arms', selB: 'chest', selC: 'arms',
+    mirA: null, mirB: null, mirC: null,
+    bw: 70,
+  };
+
+  // 器具上限(全部位一律): 24kg × 1.4(レップ12クランプの計測上限)= 33.6kg e1RM
+  static get CAP() { return 33.6; }
+  cap() { return 33.6; }
+
+  parts5() {
+    // 係数は docs/pm/phase7_strength_standards_research.md §3 承認済み表に準拠
+    return [
+      { id: 'chest', name: '胸', coef: [0.35, 0.50, 0.70], cur: 29.6, start: 24.5,
+        descs: ['Tシャツの胸元にうっすら厚みのラインが出る', 'Tシャツの上から胸の張りがわかる', 'シャツ選びで胸囲が基準になる'] },
+      { id: 'back', name: '背中', coef: [0.35, 0.55, 0.75], cur: 33.0, start: 27.0,
+        descs: ['「姿勢が良くなった」と言われる', '後ろ姿で逆三角形の輪郭がわかる', 'ジャケットの肩幅が既製では合わなくなる'] },
+      { id: 'shoulders', name: '肩', coef: [0.25, 0.40, 0.55], cur: 15.8, start: 13.0,
+        descs: ['肩のラインが丸みを帯びる', '半袖で肩の張り出しがわかる', 'ノースリーブで三角筋の分離が見える'] },
+      { id: 'arms', name: '腕', coef: [0.15, 0.30, 0.50], cur: 12.4, start: 9.5,
+        descs: ['袖から出る腕にうっすら形がある', '半袖で明らかに鍛えているとわかる', '腕まくりで周囲がざわつく'] },
+      { id: 'legs', name: '脚', coef: [0.25, 0.40, 0.60], cur: 24.8, start: 19.0,
+        descs: ['パンツのシルエットが崩れない程度に締まる', '細身のパンツで太ももの張りがわかる', '既製のパンツが太ももで選べなくなる'] },
+    ];
+  }
+  levelNames() { return ['引き締め', 'しっかり', 'がっつり']; }
+  target(p, l) { return Math.round(p.coef[l] * this.state.bw * 10) / 10; }
+  isCapped(p, l) { return this.target(p, l) > this.cap(); }
+  kgStr(v) { return v.toFixed(1).replace(/\.0$/, ''); }
+  byId(id) { return this.parts5().find(p => p.id === id); }
+
+  // スタート→現在地→ゴールの進捗軸
+  progress(p, l) {
+    const goal = this.target(p, l);
+    const span = Math.max(0.1, goal - p.start);
+    const pct = Math.max(0, Math.min(100, Math.round(((p.cur - p.start) / span) * 100)));
+    const remain = Math.max(0, goal - p.cur);
+    return {
+      pct: pct + '%', pctW: pct + '%',
+      remain: this.kgStr(remain),
+      summary: pct + '% ・ あと' + this.kgStr(remain) + 'kg',
+      done: remain <= 0,
+      start: this.kgStr(p.start), cur: this.kgStr(p.cur), goal: this.kgStr(goal),
+      curX: Math.max(0, Math.min(100, ((p.cur - p.start) / span) * 100)).toFixed(1) + '%',
+    };
+  }
+
+  // 部位別パラメトリック輪郭(100x70, 地面線 y=62)
+  silo(id, l) {
+    if (id === 'arms') { const h = [12, 22, 34][l]; return `M6,52 L30,52 Q50,${52 - h} 70,52 L94,52 L94,62 L6,62 Z`; }
+    if (id === 'chest') { const d = [10, 18, 28][l]; return `M44,6 L52,6 Q${52 + d},26 46,62 L36,62 L36,6 Z`; }
+    if (id === 'back') { const w = [52, 66, 84][l]; return `M${50 - w / 2},12 L${50 + w / 2},12 L66,62 L34,62 Z`; }
+    if (id === 'shoulders') { const rw = [22, 28, 36][l], rh = [16, 26, 38][l]; return `M${50 - rw},62 Q${50 - rw},${62 - rh} 50,${62 - rh} Q${50 + rw},${62 - rh} ${50 + rw},62 Z`; }
+    const w = [16, 26, 38][l]; return `M${50 - w / 2},8 L${50 + w / 2},8 Q${50 + w / 2 + 7},34 ${50 + w / 2},62 L${50 - w / 2},62 Z`;
+  }
+
+  goalChartData() {
+    const s = [24.5, 25.2, 26.1, 27.0, 27.8, 28.9, 29.6];
+    const goal = this.target(this.byId('chest'), 1);
+    const min = Math.min(...s), max = goal * 1.06, span = max - min;
+    const y = v => 108 - ((v - min) / span) * 96;
+    const pts = s.map((v, i) => ({ cx: (8 + (284 * i) / (s.length - 1)).toFixed(1), cy: y(v).toFixed(1) }));
+    const goalY = y(goal);
+    return {
+      line: pts.map(d => d.cx + ',' + d.cy).join(' '), dots: pts,
+      goalY: goalY.toFixed(1), goalTagY: (goalY - 8).toFixed(1), goalTagTextY: (goalY + 4).toFixed(1),
+      goal: this.kgStr(goal), now: '29.6', remain: this.kgStr(Math.max(0, goal - 29.6)),
+      pct: Math.round((29.6 - 24.5) / Math.max(0.1, goal - 24.5) * 100) + '%',
+    };
+  }
+
+  renderVals() {
+    const parts = this.parts5();
+    const lvNames = this.levelNames();
+    const goals = this.state.goals;
+
+    // ---- 5a ----
+    const pA = this.byId(this.state.selA);
+    const tabsA = parts.map(p => ({
+      name: p.name,
+      fg: this.state.selA === p.id ? '#FFE3CC' : '#8A5A3C',
+      border: this.state.selA === p.id ? '#FF5C1A' : '#3A2213',
+      bg: this.state.selA === p.id ? 'rgba(255,92,26,.1)' : 'transparent',
+      pick: () => this.setState({ selA: p.id }),
+    }));
+    const levelsA = lvNames.map((n, l) => {
+      const sel = goals[pA.id] === l;
+      return {
+        name: n, desc: pA.descs[l], kg: this.kgStr(this.target(pA, l)),
+        capped: this.isCapped(pA, l),
+        border: sel ? '#FF5C1A' : '#241812',
+        bg: sel ? 'rgba(255,92,26,.08)' : 'transparent',
+        nameFg: sel ? '#FFE3CC' : '#D9CFC6',
+        kgFg: sel ? '#FF7A33' : '#8A5A3C',
+        silo: this.silo(pA.id, l),
+        siloFill: sel ? '#FF5C1A' : '#241812',
+        siloGlow: sel ? 'drop-shadow(0 0 8px rgba(255,92,26,.55))' : 'none',
+        pick: () => this.setState(s => ({ goals: { ...s.goals, [pA.id]: l } })),
+      };
+    });
+
+    // ---- 5b ----
+    const pB = this.byId(this.state.selB);
+    const rowsB = parts.map(p => {
+      const gl = goals[p.id];
+      const maxV = Math.max(this.target(p, 2), this.cap()) * 1.14;
+      const pctOf = v => Math.min(97, (v / maxV) * 100).toFixed(1) + '%';
+      const cap = this.cap();
+      const hasCap = cap < maxV;
+      const pr = this.progress(p, gl);
+      return {
+        name: p.name, cur: this.kgStr(p.cur), curPct: pctOf(p.cur),
+        startPct: pctOf(p.start), prSummary: pr.summary,
+        target: this.kgStr(this.target(p, gl)), levelName: lvNames[gl],
+        levelFg: this.isCapped(p, gl) ? '#8A5A3C' : '#FF7A33',
+        border: this.state.selB === p.id ? '#FF5C1A' : '#241812',
+        bg: this.state.selB === p.id ? 'rgba(255,92,26,.06)' : 'transparent',
+        hasCap, capPct: hasCap ? pctOf(cap) : '100%',
+        notches: lvNames.map((_, l) => ({
+          x: pctOf(this.target(p, l)),
+          ring: goals[p.id] === l ? '#FF5C1A' : '#3A2213',
+          fill: goals[p.id] === l ? '#FF5C1A' : '#140B06',
+          glow: goals[p.id] === l ? '0 0 10px rgba(255,92,26,.6)' : 'none',
+          pick: () => this.setState(s => ({ goals: { ...s.goals, [p.id]: l }, selB: p.id })),
+        })),
+        pick: () => this.setState({ selB: p.id }),
+      };
+    });
+
+    // ---- 5c ----
+    const pC = this.byId(this.state.selC);
+    const tabsC = parts.map(p => ({
+      name: p.name,
+      fg: this.state.selC === p.id ? '#FFE3CC' : '#6B5A4C',
+      border: this.state.selC === p.id ? '#FF5C1A' : 'transparent',
+      pick: () => this.setState({ selC: p.id }),
+    }));
+    const moldsC = lvNames.map((n, l) => {
+      const sel = goals[pC.id] === l;
+      const t = this.target(pC, l);
+      const fill = Math.min(1, pC.cur / t);
+      const size = [72, 92, 116][l];
+      return {
+        name: n, kg: this.kgStr(t),
+        w: String(Math.round(size * 0.8)), h: String(size),
+        stroke: sel ? '#FF5C1A' : '#3A2213',
+        nameFg: sel ? '#FFE3CC' : '#8A5A3C',
+        kgFg: sel ? '#FF7A33' : '#6B5A4C',
+        fillY: (100 - 8 - (84 * fill)).toFixed(1),
+        glow: sel ? 'drop-shadow(0 0 6px rgba(255,92,26,.5))' : 'none',
+        clipId: 'mold' + pC.id + l, clipIdRef: 'mold' + pC.id + l,
+        pick: () => this.setState(s => ({ goals: { ...s.goals, [pC.id]: l } })),
+      };
+    });
+    const glC = goals[pC.id];
+    const selMoldC = {
+      name: lvNames[glC] + ' — ' + this.kgStr(this.target(pC, glC)) + 'kg',
+      desc: pC.descs[glC], capped: this.isCapped(pC, glC), kg: this.kgStr(this.target(pC, glC)),
+    };
+
+    const doneCountA = String(Object.keys(goals).length);
+
+    // 体重入力(実動): ノッチ=係数×体重 は動き、器具上限帯 33.6kg は固定
+    const bw = this.state.bw;
+    const setBw = d => this.setState(s => ({ bw: Math.max(40, Math.min(120, s.bw + d)) }));
+    const armsP = this.byId('arms');
+    const armsNext = { name: lvNames[1], kg: this.kgStr(this.target(armsP, 1)), remain: this.kgStr(Math.max(0, this.target(armsP, 1) - armsP.cur)) };
+
+    return {
+      // 体重(共通)
+      bw: String(bw), bwMinus: () => setBw(-1), bwPlus: () => setBw(1),
+      capLabel: this.kgStr(this.cap()),
+      armsGoalKg: this.kgStr(this.target(armsP, 0)), armsCur: this.kgStr(armsP.cur),
+      armsNextName: armsNext.name, armsNextKg: armsNext.kg, armsNextRemain: armsNext.remain,
+      // 5a
+      tabsA, levelsA, doneCountA,
+      progA: this.progress(pA, goals[pA.id]),
+      progC: this.progress(pC, goals[pC.id]),
+      selTargetA: this.kgStr(this.target(pA, goals[pA.id])),
+      mirrorSiloA: {
+        d: this.silo('arms', 0),
+        fill: this.state.mirA === 'keep' ? '#C9B79C' : '#FF5C1A',
+        glow: this.state.mirA === 'keep' ? 'none' : 'drop-shadow(0 0 14px rgba(255,92,26,.6))',
+      },
+      mirNoneA: this.state.mirA === null, mirKeptA: this.state.mirA === 'keep', mirUppedA: this.state.mirA === 'up',
+      mirKeepA: () => this.setState({ mirA: 'keep' }), mirUpA: () => this.setState({ mirA: 'up' }),
+      // 5b
+      rowsB,
+      selNameB: pB.name,
+      selTargetB: this.kgStr(this.target(pB, goals[pB.id])),
+      selLevelB: lvNames[goals[pB.id]],
+      selCoefB: pB.coef[goals[pB.id]].toFixed(2),
+      mirNoneB: this.state.mirB === null, mirDoneB: this.state.mirB !== null,
+      mirCardB: this.state.mirB === 'keep'
+        ? { border: '#57503F', bg: 'rgba(201,183,156,.05)', fg: '#C9B79C', label: '腕 — 維持モード', value: '✓ 目標 ' + this.kgStr(this.target(armsP, 0)) + 'kg を維持' }
+        : { border: '#FF5C1A', bg: 'rgba(255,92,26,.07)', fg: '#FF7A33', label: '腕 — 次のゴール', value: armsNext.name + ' ' + armsNext.kg + 'kg(あと' + armsNext.remain + 'kg)' },
+      mirKeepB: () => this.setState({ mirB: 'keep' }), mirUpB: () => this.setState({ mirB: 'up' }),
+      // 5c
+      tabsC, moldsC, selMoldC,
+      selNameC: pC.name, selCurC: this.kgStr(pC.cur),
+      selIdxC: String(parts.findIndex(p => p.id === this.state.selC) + 1),
+      mirNoneC: this.state.mirC === null, mirKeptC: this.state.mirC === 'keep', mirUppedC: this.state.mirC === 'up',
+      moldFillC: this.state.mirC === 'keep' ? '#C9B79C' : 'url(#moltenC)',
+      moldStrokeC: this.state.mirC === 'keep' ? '#57503F' : '#FF5C1A',
+      moldGlowC: this.state.mirC === 'keep' ? 'none' : 'drop-shadow(0 0 16px rgba(255,92,26,.55))',
+      mirKeepC: () => this.setState({ mirC: 'keep' }), mirUpC: () => this.setState({ mirC: 'up' }),
+      // 共通
+      goalChart: { ...this.goalChartData(), summary: this.progress(this.byId('chest'), 1).summary },
+    };
+  }
+}
+</script>
+</body>
+</html>
