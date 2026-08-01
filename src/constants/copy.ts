@@ -221,6 +221,12 @@ export const WORKOUT_COPY = {
   undo: '取り消し',
   exerciseNotePlaceholder: '種目メモ(フォームの気づきなど)',
   sessionNotePlaceholder: 'セッション全体のメモ',
+  // 実行画面メニュー一覧シート(ISS-021・参照のみ)
+  menuSheetButton: 'メニュー一覧',
+  menuStatusDone: '✅ 済',
+  menuStatusActive: '▶ 実施中',
+  menuStatusPending: '未',
+  menuSetsProgress: (done: number, total: number) => `${done}/${total}`,
   finish: 'トレ終了',
   interrupt: '中断して保存',
   interruptConfirm: '途中までの記録を残して中断します。よろしいですか?',

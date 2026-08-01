@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ExerciseDetailSheet from '../components/ExerciseDetailSheet'
 import Modal from '../components/Modal'
+import WorkoutMenuSheet from '../components/WorkoutMenuSheet'
 import {
   FINISH_COPY,
   MENU_COPY,
@@ -65,6 +66,8 @@ export default function ActiveWorkoutPage() {
   const [finishOpen, setFinishOpen] = useState(false)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
+  // メニュー一覧シート(ISS-021・参照のみ)。表示中もRESTINGのtickは止まらない
+  const [menuSheetOpen, setMenuSheetOpen] = useState(false)
   const [soundOk, setSoundOk] = useState(audioReady)
   const [autoTimer] = useLocalSetting('autoStartTimer', true)
   const [dumbbellSteps, setDumbbellSteps] = useState<number[]>([])
@@ -221,11 +224,22 @@ export default function ActiveWorkoutPage() {
             {position && <span className="ml-1.5 text-xs font-normal text-ink-dim">ⓘ</span>}
           </h1>
         </button>
-        {position && (
-          <span className="label-mono shrink-0 rounded-chip border border-line-ember px-2.5 py-1.5 text-[13px] font-bold tracking-normal text-ink-mid">
-            {WORKOUT_COPY.setChip(position.setIndex + 1, totalSetsOfCurrent)}
-          </span>
-        )}
+        <span className="flex shrink-0 items-center gap-1.5">
+          {position && (
+            <span className="label-mono rounded-chip border border-line-ember px-2.5 py-1.5 text-[13px] font-bold tracking-normal text-ink-mid">
+              {WORKOUT_COPY.setChip(position.setIndex + 1, totalSetsOfCurrent)}
+            </span>
+          )}
+          {/* メニュー一覧シート(ISS-021) */}
+          <button
+            type="button"
+            aria-label={WORKOUT_COPY.menuSheetButton}
+            onClick={() => setMenuSheetOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-chip border border-line-ember text-ink-mid active:border-molten active:text-molten"
+          >
+            ☰
+          </button>
+        </span>
       </header>
 
       {mode.kind === 'resting' && position ? (
@@ -424,6 +438,10 @@ export default function ActiveWorkoutPage() {
 
       {detailExercise && (
         <ExerciseDetailSheet exercise={detailExercise} onClose={() => setDetailExercise(null)} />
+      )}
+
+      {menuSheetOpen && (
+        <WorkoutMenuSheet entries={workout.entries} onClose={() => setMenuSheetOpen(false)} />
       )}
 
       {finishOpen && (
