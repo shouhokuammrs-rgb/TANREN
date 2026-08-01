@@ -2,6 +2,7 @@ import type {
   Condition,
   Exercise,
   ExerciseEmphasis,
+  GoalMode,
   MovementPattern,
   MuscleGroup,
 } from '../db/types'
@@ -79,6 +80,11 @@ export interface EngineContext {
    * DB層が直近EMPHASIS_HISTORY_SESSIONS回分から組み立てる。未設定なら現行の並び
    */
   recentEmphasis?: Map<MuscleGroup, ExerciseEmphasis[]>
+  /**
+   * 部位別ゴールのモード(DEC-013)。maintain部位は生成を軽くする
+   * (種目1・セット−1・2ステップ増量不適用)。未設定部位はgrowth扱い
+   */
+  goalModes?: Partial<Record<MuscleGroup, GoalMode>>
 }
 
 export interface MenuRequest {

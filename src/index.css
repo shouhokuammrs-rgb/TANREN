@@ -30,6 +30,9 @@
   --color-adjusting: #fde047;
   --color-destructive: #f87171;
   --color-info: #3987e5;
+  /* 鋼色(DEC-013): 維持モード=完成した鉄。値・ラベル・✓ / 枠・スタートマーカー */
+  --color-steel: #C9B79C;
+  --color-steel-line: #57503F;
 
   /* ===== 角丸4段(§2) ===== */
   --radius-chip: 6px;

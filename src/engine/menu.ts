@@ -35,6 +35,8 @@ export function estimatedMinutes(items: Pick<MenuItem, 'sets' | 'intervalSec'>[]
 
 /** 1種目分の処方(重量・レップ・セット・インターバル)を組む。入れ替え・追加時にも使う */
 export function prescriptionFor(exercise: Exercise, ctx: EngineContext): Prescription {
+  // 維持モード(DEC-013): セット数−1(下限1)。増量提案は継続するが2ステップジャンプは不適用
+  const maintain = ctx.goalModes?.[exercise.primaryMuscle] === 'maintain'
   const { weightKg, reps } = suggestWeightReps(
     exercise,
     ctx.lastPerformance.get(exercise.id!),
@@ -43,10 +45,12 @@ export function prescriptionFor(exercise: Exercise, ctx: EngineContext): Prescri
     ctx.patternBase1Rm ?? {},
     ctx.performanceHistory?.get(exercise.id!) ?? [],
     ctx.tuning,
+    { suppressSlackJump: maintain },
   )
+  // 基本セット数は上級者設定(DEC-010)で上書き可能
+  const baseSets = ctx.tuning?.defaultSets ?? DEFAULT_SETS
   return {
-    // 基本セット数は上級者設定(DEC-010)で上書き可能
-    sets: ctx.tuning?.defaultSets ?? DEFAULT_SETS,
+    sets: maintain ? Math.max(1, baseSets - 1) : baseSets,
     suggestedReps: reps,
     suggestedWeightKg: weightKg,
     intervalSec: intervalSecFor(reps, exercise.movementType),

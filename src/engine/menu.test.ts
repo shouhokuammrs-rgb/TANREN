@@ -233,6 +233,50 @@ describe('generateMenu: 強調ローテーション(DEC-012・実マスタ)', ()
   })
 })
 
+describe('generateMenu: 維持モードの生成調整(DEC-013 Phase 7-5a)', () => {
+  const request: MenuRequest = { availableMinutes: 45, targetMuscles: ['chest'], condition: 'normal' }
+
+  it('maintain部位は種目数1・セット数−1(通常3→2)', () => {
+    const menu = generateMenu(makeCtx({ goalModes: { chest: 'maintain' } }), request)
+    expect(menu.items).toHaveLength(1)
+    expect(menu.items[0].sets).toBe(2)
+  })
+
+  it('セット数の下限は1(基本セット数2の設定でも0にならない)', () => {
+    const menu = generateMenu(
+      makeCtx({ goalModes: { chest: 'maintain' }, tuning: { defaultSets: 2 } }),
+      request,
+    )
+    expect(menu.items[0].sets).toBe(1)
+  })
+
+  it('growth部位・ゴール未設定は従来どおり(回帰)', () => {
+    const menu = generateMenu(makeCtx({ goalModes: { chest: 'growth' } }), request)
+    expect(menu.items.length).toBeGreaterThan(1)
+    expect(menu.items[0].sets).toBe(3)
+  })
+
+  it('maintain部位は「余裕あり」の2ステップジャンプ不適用(増量自体は継続)', () => {
+    const flatPress = EXERCISES.find((e) => e.name === 'ダンベルベンチプレス')!
+    const last = {
+      exerciseId: flatPress.id!,
+      performedAt: new Date('2026-07-30T10:00:00'),
+      sets: [
+        { weightKg: 11.5, reps: 12, achieved: true },
+        { weightKg: 11.5, reps: 12, achieved: true, hadSlack: true },
+      ],
+    }
+    const ctx = makeCtx({
+      goalModes: { chest: 'maintain' },
+      lastPerformance: new Map([[flatPress.id!, last]]),
+    })
+    const menu = generateMenu(ctx, request)
+    const item = menu.items.find((i) => i.exerciseId === flatPress.id!)
+    // 通常なら14.5kg(2段)になるところ、維持モードでは13kg(1段)
+    expect(item?.suggestedWeightKg).toBe(13)
+  })
+})
+
 describe('recoveringListLabel / isShortenedMenu(DEC-006)', () => {
   const ex = (muscles: MuscleGroup[]) => muscles.map((muscle) => ({ muscle, freshness: 50 }))
 

@@ -170,7 +170,8 @@ export function candidatesByMuscle(
       // 疲れ気味: レップ上限が低い=高重量前提の種目を回避(F-04-6)
       .filter((e) => condition !== 'tired' || e.repRangeMax > TIRED_AVOID_REP_MAX)
       .sort(compareCandidates(ctx, muscle))
-      .slice(0, MAX_EXERCISES_PER_MUSCLE)
+      // 維持モードの部位は種目数1に落とす(DEC-013 Phase 7-5a)
+      .slice(0, ctx.goalModes?.[muscle] === 'maintain' ? 1 : MAX_EXERCISES_PER_MUSCLE)
     result.set(muscle, list)
   }
   return result

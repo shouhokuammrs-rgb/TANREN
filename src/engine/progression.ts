@@ -108,6 +108,7 @@ export function suggestWeightReps(
   patternBase1Rm: Partial<Record<MovementPattern, number>> = {},
   olderEntries: ExerciseHistoryEntry[] = [],
   tuning?: EngineTuning,
+  options: { suppressSlackJump?: boolean } = {},
 ): WeightRepsSuggestion {
   const usesDumbbell = exercise.requiredEquipment.includes('dumbbell')
   const { repRangeMin, repRangeMax } = exercise
@@ -153,9 +154,11 @@ export function suggestWeightReps(
         .map((e) => e.sets.find((s) => s.weightKg !== undefined)?.weightKg)
         .filter((w): w is number => w !== undefined),
     ]
-    // 増量ステップ数は上級者設定(DEC-010)で上書き可能
+    // 増量ステップ数は上級者設定(DEC-010)で上書き可能。
+    // 維持モード(DEC-013)は増量提案を続けつつ2ステップジャンプのみ不適用
     const slackJumpSteps = tuning?.slackJumpSteps ?? SLACK_JUMP_STEPS
     const jumpSteps =
+      !options.suppressSlackJump &&
       lastSetSlack &&
       consecutiveDoubleJumps(pastWeights, sorted, slackJumpSteps) < MAX_CONSECUTIVE_DOUBLE_JUMPS
         ? slackJumpSteps

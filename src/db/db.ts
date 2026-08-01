@@ -5,6 +5,7 @@ import type {
   Exercise,
   Goal,
   Injury,
+  MuscleGoal,
   Photo,
   Profile,
   Session,
@@ -28,6 +29,7 @@ export type TanrenDB = Dexie & {
   injuries: EntityTable<Injury, 'id'>
   strength_marks: EntityTable<StrengthMark, 'id'>
   settings: EntityTable<Setting, 'key'>
+  muscle_goals: EntityTable<MuscleGoal, 'muscle'>
 }
 
 export const db = new Dexie('tanren') as TanrenDB
@@ -54,6 +56,11 @@ db.version(2).stores({
 // v3: アプリ設定key-value(ISS-012: グラフ表示モード等)
 db.version(3).stores({
   settings: '&key',
+})
+
+// v4: 部位別ゴール(DEC-013)。部位がPK
+db.version(4).stores({
+  muscle_goals: '&muscle',
 })
 
 // 毎回のopen時に空テーブルへシード投入する(初回起動+リリース後のマスタ追加の両方に対応)

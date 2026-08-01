@@ -541,6 +541,57 @@ export const CLOUD_COPY = {
   working: '処理中…',
 }
 
+// 部位別ゴールモデル(DEC-013 / 5b「目盛」)。視覚仕様: docs/design/handoff/5b_goal_model_handoff.md
+export const MUSCLE_GOAL_COPY = {
+  section: '部位別ゴール',
+  hint: 'ゴールe1RMは体重×係数で自動追従します(片手kg)',
+  levelLabels: { toned: '引き締め', solid: 'しっかり', big: 'がっつり' } as const,
+  unset: '未設定',
+  heroUnit: 'KG e1RM 目標',
+  heroSub: (level: string, weightKg: number, coef: number) =>
+    `${level} = 体重${weightKg}kg × ${coef.toFixed(2)}`,
+  directEdit: '± 直接編集',
+  directEditTitle: '目標e1RMを直接入力(kg・0.5刻み)',
+  weightStepperNote: 'ノッチ = 係数 × 体重 / 上限帯 33.6kg は固定',
+  weightUnit: 'kg',
+  currentLabel: (kg: number) => `現在 ${kg}kg`,
+  progress: (pct: number, remainingKg: number) => `${pct}% ・ あと${remainingKg}kg`,
+  noProgress: '実ログ待ち(初回の記録からスタート地点が決まります)',
+  cappedWarning: '⚠ 現在の器具では届きません(計測上限 33.6kg)',
+  reached: '達成 — 判定待ち',
+  maintainMark: '✓ 維持',
+  footerNote: '※ 見え方は体脂肪率や骨格でも変わります',
+  save: 'ゴールを保存',
+  saved: 'ゴールを保存しました',
+  captions: {
+    chest: {
+      toned: 'Tシャツの胸元にうっすら厚みのラインが出る',
+      solid: 'Tシャツの上から胸の張りがわかる',
+      big: 'シャツ選びで胸囲が基準になる',
+    },
+    back: {
+      toned: '「姿勢が良くなった」と言われる',
+      solid: '後ろ姿で逆三角形の輪郭がわかる',
+      big: 'ジャケットの肩幅が既製では合わなくなる',
+    },
+    shoulders: {
+      toned: '肩のラインが丸みを帯びる',
+      solid: '半袖で肩の張り出しがわかる',
+      big: 'ノースリーブで三角筋の分離が見える',
+    },
+    arms: {
+      toned: '袖から出る腕にうっすら形がある',
+      solid: '半袖で明らかに鍛えているとわかる',
+      big: '腕まくりで周囲がざわつく',
+    },
+    legs: {
+      toned: 'パンツのシルエットが崩れない程度に締まる',
+      solid: '細身のパンツで太ももの張りがわかる',
+      big: '既製のパンツが太ももで選べなくなる',
+    },
+  } as const,
+}
+
 export const GOAL_SETTINGS_COPY = {
   section: '目標とヒヤリング',
   notSet: '未設定(セットアップで設定できます)',

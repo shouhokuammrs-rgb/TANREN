@@ -60,6 +60,8 @@ const TABLES = [
   'strength_marks',
   // ISS-012: UI設定(グラフ表示モード等)もバックアップ対象に含める
   'settings',
+  // DEC-013: 部位別ゴール
+  'muscle_goals',
 ] as const
 
 type TableName = (typeof TABLES)[number]
@@ -74,6 +76,7 @@ const DATE_FIELDS: Partial<Record<TableName, string[]>> = {
   body_stats: ['measuredAt'],
   injuries: ['reportedAt'],
   strength_marks: ['recordedAt'],
+  muscle_goals: ['updatedAt'],
 }
 
 export interface Backup {

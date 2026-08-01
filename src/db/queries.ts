@@ -8,6 +8,7 @@ import type {
   ExerciseEmphasis,
   Goal,
   MealTiming,
+  MuscleGoal,
   MuscleGroup,
   Photo,
   PhotoPose,
@@ -25,9 +26,10 @@ import type {
 } from '../engine/types'
 import {
   detectPrSetNumbers,
+  goalPriorityScores,
+  goalTrendByMuscle,
   patternBase1RmFrom,
   prAttemptWeightKg,
-  priorityScores,
   summarizeExercise,
   type CompletedSetInput,
   type ExerciseSummary,
@@ -38,13 +40,13 @@ import { loadEngineTuning } from '../utils/engineTuning'
 
 /** エンジン入力のスナップショットを組み立てる */
 export async function loadEngineContext(now = new Date()): Promise<EngineContext> {
-  const [profile, equipment, exercises, injuries, strengthMarks, latestGoal] = await Promise.all([
+  const [profile, equipment, exercises, injuries, strengthMarks, muscleGoals] = await Promise.all([
     db.profiles.orderBy('id').first(),
     db.equipment.where('isActive').equals(1).toArray(),
     db.exercises.toArray(),
     db.injuries.where('isActive').equals(1).toArray(),
     db.strength_marks.toArray(),
-    loadGoal(),
+    db.muscle_goals.toArray(),
   ])
 
   const dumbbell = equipment.find((e) => e.type === 'dumbbell')
@@ -140,7 +142,18 @@ export async function loadEngineContext(now = new Date()): Promise<EngineContext
     muscleStimuli: [...stimulusByMuscle.values()],
     activeInjuries: [...new Set(injuries.map((i) => i.bodyPart))],
     patternBase1Rm: patternBase1RmFrom(strengthMarks),
-    priorityScores: priorityScores(latestGoal),
+    // F-03置き換え(DEC-013): 優先度=f(ゴールギャップ)。want/avoidタグは読み捨て(後方互換・データは残す)
+    priorityScores: goalPriorityScores(
+      muscleGoals,
+      profile?.weightKg ?? 58,
+      Object.fromEntries(
+        Object.entries(goalTrendByMuscle(await loadGrowthSessions(), now)).map(([m, t]) => [
+          m,
+          t.currentE1Rm,
+        ]),
+      ),
+    ),
+    goalModes: Object.fromEntries(muscleGoals.map((g) => [g.muscle, g.mode])),
     // 上級者設定(DEC-010)。エンジンは純関数のままにするため、読み込みはここで行う
     tuning: loadEngineTuning(),
     recentEmphasis,
@@ -628,6 +641,20 @@ export async function loadGrowthSessions(): Promise<GrowthSessionInput[]> {
     }
   }
   return result
+}
+
+// ===== 部位別ゴール(DEC-013 / Phase 7-5a) =====
+
+/** 部位別ゴール一覧(未設定の部位はレコードなし) */
+export async function listMuscleGoals(): Promise<MuscleGoal[]> {
+  return db.muscle_goals.toArray()
+}
+
+/** 部位別ゴールの保存(部位PKでupsert)。係数保存の原則(DEC-013)は呼び出し側で担保 */
+export async function saveMuscleGoal(
+  goal: Omit<MuscleGoal, 'updatedAt'>,
+): Promise<void> {
+  await db.muscle_goals.put({ ...goal, updatedAt: new Date() })
 }
 
 /** アプリ設定(ISS-012)。UI設定のうちバックアップに含めたいものはlocalStorageではなくここへ */

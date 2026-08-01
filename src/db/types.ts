@@ -122,6 +122,27 @@ export interface Exercise {
   note?: string
 }
 
+// ===== 部位別ゴールモデル(DEC-013 / Phase 7) =====
+
+/** ゴールレベル: 引き締め(Nov)/しっかり(Int)/がっつり(Adv) */
+export type GoalLevel = 'toned' | 'solid' | 'big'
+
+/** growth=成長中 / maintain=維持(鏡チェックで遷移。前半では到達経路なし) */
+export type GoalMode = 'growth' | 'maintain'
+
+/**
+ * 部位別ゴール(対象は胸・背中・肩・腕・脚の5部位のみ)。
+ * ゴールは体重×係数で自動追従するため係数を保存する(固定kg保存禁止・直接編集も係数化)
+ */
+export interface MuscleGoal {
+  muscle: MuscleGroup
+  level: GoalLevel
+  /** 体重比係数。プリセット選択時は係数表の値、直接編集時は 編集kg÷編集時点体重 */
+  coef: number
+  mode: GoalMode
+  updatedAt: Date
+}
+
 export interface Session {
   id?: number
   startedAt: Date
