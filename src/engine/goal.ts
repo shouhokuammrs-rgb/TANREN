@@ -11,7 +11,7 @@ import {
   GOAL_TARGET_MUSCLES,
   isGoalTargetMuscle,
 } from '../constants/goals'
-import type { MuscleGoal, MuscleGroup } from '../db/types'
+import type { GoalLevel, MuscleGoal, MuscleGroup } from '../db/types'
 import { E1RM_REP_CLAMP, muscleGrowthMap, type GrowthSessionInput } from './growth'
 
 /**
@@ -110,11 +110,63 @@ export function goalPriorityScores(
   return result
 }
 
+// ===== 到達判定と鏡チェック(Phase 7-5b) =====
+
+/**
+ * セッション保存時の到達検知(純関数)。
+ * - mode==='growth' かつ 記録した部位のみ判定
+ * - 境界: current === target も到達
+ * - reachedAt が残っている(判定未消化)部位は再検知しない(重複記録抑止)
+ */
+export function detectReachedGoals(
+  goals: MuscleGoal[],
+  bodyWeightKg: number,
+  currentE1Rm: Partial<Record<MuscleGroup, number>>,
+  recordedMuscles: MuscleGroup[],
+): MuscleGroup[] {
+  const recorded = new Set(recordedMuscles)
+  const reached: MuscleGroup[] = []
+  for (const goal of goals) {
+    if (goal.mode !== 'growth') continue
+    if (goal.reachedAt !== undefined) continue
+    if (!recorded.has(goal.muscle)) continue
+    const current = currentE1Rm[goal.muscle]
+    if (current === undefined) continue
+    if (current >= targetE1Rm(goal.coef, bodyWeightKg)) reached.push(goal.muscle)
+  }
+  return reached
+}
+
+/** 「物足りない」の1段引き上げ先。bigの場合はnull(直接編集+10%提案へ) */
+export function nextGoalLevel(level: GoalLevel): GoalLevel | null {
+  if (level === 'toned') return 'solid'
+  if (level === 'solid') return 'big'
+  return null
+}
+
+/** big到達で物足りない場合の直接編集初期値: 現目標+10%(0.5kg刻み・Elite係数は採用しない) */
+export function raiseSuggestionKg(currentTargetKg: number): number {
+  return Math.round(currentTargetKg * 1.1 * 2) / 2
+}
+
+/**
+ * 成長グラフに描くゴールライン(指標乖離ルール・Phase 7-5b §1)。
+ * 基準種目がレップ指標(ISS-018)の部位ではkg線をレップ軸に重ねないためundefined
+ */
+export function chartGoalLineKg(
+  metric: 'e1rm' | 'reps',
+  targetKg: number,
+): number | undefined {
+  return metric === 'e1rm' ? targetKg : undefined
+}
+
 export interface GoalTrend {
   /** スタート(導出値): 現行基準種目の全期間最古の実ログe1RM */
   startE1Rm?: number
   /** 現在: 同じ基準種目の最新実ログe1RM */
   currentE1Rm?: number
+  /** 進捗の基準種目名。グラフがレップ指標の部位で「基準: ◯◯」併記に使う(§1指標乖離ルール) */
+  anchorExerciseName?: string
 }
 
 /** 全期間扱いの期間日数(進捗のスタート導出用) */
@@ -138,6 +190,7 @@ export function goalTrendByMuscle(
     result[muscle] = {
       startE1Rm: growth.points[0].value,
       currentE1Rm: growth.points[growth.points.length - 1].value,
+      anchorExerciseName: growth.anchorExerciseName,
     }
   }
   return result

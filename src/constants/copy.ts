@@ -563,6 +563,21 @@ export const MUSCLE_GOAL_COPY = {
   footerNote: '※ 見え方は体脂肪率や骨格でも変わります',
   save: 'ゴールを保存',
   saved: 'ゴールを保存しました',
+  // Phase 7-5b: 鏡チェック(到達判定)
+  reachedTitle: (label: string) => `${label}がゴールに到達しました`,
+  reachedBody: '鏡を見て判定してください',
+  judgeSatisfied: '満足(維持へ)',
+  judgeMore: '物足りない(1段上げ)',
+  judgeMoreBig: '物足りない(目標を上げる)',
+  judgeLater: 'あとで判定',
+  raiseEditLabel: '新しい目標e1RM(kg・現目標+10%を提案)',
+  raiseEditConfirm: 'この目標にする',
+  maintainDone: (label: string) => `${label}を維持モードにしました`,
+  raiseDone: (label: string) => `${label}のゴールを引き上げました`,
+  resumeConfirm: '維持中のゴールを再開しますか?(メニュー生成が通常ボリュームに戻ります)',
+  mirrorTitle: '鏡チェック',
+  // 成長ビュー統合(§1): レップ指標部位の進捗軸に基準種目を併記
+  progressAnchor: (name: string) => `基準: ${name}`,
   captions: {
     chest: {
       toned: 'Tシャツの胸元にうっすら厚みのラインが出る',

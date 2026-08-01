@@ -141,6 +141,19 @@ export interface MuscleGoal {
   coef: number
   mode: GoalMode
   updatedAt: Date
+  /** 到達検知済み・鏡チェック未消化(状態4)。判定消化でクリア(Phase 7-5b) */
+  reachedAt?: Date
+}
+
+/** ゴールの節目イベント(Phase 7-5b・構想§2-5のSSOT的追跡) */
+export type GoalEventType = 'reached' | 'maintain' | 'raise' | 'resume'
+
+export interface GoalEvent {
+  id?: number
+  muscle: MuscleGroup
+  type: GoalEventType
+  at: Date
+  note?: string
 }
 
 export interface Session {

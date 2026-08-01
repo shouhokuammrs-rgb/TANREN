@@ -62,6 +62,7 @@ const TABLES = [
   'settings',
   // DEC-013: 部位別ゴール
   'muscle_goals',
+  'goal_events',
 ] as const
 
 type TableName = (typeof TABLES)[number]
@@ -76,7 +77,8 @@ const DATE_FIELDS: Partial<Record<TableName, string[]>> = {
   body_stats: ['measuredAt'],
   injuries: ['reportedAt'],
   strength_marks: ['recordedAt'],
-  muscle_goals: ['updatedAt'],
+  muscle_goals: ['updatedAt', 'reachedAt'],
+  goal_events: ['at'],
 }
 
 export interface Backup {

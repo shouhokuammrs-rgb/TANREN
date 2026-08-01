@@ -7,7 +7,9 @@ export type { CompletedSetInput, ExerciseSummary, PastSetInput } from './summary
 export { calcFreshness, effectiveRecoveryHours, hoursUntilRecovered, muscleFreshnessMap } from './freshness'
 export { growthE1Rm, muscleGrowthMap, sessionE1Rm, sessionMaxReps } from './growth'
 export {
+  chartGoalLineKg,
   coefForDirectEdit,
+  detectReachedGoals,
   equipmentE1RmCap,
   goalGapRatio,
   goalPriority,
@@ -15,6 +17,8 @@ export {
   goalProgress,
   goalTrendByMuscle,
   isCapped,
+  nextGoalLevel,
+  raiseSuggestionKg,
   targetE1Rm,
 } from './goal'
 export type { GoalProgress, GoalTrend } from './goal'

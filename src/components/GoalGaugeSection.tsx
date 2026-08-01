@@ -10,8 +10,8 @@ import {
 } from '../constants/goals'
 import { MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import { db } from '../db/db'
-import { addBodyWeight, loadGrowthSessions, saveMuscleGoal } from '../db/queries'
-import type { GoalLevel, GoalMode } from '../db/types'
+import { addBodyWeight, loadGrowthSessions, resumeMuscleGoal, saveMuscleGoal } from '../db/queries'
+import type { GoalLevel, GoalMode, MuscleGoal } from '../db/types'
 import {
   coefForDirectEdit,
   equipmentE1RmCap,
@@ -21,6 +21,7 @@ import {
   targetE1Rm,
 } from '../engine'
 import { showToast } from '../utils/toast'
+import { MirrorCheckModal } from './MirrorCheck'
 
 const LEVELS: GoalLevel[] = ['toned', 'solid', 'big']
 
@@ -53,18 +54,22 @@ export default function GoalGaugeSection() {
   const [editOpen, setEditOpen] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [dirty, setDirty] = useState(false)
+  const [mirrorMuscle, setMirrorMuscle] = useState<GoalTargetMuscle | null>(null)
 
-  // DB値でドラフト初期化(保存済みゴール+現在体重)
+  // DB値でドラフト同期(未編集の間はDB変化=鏡チェック判定などを追従)
   useEffect(() => {
-    if (storedGoals === undefined) return
-    setDrafts((prev) => {
-      if (Object.keys(prev).length > 0) return prev
-      const init: Partial<Record<GoalTargetMuscle, GoalDraft>> = {}
-      for (const g of storedGoals) {
-        init[g.muscle as GoalTargetMuscle] = { level: g.level, coef: g.coef, mode: g.mode }
-      }
-      return init
-    })
+    if (storedGoals === undefined || dirty) return
+    const init: Partial<Record<GoalTargetMuscle, GoalDraft>> = {}
+    for (const g of storedGoals) {
+      init[g.muscle as GoalTargetMuscle] = { level: g.level, coef: g.coef, mode: g.mode }
+    }
+    setDrafts(init)
+  }, [storedGoals, dirty])
+
+  const storedByMuscle = useMemo(() => {
+    const map: Partial<Record<GoalTargetMuscle, MuscleGoal>> = {}
+    for (const g of storedGoals ?? []) map[g.muscle as GoalTargetMuscle] = g
+    return map
   }, [storedGoals])
 
   const weightKg = weightDraft ?? profile?.weightKg ?? 58
@@ -72,6 +77,14 @@ export default function GoalGaugeSection() {
 
   const pickLevel = (muscle: GoalTargetMuscle, level: GoalLevel) => {
     setFocused(muscle)
+    // 維持からの再開(INS §2): レベル変更操作を再開の意思とみなし、確認の上で即時growthへ戻す
+    if (drafts[muscle]?.mode === 'maintain') {
+      if (!window.confirm(MUSCLE_GOAL_COPY.resumeConfirm)) return
+      const coef = GOAL_COEF[muscle][level]
+      setDrafts((prev) => ({ ...prev, [muscle]: { level, coef, mode: 'growth' } }))
+      void resumeMuscleGoal(muscle, { level, coef })
+      return
+    }
     setDrafts((prev) => ({
       ...prev,
       [muscle]: { level, coef: GOAL_COEF[muscle][level], mode: prev[muscle]?.mode ?? 'growth' },
@@ -212,20 +225,29 @@ export default function GoalGaugeSection() {
 
       {/* ゲージ行×5(仕様§3・§4) */}
       <div className="mt-4 flex flex-col gap-3.5">
-        {GOAL_TARGET_MUSCLES.map((muscle) => (
-          <GoalGaugeRow
-            key={muscle}
-            muscle={muscle}
-            draft={drafts[muscle]}
-            weightKg={weightKg}
-            capKg={capKg}
-            startE1Rm={trend[muscle]?.startE1Rm}
-            currentE1Rm={trend[muscle]?.currentE1Rm}
-            focused={muscle === focused}
-            onFocus={() => setFocused(muscle)}
-            onPickLevel={(level) => pickLevel(muscle, level)}
-          />
-        ))}
+        {GOAL_TARGET_MUSCLES.map((muscle) => {
+          const stored = storedByMuscle[muscle]
+          // 状態4(到達・判定待ち)はreachedAt駆動(INS §2)。行タップで鏡チェックを開く
+          const reached = stored?.reachedAt !== undefined && stored.mode === 'growth'
+          return (
+            <GoalGaugeRow
+              key={muscle}
+              muscle={muscle}
+              draft={drafts[muscle]}
+              weightKg={weightKg}
+              capKg={capKg}
+              startE1Rm={trend[muscle]?.startE1Rm}
+              currentE1Rm={trend[muscle]?.currentE1Rm}
+              focused={muscle === focused}
+              reached={reached}
+              onFocus={() => {
+                setFocused(muscle)
+                if (reached) setMirrorMuscle(muscle)
+              }}
+              onPickLevel={(level) => pickLevel(muscle, level)}
+            />
+          )
+        })}
       </div>
 
       <p className="mt-3 text-[10px] text-ink-dim">{MUSCLE_GOAL_COPY.footerNote}</p>
@@ -238,6 +260,15 @@ export default function GoalGaugeSection() {
       >
         {MUSCLE_GOAL_COPY.save}
       </button>
+
+      {/* 鏡チェック(状態4行タップ・INS §2) */}
+      {mirrorMuscle && storedByMuscle[mirrorMuscle] && (
+        <MirrorCheckModal
+          goal={storedByMuscle[mirrorMuscle]}
+          bodyWeightKg={weightKg}
+          onClose={() => setMirrorMuscle(null)}
+        />
+      )}
     </>
   )
 }
@@ -250,6 +281,7 @@ function GoalGaugeRow({
   startE1Rm,
   currentE1Rm,
   focused,
+  reached,
   onFocus,
   onPickLevel,
 }: {
@@ -260,6 +292,7 @@ function GoalGaugeRow({
   startE1Rm?: number
   currentE1Rm?: number
   focused: boolean
+  reached: boolean
   onFocus: () => void
   onPickLevel: (level: GoalLevel) => void
 }) {
@@ -268,9 +301,6 @@ function GoalGaugeRow({
   const progress =
     target !== undefined ? goalProgress(startE1Rm, currentE1Rm, target) : undefined
   const maintain = draft?.mode === 'maintain'
-  // 状態4(到達)は表示のみ(行タップの鏡チェック遷移は後半)
-  const reached =
-    !maintain && target !== undefined && currentE1Rm !== undefined && currentE1Rm >= target
 
   // 正規化(仕様§3): maxV = max(がっつり目標, 上限) × 1.14
   const bigTarget = targetE1Rm(GOAL_COEF[muscle].big, weightKg)

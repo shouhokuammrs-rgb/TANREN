@@ -1,8 +1,17 @@
-// DB層テスト: ログ削除後の再計算(ISS-008)とボリューム集計(ISS-012)
+// DB層テスト: ログ削除後の再計算(ISS-008)・ボリューム集計(ISS-012)・ゴール判定記録(Phase 7-5b)
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { dailyVolumeHistory, deleteSession, loadEngineContext, weeklyVolumeHistory } from './queries'
+import {
+  dailyVolumeHistory,
+  deleteSession,
+  judgeGoal,
+  loadEngineContext,
+  recordReachedGoals,
+  resumeMuscleGoal,
+  weeklyVolumeHistory,
+} from './queries'
+import { GOAL_COEF } from '../constants/goals'
 import { generateMenu } from '../engine'
 
 async function clearLogs() {
@@ -174,5 +183,93 @@ describe('ボリューム集計(ISS-012): 週別/日別履歴', () => {
     await createCompletedSession(BENCH, new Date('2026-07-01T10:00:00'), 13)
     const points = await dailyVolumeHistory(14, now)
     expect(points.every((p) => Object.keys(p.sets).length === 0)).toBe(true)
+  })
+})
+
+describe('ゴール到達検知と鏡チェックの判定記録(Phase 7-5b)', () => {
+  beforeEach(async () => {
+    await db.open()
+    await clearLogs()
+    await db.muscle_goals.clear()
+    await db.goal_events.clear()
+    await db.profiles.clear()
+    await db.profiles.add({
+      heightCm: 170,
+      weightKg: 58,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  })
+
+  /** 体重58kg・目標18kg(係数18/58)の胸growthゴールを作る */
+  async function seedChestGoal(overrides: Partial<Parameters<typeof db.muscle_goals.add>[0]> = {}) {
+    await db.muscle_goals.add({
+      muscle: 'chest',
+      level: 'toned',
+      coef: 18 / 58,
+      mode: 'growth',
+      updatedAt: new Date(),
+      ...overrides,
+    })
+  }
+
+  it('到達検知: reachedAtが立ちgoal_eventsにreachedが記録される。判定未消化の再到達は重複記録しない', async () => {
+    await seedChestGoal()
+    // ベンチ14.5kg×8 → e1RM 14.5×(1+8/30)≒18.4 ≧ 目標18
+    const first = await createCompletedSession(BENCH, 1, 14.5)
+    expect(await recordReachedGoals(first)).toEqual(['chest'])
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeDefined()
+    expect(await db.goal_events.where('muscle').equals('chest').count()).toBe(1)
+
+    // 判定未消化のまま再到達 → 検知・記録なし
+    const second = await createCompletedSession(BENCH, 0, 14.5)
+    expect(await recordReachedGoals(second)).toEqual([])
+    expect(await db.goal_events.count()).toBe(1)
+  })
+
+  it('到達未満・記録していない部位では検知しない', async () => {
+    await seedChestGoal({ coef: 25 / 58 }) // 目標25 > e1RM18.4
+    const sessionId = await createCompletedSession(BENCH, 1, 14.5)
+    expect(await recordReachedGoals(sessionId)).toEqual([])
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
+  })
+
+  it('判定「満足」: mode=maintainへ+reachedAtクリア+maintainイベント', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await judgeGoal('chest', 'maintain')
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.mode).toBe('maintain')
+    expect(goal?.reachedAt).toBeUndefined()
+    expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['maintain'])
+  })
+
+  it('判定「物足りない」: レベル1段引き上げ(プリセット係数)+raiseイベント', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await judgeGoal('chest', 'raise')
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.level).toBe('solid')
+    expect(goal?.coef).toBe(GOAL_COEF.chest.solid)
+    expect(goal?.reachedAt).toBeUndefined()
+    expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['raise'])
+  })
+
+  it('big到達で物足りない: 直接編集kg(+10%提案)を係数化して保存+noteに記録', async () => {
+    await seedChestGoal({ level: 'big', coef: GOAL_COEF.chest.big, reachedAt: new Date() })
+    await judgeGoal('chest', 'raise', 32)
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.level).toBe('big') // レベルはbigのまま(Elite係数は採用しない・DEC-013)
+    expect(goal?.coef).toBeCloseTo(32 / 58, 5)
+    const events = await db.goal_events.toArray()
+    expect(events[0].type).toBe('raise')
+    expect(events[0].note).toContain('32kg')
+  })
+
+  it('維持からの復帰: mode=growthへ戻り+resumeイベント', async () => {
+    await seedChestGoal({ mode: 'maintain' })
+    await resumeMuscleGoal('chest', { level: 'solid', coef: GOAL_COEF.chest.solid })
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.mode).toBe('growth')
+    expect(goal?.level).toBe('solid')
+    expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['resume'])
   })
 })

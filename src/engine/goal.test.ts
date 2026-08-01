@@ -1,7 +1,10 @@
-// 部位別ゴールモデル(DEC-013 / Phase 7-5a)のユニットテスト
+// 部位別ゴールモデル(DEC-013 / Phase 7-5a・7-5b)のユニットテスト
 import { describe, expect, it } from 'vitest'
+import type { MuscleGoal } from '../db/types'
 import {
+  chartGoalLineKg,
   coefForDirectEdit,
+  detectReachedGoals,
   equipmentE1RmCap,
   goalGapRatio,
   goalPriority,
@@ -9,6 +12,8 @@ import {
   goalProgress,
   goalTrendByMuscle,
   isCapped,
+  nextGoalLevel,
+  raiseSuggestionKg,
   targetE1Rm,
 } from './goal'
 import type { GrowthSessionInput } from './growth'
@@ -126,5 +131,60 @@ describe('goalTrendByMuscle(スタート導出値・保存しない)', () => {
     const trend = goalTrendByMuscle([bodyweightOnly], new Date())
     expect(trend.chest).toBeUndefined()
     expect(trend.back).toBeUndefined()
+  })
+})
+
+// ===== Phase 7-5b: 到達判定と鏡チェック =====
+
+function goalOf(partial: Partial<MuscleGoal> & Pick<MuscleGoal, 'muscle' | 'coef'>): MuscleGoal {
+  return { level: 'toned', mode: 'growth', updatedAt: new Date(), ...partial }
+}
+
+describe('detectReachedGoals(セッション保存時の到達検知)', () => {
+  // 体重58kg × 係数0.25 = 目標14.5kg
+  const goals = [goalOf({ muscle: 'chest', coef: 0.25 })]
+
+  it('境界: current === target も到達', () => {
+    expect(detectReachedGoals(goals, 58, { chest: 14.5 }, ['chest'])).toEqual(['chest'])
+    expect(detectReachedGoals(goals, 58, { chest: 14.4 }, ['chest'])).toEqual([])
+  })
+
+  it('maintain部位は判定対象外', () => {
+    const maintain = [goalOf({ muscle: 'chest', coef: 0.25, mode: 'maintain' })]
+    expect(detectReachedGoals(maintain, 58, { chest: 20 }, ['chest'])).toEqual([])
+  })
+
+  it('reachedAt残留(判定未消化)の部位は再検知しない=重複記録抑止', () => {
+    const pending = [goalOf({ muscle: 'chest', coef: 0.25, reachedAt: new Date() })]
+    expect(detectReachedGoals(pending, 58, { chest: 20 }, ['chest'])).toEqual([])
+  })
+
+  it('このセッションで記録していない部位・現在値未導出の部位は判定しない', () => {
+    expect(detectReachedGoals(goals, 58, { chest: 20 }, ['back'])).toEqual([])
+    expect(detectReachedGoals(goals, 58, {}, ['chest'])).toEqual([])
+  })
+})
+
+describe('nextGoalLevel / raiseSuggestionKg(物足りない)', () => {
+  it('1段引き上げ: toned→solid→big→null(bigは直接編集へ)', () => {
+    expect(nextGoalLevel('toned')).toBe('solid')
+    expect(nextGoalLevel('solid')).toBe('big')
+    expect(nextGoalLevel('big')).toBeNull()
+  })
+
+  it('big到達の提案値: 現目標+10%を0.5kg刻みで丸める', () => {
+    expect(raiseSuggestionKg(29)).toBe(32) // 31.9 → 32
+    expect(raiseSuggestionKg(20)).toBe(22)
+    expect(raiseSuggestionKg(30.5)).toBe(33.5) // 33.55 → 33.5
+  })
+})
+
+describe('chartGoalLineKg(指標乖離ルール・§1)', () => {
+  it('e1RMグラフにはゴールラインを描く', () => {
+    expect(chartGoalLineKg('e1rm', 18)).toBe(18)
+  })
+
+  it('レップ指標(ISS-018)のグラフにはkg線を重ねない', () => {
+    expect(chartGoalLineKg('reps', 18)).toBeUndefined()
   })
 })

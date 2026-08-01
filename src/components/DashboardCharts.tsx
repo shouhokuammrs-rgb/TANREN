@@ -6,6 +6,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -52,15 +53,49 @@ export function VolumeChart({ data }: { data: Record<string, number | string>[] 
   )
 }
 
+/** ゴールライン右端の値タグ(5b §5: #FFE3CC塗り・角丸3px・Mono 700 10px #0B0907) */
+function GoalLineTag({
+  viewBox,
+  valueKg,
+}: {
+  viewBox?: { x?: number; y?: number; width?: number }
+  valueKg?: number
+}) {
+  if (!viewBox || valueKg === undefined) return null
+  const text = `${valueKg}`
+  const w = text.length * 6.5 + 9
+  const x = (viewBox.x ?? 0) + (viewBox.width ?? 0) - w
+  const y = (viewBox.y ?? 0) - 7
+  return (
+    <g>
+      <rect x={x} y={y} width={w} height={14} rx={3} fill="#FFE3CC" />
+      <text
+        x={x + w / 2}
+        y={y + 10}
+        textAnchor="middle"
+        fontSize={10}
+        fontWeight={700}
+        fill="#0B0907"
+        style={{ fontFamily: 'var(--font-label)' }}
+      >
+        {text}
+      </text>
+    </g>
+  )
+}
+
 /** 成長推移(DEC-011/ISS-018)。データ点=セッション。値はe1RM(kg)または最大レップ(回) */
 export function GrowthChart({
   data,
   name,
   height = 150,
+  goalLineKg,
 }: {
   data: { label: string; value: number }[]
   name: string
   height?: number
+  /** ゴールライン(Phase 7-5b §1)。レップ指標の部位ではundefinedを渡す(kg線を重ねない) */
+  goalLineKg?: number
 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -71,10 +106,21 @@ export function GrowthChart({
           tick={AXIS_TICK}
           axisLine={false}
           tickLine={false}
-          domain={['dataMin - 2', 'dataMax + 2']}
+          domain={[
+            (dataMin: number) => Math.floor(Math.min(dataMin, goalLineKg ?? dataMin) - 2),
+            (dataMax: number) => Math.ceil(Math.max(dataMax, goalLineKg ?? dataMax) + 2),
+          ]}
           tickFormatter={(v: number) => `${Math.round(v)}`}
         />
         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#d9cfc6' }} />
+        {goalLineKg !== undefined && (
+          <ReferenceLine
+            y={goalLineKg}
+            stroke="#FFE3CC"
+            strokeWidth={1.5}
+            label={<GoalLineTag valueKg={goalLineKg} />}
+          />
+        )}
         <Line
           type="monotone"
           dataKey="value"

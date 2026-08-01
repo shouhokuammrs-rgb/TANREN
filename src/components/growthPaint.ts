@@ -3,8 +3,16 @@ import type { MusclePaint } from './BodySvg'
 import { GROWTH_COLD, GROWTH_GLOW_FILTER, growthHeatOf } from '../constants/charts'
 import type { MuscleGrowth } from '../engine'
 
-/** 熱スケールの塗り(データ不足=冷えた鉄破線・選択中=hotストローク) */
-export function growthPaint(growth: MuscleGrowth, selected = false): MusclePaint {
+/** 熱スケールの塗り(データ不足=冷えた鉄破線・選択中=hotストローク・維持=鋼色フラット) */
+export function growthPaint(growth: MuscleGrowth, selected = false, maintain = false): MusclePaint {
+  // 維持モード(5b §5): 熱スケールから外して鋼色にフラット置換。グローなし
+  if (maintain) {
+    return {
+      // SVG属性にCSS変数は使えないためリテラル(= --color-steel)
+      fill: '#C9B79C',
+      ...(selected ? { stroke: '#FFE3CC', strokeWidth: 1.5 } : {}),
+    }
+  }
   if (!growth.hasEnoughData) {
     return {
       fill: GROWTH_COLD.fill,

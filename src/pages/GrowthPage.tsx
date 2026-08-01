@@ -7,10 +7,17 @@ import { Link } from 'react-router-dom'
 import BodySvg from '../components/BodySvg'
 import { growthPaint } from '../components/growthPaint'
 import { GROWTH_COLD, GROWTH_HEAT_SCALE, GROWTH_MIN_SESSIONS, GROWTH_PERIODS } from '../constants/charts'
-import { GROWTH_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
+import { GROWTH_COPY, MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
+import { db } from '../db/db'
 import { loadGrowthSessions } from '../db/queries'
 import type { MuscleGroup } from '../db/types'
-import { muscleGrowthMap } from '../engine'
+import {
+  chartGoalLineKg,
+  goalProgress,
+  goalTrendByMuscle,
+  muscleGrowthMap,
+  targetE1Rm,
+} from '../engine'
 
 const GrowthChart = lazy(() =>
   import('../components/DashboardCharts').then((m) => ({ default: m.GrowthChart })),
@@ -33,6 +40,14 @@ export default function GrowthPage() {
     () => muscleGrowthMap(sessions ?? [], periodDays, new Date()),
     [sessions, periodDays],
   )
+  // ゴールライン+進捗軸統合(Phase 7-5b §1)
+  const goals = useLiveQuery(() => db.muscle_goals.toArray())
+  const profile = useLiveQuery(() => db.profiles.orderBy('id').first())
+  const goalTrend = useMemo(() => goalTrendByMuscle(sessions ?? [], new Date()), [sessions])
+  const maintainMuscles = useMemo(
+    () => new Set((goals ?? []).filter((g) => g.mode === 'maintain').map((g) => g.muscle)),
+    [goals],
+  )
 
   // 未選択時は最も伸びている部位(データ十分のみ)を初期選択
   const current: MuscleGroup =
@@ -42,6 +57,27 @@ export default function GrowthPage() {
     )[0] ??
     'chest'
   const growth = growthMap[current]
+
+  // 選択部位のゴール(growthモードのみライン・進捗を出す。維持は鋼色表現のみ)
+  const goal = goals?.find((g) => g.muscle === current && g.mode === 'growth')
+  const goalTargetKg =
+    goal !== undefined ? targetE1Rm(goal.coef, profile?.weightKg ?? 58) : undefined
+  // 指標乖離ルール(§1): レップ指標のグラフにはkg線を重ねない
+  const goalLineKg =
+    goalTargetKg !== undefined ? chartGoalLineKg(growth.metric, goalTargetKg) : undefined
+  const goalProg =
+    goalTargetKg !== undefined
+      ? goalProgress(
+          goalTrend[current]?.startE1Rm,
+          goalTrend[current]?.currentE1Rm,
+          goalTargetKg,
+        )
+      : undefined
+  // レップ指標部位で進捗を出す場合は基準種目名を併記(グラフと別種目基準であることを明示)
+  const goalAnchorName =
+    goalProg !== undefined && growth.metric === 'reps'
+      ? goalTrend[current]?.anchorExerciseName
+      : undefined
 
   // ISS-018: 単位は指標に依存(e1RM=kg / 自重=回)
   const unitLabel = growth.metric === 'reps' ? GROWTH_COPY.repsUnit : GROWTH_COPY.e1rmUnit
@@ -94,7 +130,7 @@ export default function GrowthPage() {
             <BodySvg
               side={side}
               className="h-52 w-auto"
-              paint={(m) => growthPaint(growthMap[m], m === current)}
+              paint={(m) => growthPaint(growthMap[m], m === current, maintainMuscles.has(m))}
               onPick={setSelected}
             />
             <figcaption className="label-mono mt-1 text-[9px] text-ink-dim">
@@ -161,19 +197,33 @@ export default function GrowthPage() {
         onClick={() => setFullscreen(true)}
         className="card-ember block w-full p-4 text-left disabled:cursor-default"
       >
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline justify-between gap-2">
           <span className="label-mono text-[10px] text-molten-bright">
             {GROWTH_COPY.chartTitle(MUSCLE_GROUP_LABELS[current])}
           </span>
-          {growth.hasEnoughData && (
-            <span className="label-mono text-[11px] tracking-normal text-accent-dim">
-              {GROWTH_COPY.expand}
-            </span>
-          )}
+          <span className="flex items-baseline gap-2.5">
+            {/* 進捗軸(5b §5): カードヘッダー右に {進捗率}% ・ あと{残り}kg */}
+            {goalProg && (
+              <span className="label-mono text-xs font-bold tracking-normal text-[#FFE3CC]">
+                {MUSCLE_GOAL_COPY.progress(Math.round(goalProg.ratio * 100), goalProg.remainingKg)}
+              </span>
+            )}
+            {growth.hasEnoughData && (
+              <span className="label-mono text-[11px] tracking-normal text-accent-dim">
+                {GROWTH_COPY.expand}
+              </span>
+            )}
+          </span>
         </div>
         {growth.anchorExerciseName && (
           <p className="mt-0.5 text-[10px] text-ink-dim">
             {GROWTH_COPY.anchorNote(growth.anchorExerciseName)}
+          </p>
+        )}
+        {/* 指標乖離ルール(§1): レップ指標グラフの進捗はe1RM基準種目由来であることを併記 */}
+        {goalAnchorName && (
+          <p className="mt-0.5 text-[10px] text-ink-dim">
+            {MUSCLE_GOAL_COPY.progressAnchor(goalAnchorName)}
           </p>
         )}
         {growth.hasEnoughData && latest ? (
@@ -191,7 +241,7 @@ export default function GrowthPage() {
             </div>
             <div className="mt-2">
               <Suspense fallback={chartFallback}>
-                <GrowthChart data={chartData} name={seriesName} />
+                <GrowthChart data={chartData} name={seriesName} goalLineKg={goalLineKg} />
               </Suspense>
             </div>
           </>
@@ -239,7 +289,7 @@ export default function GrowthPage() {
 
             <div className="mt-3">
               <Suspense fallback={chartFallback}>
-                <GrowthChart data={chartData} name={seriesName} height={230} />
+                <GrowthChart data={chartData} name={seriesName} height={230} goalLineKg={goalLineKg} />
               </Suspense>
             </div>
 

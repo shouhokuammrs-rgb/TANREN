@@ -1,13 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useParams } from 'react-router-dom'
+import { MirrorCheckActions } from '../components/MirrorCheck'
 import {
   LOG_COPY,
+  MUSCLE_GOAL_COPY,
   MUSCLE_GROUP_LABELS,
   SUMMARY_COPY,
   WORKOUT_COPY,
   formatDate,
 } from '../constants/copy'
+import { db } from '../db/db'
 import { loadSessionSummaryView } from '../db/queries'
+import type { MuscleGoal } from '../db/types'
 import type { PastSetInput } from '../engine'
 
 function setLabel(set: PastSetInput): string {
@@ -20,6 +24,11 @@ function setLabel(set: PastSetInput): string {
 export default function SummaryPage() {
   const { id } = useParams()
   const view = useLiveQuery(async () => (await loadSessionSummaryView(Number(id))) ?? null, [id])
+  // Phase 7-5b: 判定未消化の到達ゴール(状態4)。判定するまでサマリーに出す
+  const reachedGoals = useLiveQuery(() =>
+    db.muscle_goals.filter((g) => g.reachedAt !== undefined && g.mode === 'growth').toArray(),
+  )
+  const profile = useLiveQuery(() => db.profiles.orderBy('id').first())
 
   if (view === undefined) {
     return <p className="pt-10 text-center text-sm text-ink-dim">…</p>
@@ -70,6 +79,11 @@ export default function SummaryPage() {
         .map((ex) => (
           <PrCard key={ex.exerciseId} name={ex.exercise.name} best={ex.todayBest!} />
         ))}
+
+      {/* ゴール到達演出+鏡チェック(Phase 7-5b・状態4) */}
+      {reachedGoals?.map((goal) => (
+        <GoalReachedCard key={goal.muscle} goal={goal} bodyWeightKg={profile?.weightKg ?? 58} />
+      ))}
 
       {/* 種目リスト(区切り line-soft) */}
       <ul className="card-ember divide-y divide-line-soft px-4">
@@ -141,6 +155,22 @@ export default function SummaryPage() {
         </Link>
       </div>
     </section>
+  )
+}
+
+/** ゴール到達カード(Phase 7-5b): PR演出に準ずる熱さ(金色+emberPulse)+鏡チェック3択 */
+function GoalReachedCard({ goal, bodyWeightKg }: { goal: MuscleGoal; bodyWeightKg: number }) {
+  return (
+    <div
+      className="anim-pulse rounded-card p-4"
+      style={{ border: '1px solid #FFB300', background: 'rgba(255,179,0,.07)' }}
+    >
+      <p className="text-[15px] font-black" style={{ color: '#FFB300' }}>
+        🏆 {MUSCLE_GOAL_COPY.reachedTitle(MUSCLE_GROUP_LABELS[goal.muscle])}
+      </p>
+      <p className="mb-3 mt-0.5 text-xs text-ink-mid">{MUSCLE_GOAL_COPY.reachedBody}</p>
+      <MirrorCheckActions goal={goal} bodyWeightKg={bodyWeightKg} onDone={() => {}} />
+    </div>
   )
 }
 

@@ -242,13 +242,22 @@ const ALL_MUSCLES = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]
 
 /** 成長カード(DEC-011/4b): ミニ人体図(FRONT・30日固定)+上位3部位の変化率要約 */
 function GrowthCard({ growth }: { growth: Record<MuscleGroup, MuscleGrowth> }) {
+  // 維持モードの部位は鋼色フラット(5b §5: 熱スケールから外す)
+  const maintainGoals = useLiveQuery(() =>
+    db.muscle_goals.filter((g) => g.mode === 'maintain').toArray(),
+  )
+  const maintainMuscles = new Set((maintainGoals ?? []).map((g) => g.muscle))
   const top3 = ALL_MUSCLES.filter((m) => growth[m].hasEnoughData)
     .sort((a, b) => (growth[b].growthRate ?? 0) - (growth[a].growthRate ?? 0))
     .slice(0, 3)
 
   return (
     <Link to="/growth" className="card-ember flex gap-4 p-4">
-      <BodySvg side="front" className="h-28 w-auto shrink-0" paint={(m) => growthPaint(growth[m])} />
+      <BodySvg
+        side="front"
+        className="h-28 w-auto shrink-0"
+        paint={(m) => growthPaint(growth[m], false, maintainMuscles.has(m))}
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <span className="label-mono text-[10px] text-molten-bright">{GROWTH_COPY.cardTitle}</span>

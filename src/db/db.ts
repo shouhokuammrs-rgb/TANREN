@@ -4,6 +4,7 @@ import type {
   Equipment,
   Exercise,
   Goal,
+  GoalEvent,
   Injury,
   MuscleGoal,
   Photo,
@@ -30,6 +31,7 @@ export type TanrenDB = Dexie & {
   strength_marks: EntityTable<StrengthMark, 'id'>
   settings: EntityTable<Setting, 'key'>
   muscle_goals: EntityTable<MuscleGoal, 'muscle'>
+  goal_events: EntityTable<GoalEvent, 'id'>
 }
 
 export const db = new Dexie('tanren') as TanrenDB
@@ -61,6 +63,11 @@ db.version(3).stores({
 // v4: 部位別ゴール(DEC-013)。部位がPK
 db.version(4).stores({
   muscle_goals: '&muscle',
+})
+
+// v5: ゴールの節目イベント(Phase 7-5b: 到達/維持/引き上げ/再開の追跡)
+db.version(5).stores({
+  goal_events: '++id, muscle, at',
 })
 
 // 毎回のopen時に空テーブルへシード投入する(初回起動+リリース後のマスタ追加の両方に対応)

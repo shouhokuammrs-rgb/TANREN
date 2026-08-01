@@ -7,6 +7,7 @@ import type {
   Exercise,
   ExerciseEmphasis,
   Goal,
+  GoalLevel,
   MealTiming,
   MuscleGoal,
   MuscleGroup,
@@ -17,6 +18,7 @@ import type {
   SetRecord,
 } from './types'
 import { EMPHASIS_HISTORY_SESSIONS } from '../constants/engine'
+import { GOAL_COEF, isGoalTargetMuscle } from '../constants/goals'
 import type {
   EngineContext,
   ExerciseHistoryEntry,
@@ -25,9 +27,12 @@ import type {
   MuscleStimulus,
 } from '../engine/types'
 import {
+  coefForDirectEdit,
   detectPrSetNumbers,
+  detectReachedGoals,
   goalPriorityScores,
   goalTrendByMuscle,
+  nextGoalLevel,
   patternBase1RmFrom,
   prAttemptWeightKg,
   summarizeExercise,
@@ -373,6 +378,96 @@ export async function finishSession(sessionId: number, input: FinishInput): Prom
   })
   // PR判定(F-07)を保存(ログ詳細のバッジ表示用)
   await markPrSets(sessionId)
+  // ゴール到達検知(Phase 7-5b): 記録部位のgrowthゴールを判定し、reached未消化として記録
+  await recordReachedGoals(sessionId)
+}
+
+/**
+ * ゴール到達検知(Phase 7-5b)。セッション記録保存時に呼ぶ。
+ * 到達部位に reachedAt を立て、goal_events に 'reached' を記録する
+ * (判定未消化のまま再到達しても重複記録しない=detectReachedGoalsが抑止)
+ */
+export async function recordReachedGoals(sessionId: number, now = new Date()): Promise<MuscleGroup[]> {
+  const goals = await db.muscle_goals.toArray()
+  if (!goals.some((g) => g.mode === 'growth' && g.reachedAt === undefined)) return []
+
+  // このセッションで記録した部位(完了セットのある種目の主働部位)
+  const exercises = await db.exercises.toArray()
+  const exerciseById = new Map(exercises.map((e) => [e.id!, e]))
+  const ses = await db.session_exercises.where('sessionId').equals(sessionId).toArray()
+  const recordedMuscles = new Set<MuscleGroup>()
+  for (const se of ses) {
+    const sets = await db.sets.where('sessionExerciseId').equals(se.id!).toArray()
+    if (sets.some((s) => s.completedAt !== undefined)) {
+      const muscle = exerciseById.get(se.exerciseId)?.primaryMuscle
+      if (muscle) recordedMuscles.add(muscle)
+    }
+  }
+
+  const profile = await db.profiles.orderBy('id').first()
+  const trend = goalTrendByMuscle(await loadGrowthSessions(), now)
+  const currents = Object.fromEntries(
+    Object.entries(trend).map(([m, t]) => [m, t.currentE1Rm]),
+  ) as Partial<Record<MuscleGroup, number>>
+
+  const reached = detectReachedGoals(goals, profile?.weightKg ?? 58, currents, [...recordedMuscles])
+  for (const muscle of reached) {
+    await db.muscle_goals.update(muscle, { reachedAt: now })
+    await db.goal_events.add({ muscle, type: 'reached', at: now })
+  }
+  return reached
+}
+
+/**
+ * 鏡チェックの判定消化(Phase 7-5b)。
+ * - maintain(満足): モード維持へ+イベント記録
+ * - raise(物足りない): レベル1段引き上げ(bigはdirectEditKgで+10%直接編集)+イベント記録
+ * いずれもreachedAtをクリアする(状態4の消化)
+ */
+export async function judgeGoal(
+  muscle: MuscleGroup,
+  verdict: 'maintain' | 'raise',
+  directEditKg?: number,
+): Promise<void> {
+  const goal = await db.muscle_goals.get(muscle)
+  if (!goal) return
+  const now = new Date()
+  if (verdict === 'maintain') {
+    await db.muscle_goals.update(muscle, { mode: 'maintain', reachedAt: undefined, updatedAt: now })
+    await db.goal_events.add({ muscle, type: 'maintain', at: now })
+    return
+  }
+  const next = nextGoalLevel(goal.level)
+  if (next && isGoalTargetMuscle(muscle)) {
+    await db.muscle_goals.update(muscle, {
+      level: next,
+      coef: GOAL_COEF[muscle][next],
+      reachedAt: undefined,
+      updatedAt: now,
+    })
+    await db.goal_events.add({ muscle, type: 'raise', at: now })
+    return
+  }
+  // big到達で物足りない: 直接編集kg(+10%提案)を係数化して保存(Elite係数は採用しない・DEC-013)
+  if (directEditKg !== undefined && directEditKg > 0) {
+    const profile = await db.profiles.orderBy('id').first()
+    await db.muscle_goals.update(muscle, {
+      coef: coefForDirectEdit(directEditKg, profile?.weightKg ?? 58),
+      reachedAt: undefined,
+      updatedAt: now,
+    })
+    await db.goal_events.add({ muscle, type: 'raise', at: now, note: `${directEditKg}kg(直接編集)` })
+  }
+}
+
+/** 維持からの復帰(Phase 7-5b): mode='growth'へ戻し、必要ならレベル・係数も更新 */
+export async function resumeMuscleGoal(
+  muscle: MuscleGroup,
+  patch?: { level: GoalLevel; coef: number },
+): Promise<void> {
+  const now = new Date()
+  await db.muscle_goals.update(muscle, { ...patch, mode: 'growth', reachedAt: undefined, updatedAt: now })
+  await db.goal_events.add({ muscle, type: 'resume', at: now })
 }
 
 /** このセッションより前の完了セットを種目ごとに集める(PR判定・前回比の共通材料) */
