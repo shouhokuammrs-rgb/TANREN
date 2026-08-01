@@ -10,7 +10,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // ISS-025: 更新は自動適用せずトーストで案内(タイマー中のリロード事故防止)
+      registerType: 'prompt',
       includeAssets: ['icons/apple-touch-icon.png'],
       workbox: {
         // フォント(Noto Sans JPのunicode-rangeサブセット多数)はプリキャッシュから外し、

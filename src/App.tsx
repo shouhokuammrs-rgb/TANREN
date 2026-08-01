@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TabBar from './components/TabBar'
 import { ToastHost } from './components/Toast'
+import UpdateToast from './components/UpdateToast'
 import { CLOUD_COPY, STORAGE_COPY } from './constants/copy'
 import { retryPendingCloudBackup } from './utils/cloudBackup'
 import { showToast } from './utils/toast'
@@ -60,6 +61,7 @@ export default function App() {
       </main>
       <TabBar />
       <ToastHost />
+      <UpdateToast />
     </div>
   )
 }

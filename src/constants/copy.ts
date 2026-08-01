@@ -383,6 +383,13 @@ export const TUNING_COPY = {
   },
 } as const
 
+// PWA更新トースト(ISS-025)
+export const PWA_COPY = {
+  updateAvailable: '更新があります',
+  reload: '再読み込み',
+  close: '閉じる',
+}
+
 export const POSE_LABELS = {
   front: '正面',
   side: '横',
