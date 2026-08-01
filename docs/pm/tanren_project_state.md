@@ -79,7 +79,7 @@
 - [x] 7-1 筋力標準調査+係数表承認(PM→Eiichi)→ `docs/pm/phase7_strength_standards_research.md`
 - [x] 7-2 進捗軸要件追加(スタート→現在→ゴール・進捗率=(現在−スタート)÷(ゴール−スタート))→ 構想書§2-2b
 - [x] 7-3 デザイン探索3案→**5b「目盛」選定**(Eiichi・2026-08-01)
-- [ ] 7-4 採用案HTMLのリポジトリ格納(Eiichi・Upload files→`docs/design/`)
+- [x] 7-4 採用案HTMLのリポジトリ格納→ `docs/design/部位別ゴール 3案.dc.html`(PM経由で格納済み)
 - [ ] 7-5 実装INS作成→Engineer実装(データモデル/動的優先度/維持モード/設定UI/成長ビュー統合/鏡チェック)
 
 ※採番注記: 旧「DEC-013候補」は本フェーズとして確定済み
