@@ -5,8 +5,14 @@ export type { GapAnalysis } from './priority'
 export { detectPrSetNumbers, setScore, summarizeExercise } from './summary'
 export type { CompletedSetInput, ExerciseSummary, PastSetInput } from './summary'
 export { calcFreshness, effectiveRecoveryHours, hoursUntilRecovered, muscleFreshnessMap } from './freshness'
-export { growthE1Rm, muscleGrowthMap, sessionE1Rm } from './growth'
-export type { GrowthPoint, GrowthSessionInput, GrowthSetInput, MuscleGrowth } from './growth'
+export { growthE1Rm, muscleGrowthMap, sessionE1Rm, sessionMaxReps } from './growth'
+export type {
+  GrowthMetric,
+  GrowthPoint,
+  GrowthSessionInput,
+  GrowthSetInput,
+  MuscleGrowth,
+} from './growth'
 export { intervalSecFor, purposeForReps } from './interval'
 export { initialWeightKg, snapToSteps, suggestWeightReps } from './progression'
 export { candidatesByMuscle, isExerciseAvailable, muscleCountForTime, selectMuscles } from './selection'

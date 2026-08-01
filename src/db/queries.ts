@@ -621,6 +621,8 @@ export async function loadGrowthSessions(): Promise<GrowthSessionInput[]> {
         exerciseId: exercise.id!,
         exerciseName: exercise.name,
         muscle: exercise.primaryMuscle,
+        // ISS-018: 自重種目はレップ指標。判定はマスタ基準で固定
+        bodyweight: exercise.requiredEquipment.includes('bodyweight'),
         sets,
       })
     }

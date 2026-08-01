@@ -52,12 +52,14 @@ export function VolumeChart({ data }: { data: Record<string, number | string>[] 
   )
 }
 
-/** e1RM推移(DEC-011)。データ点=セッション。溶鉄ストローク+ホットな点 */
+/** 成長推移(DEC-011/ISS-018)。データ点=セッション。値はe1RM(kg)または最大レップ(回) */
 export function GrowthChart({
   data,
+  name,
   height = 150,
 }: {
-  data: { label: string; e1rm: number }[]
+  data: { label: string; value: number }[]
+  name: string
   height?: number
 }) {
   return (
@@ -75,8 +77,8 @@ export function GrowthChart({
         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#d9cfc6' }} />
         <Line
           type="monotone"
-          dataKey="e1rm"
-          name="e1RM(kg)"
+          dataKey="value"
+          name={name}
           stroke="#FF5C1A"
           strokeWidth={2.5}
           dot={{ r: 4, fill: '#FFE3CC', stroke: '#0b0907', strokeWidth: 1.5 }}

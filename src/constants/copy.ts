@@ -446,6 +446,12 @@ export const GROWTH_COPY = {
   anchorNote: (name: string) => `基準種目: ${name}`,
   expand: '拡大 ↗',
   e1rmUnit: 'KG e1RM',
+  // ISS-018: 自重種目はレップ指標(単位は「回」)
+  repsUnit: 'REPS 最大回数',
+  kgSuffix: 'kg',
+  repsSuffix: '回',
+  e1rmSeries: 'e1RM(kg)',
+  repsSeries: '最大レップ(回)',
   needMoreSessions: (needed: number, count: number) =>
     `推移を表示するにはセッションがあと${needed}回必要です(${count}/3)`,
   fsHeader: (days: number) => `E1RM 推移 / 直近${days}日`,

@@ -43,14 +43,18 @@ export default function GrowthPage() {
     'chest'
   const growth = growthMap[current]
 
-  const chartData = growth.points.map((p) => ({ label: dateLabel(p.date), e1rm: Math.round(p.e1RmKg * 10) / 10 }))
+  // ISS-018: 単位は指標に依存(e1RM=kg / 自重=回)
+  const unitLabel = growth.metric === 'reps' ? GROWTH_COPY.repsUnit : GROWTH_COPY.e1rmUnit
+  const unitSuffix = growth.metric === 'reps' ? GROWTH_COPY.repsSuffix : GROWTH_COPY.kgSuffix
+  const seriesName = growth.metric === 'reps' ? GROWTH_COPY.repsSeries : GROWTH_COPY.e1rmSeries
+  const chartData = growth.points.map((p) => ({ label: dateLabel(p.date), value: Math.round(p.value * 10) / 10 }))
   const latest = growth.points[growth.points.length - 1]
   // 履歴(最新順・最大6件): 前回差付き
   const history = growth.points
     .map((p, i) => ({
       date: p.date,
-      e1RmKg: p.e1RmKg,
-      diffKg: i > 0 ? p.e1RmKg - growth.points[i - 1].e1RmKg : undefined,
+      value: p.value,
+      diff: i > 0 ? p.value - growth.points[i - 1].value : undefined,
     }))
     .reverse()
     .slice(0, 6)
@@ -176,10 +180,10 @@ export default function GrowthPage() {
           <>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="num-hero glow-text text-[40px] leading-none">
-                {Math.round(latest.e1RmKg * 10) / 10}
+                {Math.round(latest.value * 10) / 10}
               </span>
               <span className="label-mono text-[11px] tracking-normal text-accent-dim">
-                {GROWTH_COPY.e1rmUnit}
+                {unitLabel}
               </span>
               <span className="label-mono text-sm font-bold tracking-normal text-molten-bright">
                 {GROWTH_COPY.deltaPct(growth.growthRate ?? 0)}
@@ -187,7 +191,7 @@ export default function GrowthPage() {
             </div>
             <div className="mt-2">
               <Suspense fallback={chartFallback}>
-                <GrowthChart data={chartData} />
+                <GrowthChart data={chartData} name={seriesName} />
               </Suspense>
             </div>
           </>
@@ -223,10 +227,10 @@ export default function GrowthPage() {
 
             <div className="mt-4 flex items-baseline gap-2.5">
               <span className="num-hero glow-text text-[64px] leading-none">
-                {Math.round(latest.e1RmKg * 10) / 10}
+                {Math.round(latest.value * 10) / 10}
               </span>
               <span className="label-mono text-xs tracking-normal text-accent-dim">
-                {GROWTH_COPY.e1rmUnit}
+                {unitLabel}
               </span>
               <span className="label-mono text-[17px] font-bold tracking-normal text-molten-bright">
                 {GROWTH_COPY.deltaPct(growth.growthRate ?? 0)}
@@ -235,7 +239,7 @@ export default function GrowthPage() {
 
             <div className="mt-3">
               <Suspense fallback={chartFallback}>
-                <GrowthChart data={chartData} height={230} />
+                <GrowthChart data={chartData} name={seriesName} height={230} />
               </Suspense>
             </div>
 
@@ -253,20 +257,20 @@ export default function GrowthPage() {
                   </span>
                   <span className="flex items-baseline gap-2.5">
                     <span className="label-mono text-[15px] font-bold tracking-normal text-ink">
-                      {Math.round(h.e1RmKg * 10) / 10} kg
+                      {Math.round(h.value * 10) / 10} {unitSuffix}
                     </span>
                     <span
                       className={`label-mono w-14 text-right text-xs font-bold tracking-normal ${
-                        h.diffKg === undefined
+                        h.diff === undefined
                           ? 'text-ink-dim'
-                          : h.diffKg >= 0
+                          : h.diff >= 0
                             ? 'text-molten-bright'
                             : 'text-ink-dim'
                       }`}
                     >
-                      {h.diffKg === undefined
+                      {h.diff === undefined
                         ? '—'
-                        : `${h.diffKg >= 0 ? '+' : ''}${Math.round(h.diffKg * 10) / 10}`}
+                        : `${h.diff >= 0 ? '+' : ''}${Math.round(h.diff * 10) / 10}`}
                     </span>
                   </span>
                 </li>

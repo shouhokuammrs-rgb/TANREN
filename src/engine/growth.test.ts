@@ -2,7 +2,13 @@
 import { describe, expect, it } from 'vitest'
 import { GROWTH_COLD, GROWTH_HEAT_SCALE, growthHeatOf } from '../constants/charts'
 import type { MuscleGroup } from '../db/types'
-import { growthE1Rm, muscleGrowthMap, sessionE1Rm, type GrowthSessionInput } from './growth'
+import {
+  growthE1Rm,
+  muscleGrowthMap,
+  sessionE1Rm,
+  sessionMaxReps,
+  type GrowthSessionInput,
+} from './growth'
 
 const NOW = new Date('2026-07-22T12:00:00')
 
@@ -144,13 +150,105 @@ describe('muscleGrowthMap: データ不足判定(DEC-011 §1-5)', () => {
     ).chest
     expect(growth.sessionCount).toBe(2)
     // 同日はe1RM最大(14.5ベース)を採用
-    expect(growth.points[growth.points.length - 1].e1RmKg).toBeCloseTo(14.5 * (1 + 10 / 30), 5)
+    expect(growth.points[growth.points.length - 1].value).toBeCloseTo(14.5 * (1 + 10 / 30), 5)
   })
 
   it('実績ゼロの部位はsessionCount 0・基準種目なし', () => {
     const growth = muscleGrowthMap([], 30, NOW).back
     expect(growth).toMatchObject({ sessionCount: 0, hasEnoughData: false, points: [] })
     expect(growth.anchorExerciseId).toBeUndefined()
+  })
+})
+
+// ===== 自重種目のレップベース成長指標(ISS-018) =====
+
+/** クランチ(id:10・自重)のレップだけ変えたセッション */
+function crunch(at: Date, reps: number): GrowthSessionInput {
+  return {
+    performedAt: at,
+    exerciseId: 10,
+    exerciseName: 'クランチ',
+    muscle: 'abs',
+    bodyweight: true,
+    sets: [{ reps: reps - 3 }, { reps }],
+  }
+}
+
+/** ロシアンツイスト(id:11・ダンベル使用)のセッション */
+function russianTwist(at: Date, weightKg: number): GrowthSessionInput {
+  return {
+    performedAt: at,
+    exerciseId: 11,
+    exerciseName: 'ロシアンツイスト',
+    muscle: 'abs',
+    sets: [{ weightKg, reps: 20 }],
+  }
+}
+
+describe('自重種目のレップ指標(ISS-018)', () => {
+  it('sessionMaxReps: 記録セット中の最大レップ。E1RM_REP_CLAMP(12)は適用しない', () => {
+    expect(sessionMaxReps([{ reps: 15 }, { reps: 25 }, { reps: 20 }])).toBe(25)
+    expect(sessionMaxReps([{ reps: 0 }, {}])).toBeUndefined()
+  })
+
+  it('自重セット(weightなし)のみのセッションからレップ点列が生成される', () => {
+    const growth = muscleGrowthMap(
+      [crunch(daysAgo(20), 15), crunch(daysAgo(10), 18), crunch(daysAgo(2), 22)],
+      30,
+      NOW,
+    ).abs
+    expect(growth.metric).toBe('reps')
+    expect(growth.anchorExerciseName).toBe('クランチ')
+    expect(growth.hasEnoughData).toBe(true)
+    expect(growth.points.map((p) => p.value)).toEqual([15, 18, 22])
+  })
+
+  it('レップ成長率は同一式 (last-first)/first。月換算・クランプ非適用も同様', () => {
+    const growth = muscleGrowthMap(
+      [crunch(daysAgo(20), 15), crunch(daysAgo(10), 18), crunch(daysAgo(2), 22)],
+      30,
+      NOW,
+    ).abs
+    // 22はクランプされずそのまま点になる(クランプすると成長が消える)
+    expect(growth.growthRate).toBeCloseTo((22 - 15) / 15, 5)
+    expect(growth.monthlyRate).toBeCloseTo(((22 - 15) / 15) * 1, 5)
+  })
+
+  it('混在部位(腹): 基準種目選定は指標をまたいで回数ベース(クランチ3回 vs ツイスト2回)', () => {
+    const sessions = [
+      crunch(daysAgo(20), 15),
+      crunch(daysAgo(10), 18),
+      crunch(daysAgo(2), 22),
+      russianTwist(daysAgo(15), 8),
+      russianTwist(daysAgo(5), 10),
+    ]
+    const growth = muscleGrowthMap(sessions, 30, NOW).abs
+    expect(growth.anchorExerciseName).toBe('クランチ')
+    expect(growth.metric).toBe('reps')
+  })
+
+  it('混在部位: ダンベル種目が最多ならe1RM指標のまま(回帰)', () => {
+    const sessions = [
+      crunch(daysAgo(10), 18),
+      russianTwist(daysAgo(15), 8),
+      russianTwist(daysAgo(5), 10),
+      russianTwist(daysAgo(1), 10),
+    ]
+    const growth = muscleGrowthMap(sessions, 30, NOW).abs
+    expect(growth.anchorExerciseName).toBe('ロシアンツイスト')
+    expect(growth.metric).toBe('e1rm')
+    // e1RM側は従来どおりクランプあり(reps20→12扱い)
+    expect(growth.points[0].value).toBeCloseTo(8 * (1 + 12 / 30), 5)
+  })
+
+  it('ダンベル種目のみの部位はmetric=e1rmで従来どおり(回帰)', () => {
+    const growth = muscleGrowthMap(
+      [press(daysAgo(10), 11.5), press(daysAgo(5), 13), press(daysAgo(2), 14.5)],
+      30,
+      NOW,
+    ).chest
+    expect(growth.metric).toBe('e1rm')
+    expect(growth.growthRate).toBeGreaterThan(0)
   })
 })
 
