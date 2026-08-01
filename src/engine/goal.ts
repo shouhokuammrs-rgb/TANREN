@@ -137,8 +137,9 @@ export function detectReachedGoals(
   return reached
 }
 
-/** 「物足りない」の1段引き上げ先。bigの場合はnull(直接編集+10%提案へ) */
+/** 「物足りない」の1段引き上げ先(light→toned→solid→big)。bigはnull(直接編集+10%提案へ) */
 export function nextGoalLevel(level: GoalLevel): GoalLevel | null {
+  if (level === 'light') return 'toned'
   if (level === 'toned') return 'solid'
   if (level === 'solid') return 'big'
   return null

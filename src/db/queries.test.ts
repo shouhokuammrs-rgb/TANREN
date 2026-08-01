@@ -323,15 +323,44 @@ describe('ゴール到達検知と鏡チェックの判定記録(Phase 7-5b)', (
     expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
   })
 
-  it('ISS-019: クリア後の再到達は新目標への正規reachedとして記録される', async () => {
-    await seedChestGoal({ reachedAt: new Date() })
-    const sessionId = await createCompletedSession(BENCH, 1, 14.5)
-    // 目標引き上げ保存でクリア → 目標を戻して保存してもreachedAtは復活しない(検知はセッション保存経由のみ)
-    await saveMuscleGoal({ muscle: 'chest', level: 'solid', coef: 25 / 58, mode: 'growth' })
-    await saveMuscleGoal({ muscle: 'chest', level: 'toned', coef: 18 / 58, mode: 'growth' })
+  // ===== DEC-016 §5(PM裁定採用): 保存時の即到達 =====
+
+  it('DEC-016: 既超過部位への設定は保存時に即到達(reachedAt+reachedイベント)', async () => {
+    await createCompletedSession(BENCH, 1, 14.5) // e1RM≒18.4
+    // ひかえめ(0.20×58=11.6)は既に超えている → 保存で即状態4
+    await saveMuscleGoal({ muscle: 'chest', level: 'light', coef: GOAL_COEF.chest.light, mode: 'growth' })
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.reachedAt).toBeInstanceOf(Date)
+    expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['reached'])
+  })
+
+  it('DEC-016: 重複抑止 — reachedAt保持中の再保存では2つ目のreachedを記録しない', async () => {
+    await createCompletedSession(BENCH, 1, 14.5)
+    await saveMuscleGoal({ muscle: 'chest', level: 'light', coef: GOAL_COEF.chest.light, mode: 'growth' })
+    await saveMuscleGoal({ muscle: 'chest', level: 'light', coef: GOAL_COEF.chest.light, mode: 'growth' })
+    expect(await db.goal_events.count()).toBe(1)
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeInstanceOf(Date)
+  })
+
+  it('DEC-016: 未到達目標・maintainモードの保存では即到達しない', async () => {
+    await createCompletedSession(BENCH, 1, 14.5)
+    await saveMuscleGoal({ muscle: 'chest', level: 'big', coef: GOAL_COEF.chest.big, mode: 'growth' }) // 目標40.6
     expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
-    // 次のセッション記録保存で正規の到達検知が走る
-    expect(await recordReachedGoals(sessionId)).toEqual(['chest'])
+    await saveMuscleGoal({ muscle: 'back', level: 'light', coef: GOAL_COEF.back.light, mode: 'maintain' })
+    expect((await db.muscle_goals.get('back'))?.reachedAt).toBeUndefined()
+    expect(await db.goal_events.count()).toBe(0)
+  })
+
+  it('ISS-019×DEC-016: 目標引き上げでクリア(イベントなし)→下げ直すと保存時に正規reachedで再到達', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await createCompletedSession(BENCH, 1, 14.5)
+    // 目標引き上げ保存で状態4クリア(goal_events記録なし・ISS-019裁定)
+    await saveMuscleGoal({ muscle: 'chest', level: 'solid', coef: 25 / 58, mode: 'growth' })
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
+    expect(await db.goal_events.count()).toBe(0)
+    // 目標を現在以下へ戻すと保存時の即到達(DEC-016 §5)が新目標への正規reachedとして記録する
+    await saveMuscleGoal({ muscle: 'chest', level: 'toned', coef: 18 / 58, mode: 'growth' })
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeInstanceOf(Date)
     expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['reached'])
   })
 })

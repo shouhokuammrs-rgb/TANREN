@@ -832,15 +832,24 @@ export async function saveMuscleGoal(
   goal: Omit<MuscleGoal, 'updatedAt' | 'reachedAt'>,
 ): Promise<void> {
   const prev = await db.muscle_goals.get(goal.muscle)
+  const now = new Date()
+  const profile = await db.profiles.orderBy('id').first()
+  const current = goalTrendByMuscle(await loadGrowthSessions(), now)[goal.muscle]?.currentE1Rm
+  const target = targetE1Rm(goal.coef, profile?.weightKg ?? 58)
+  const alreadyReached = current !== undefined && current >= target
+
   let reachedAt = prev?.reachedAt
-  if (reachedAt !== undefined) {
-    const profile = await db.profiles.orderBy('id').first()
-    const current = goalTrendByMuscle(await loadGrowthSessions(), new Date())[goal.muscle]
-      ?.currentE1Rm
-    const target = targetE1Rm(goal.coef, profile?.weightKg ?? 58)
-    if (current === undefined || current < target) reachedAt = undefined
+  if (reachedAt !== undefined && !alreadyReached) {
+    // ISS-019: 新目標が現在を上回ったら状態4をクリア(イベント記録なし)
+    reachedAt = undefined
   }
-  await db.muscle_goals.put({ ...goal, reachedAt, updatedAt: new Date() })
+  // DEC-016 §5(PM裁定採用): 既超過部位への設定は保存時に即到達
+  // (growthのみ・reachedAt未設定のみ=重複抑止。抑制運転が設定当日から始まる)
+  const instantReach = goal.mode === 'growth' && reachedAt === undefined && alreadyReached
+  if (instantReach) reachedAt = now
+
+  await db.muscle_goals.put({ ...goal, reachedAt, updatedAt: now })
+  if (instantReach) await db.goal_events.add({ muscle: goal.muscle, type: 'reached', at: now })
 }
 
 /** アプリ設定(ISS-012)。UI設定のうちバックアップに含めたいものはlocalStorageではなくここへ */

@@ -20,11 +20,11 @@ export function isGoalTargetMuscle(muscle: MuscleGroup): muscle is GoalTargetMus
  * ゴールe1RM = 体重 × 係数(片手kg)。体感フィードバックで調整が入る前提
  */
 export const GOAL_COEF: Record<GoalTargetMuscle, Record<GoalLevel, number>> = {
-  chest: { toned: 0.35, solid: 0.5, big: 0.7 },
-  back: { toned: 0.35, solid: 0.55, big: 0.75 },
-  shoulders: { toned: 0.25, solid: 0.4, big: 0.55 },
-  arms: { toned: 0.15, solid: 0.3, big: 0.5 },
-  legs: { toned: 0.25, solid: 0.4, big: 0.6 },
+  chest: { light: 0.2, toned: 0.35, solid: 0.5, big: 0.7 },
+  back: { light: 0.2, toned: 0.35, solid: 0.55, big: 0.75 },
+  shoulders: { light: 0.15, toned: 0.25, solid: 0.4, big: 0.55 },
+  arms: { light: 0.1, toned: 0.15, solid: 0.3, big: 0.5 },
+  legs: { light: 0.15, toned: 0.25, solid: 0.4, big: 0.6 },
 }
 
 /** 年齢係数(v1は1.0固定。将来の調整用に定数として保持) */

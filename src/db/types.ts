@@ -124,8 +124,8 @@ export interface Exercise {
 
 // ===== 部位別ゴールモデル(DEC-013 / Phase 7) =====
 
-/** ゴールレベル: 引き締め(Nov)/しっかり(Int)/がっつり(Adv) */
-export type GoalLevel = 'toned' | 'solid' | 'big'
+/** ゴールレベル: ひかえめ(Beg・DEC-016)/引き締め(Nov)/しっかり(Int)/がっつり(Adv) */
+export type GoalLevel = 'light' | 'toned' | 'solid' | 'big'
 
 /** growth=成長中 / maintain=維持(鏡チェックで遷移。前半では到達経路なし) */
 export type GoalMode = 'growth' | 'maintain'

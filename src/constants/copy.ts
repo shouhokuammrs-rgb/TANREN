@@ -600,7 +600,12 @@ export const CLOUD_COPY = {
 export const MUSCLE_GOAL_COPY = {
   section: '部位別ゴール',
   hint: 'ゴールe1RMは体重×係数で自動追従します(片手kg)',
-  levelLabels: { toned: '引き締め', solid: 'しっかり', big: 'がっつり' } as const,
+  levelLabels: {
+    light: 'ひかえめ',
+    toned: '引き締め',
+    solid: 'しっかり',
+    big: 'がっつり',
+  } as const,
   unset: '未設定',
   heroUnit: 'KG e1RM 目標',
   heroSub: (level: string, weightKg: number, coef: number) =>
@@ -635,26 +640,31 @@ export const MUSCLE_GOAL_COPY = {
   progressAnchor: (name: string) => `基準: ${name}`,
   captions: {
     chest: {
+      light: '見た目は変わらない。押す力が日常で衰えない',
       toned: 'Tシャツの胸元にうっすら厚みのラインが出る',
       solid: 'Tシャツの上から胸の張りがわかる',
       big: 'シャツ選びで胸囲が基準になる',
     },
     back: {
+      light: '猫背に戻らない。座り仕事の一日に耐える背中',
       toned: '「姿勢が良くなった」と言われる',
       solid: '後ろ姿で逆三角形の輪郭がわかる',
       big: 'ジャケットの肩幅が既製では合わなくなる',
     },
     shoulders: {
+      light: '高い棚への上げ下ろしが苦にならない',
       toned: '肩のラインが丸みを帯びる',
       solid: '半袖で肩の張り出しがわかる',
       big: 'ノースリーブで三角筋の分離が見える',
     },
     arms: {
+      light: '重い買い物袋を平気で持ち帰れる',
       toned: '袖から出る腕にうっすら形がある',
       solid: '半袖で明らかに鍛えているとわかる',
       big: '腕まくりで周囲がざわつく',
     },
     legs: {
+      light: '階段と立ち仕事で疲れない土台',
       toned: 'パンツのシルエットが崩れない程度に締まる',
       solid: '細身のパンツで太ももの張りがわかる',
       big: '既製のパンツが太ももで選べなくなる',

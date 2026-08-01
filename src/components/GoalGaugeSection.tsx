@@ -23,7 +23,7 @@ import {
 import { showToast } from '../utils/toast'
 import { MirrorCheckModal } from './MirrorCheck'
 
-const LEVELS: GoalLevel[] = ['toned', 'solid', 'big']
+const LEVELS: GoalLevel[] = ['light', 'toned', 'solid', 'big']
 
 interface GoalDraft {
   level: GoalLevel
@@ -412,6 +412,8 @@ function GoalGaugeRow({
               className="absolute top-[4px] h-[18px] w-[18px] -ml-[9px] rounded-pill border-2"
               style={{
                 left: `${xPct(notchKg, maxV)}%`,
+                // DEC-016 §2-3: 低体重で腕の第1・第2ノッチが接近しても選択中が隠れないよう最前面に
+                zIndex: selected ? 1 : undefined,
                 borderColor: selected ? (maintain ? 'var(--color-steel)' : reached ? '#FFB300' : '#FF5C1A') : '#3A2213',
                 background: selected
                   ? maintain

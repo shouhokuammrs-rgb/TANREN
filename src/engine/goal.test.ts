@@ -166,7 +166,8 @@ describe('detectReachedGoals(セッション保存時の到達検知)', () => {
 })
 
 describe('nextGoalLevel / raiseSuggestionKg(物足りない)', () => {
-  it('1段引き上げ: toned→solid→big→null(bigは直接編集へ)', () => {
+  it('1段引き上げ: light→toned→solid→big→null(DEC-016で4段化)', () => {
+    expect(nextGoalLevel('light')).toBe('toned')
     expect(nextGoalLevel('toned')).toBe('solid')
     expect(nextGoalLevel('solid')).toBe('big')
     expect(nextGoalLevel('big')).toBeNull()
@@ -186,5 +187,52 @@ describe('chartGoalLineKg(指標乖離ルール・§1)', () => {
 
   it('レップ指標(ISS-018)のグラフにはkg線を重ねない', () => {
     expect(chartGoalLineKg('reps', 18)).toBeUndefined()
+  })
+})
+
+// ===== DEC-016: ゴール第4段「ひかえめ」 =====
+import { GOAL_COEF } from '../constants/goals'
+
+describe('ひかえめ係数(DEC-016・Strength Level Beginner)', () => {
+  it('係数表: 胸0.20/背中0.20/肩0.15/腕0.10/脚0.15', () => {
+    expect(GOAL_COEF.chest.light).toBe(0.2)
+    expect(GOAL_COEF.back.light).toBe(0.2)
+    expect(GOAL_COEF.shoulders.light).toBe(0.15)
+    expect(GOAL_COEF.arms.light).toBe(0.1)
+    expect(GOAL_COEF.legs.light).toBe(0.15)
+  })
+
+  it('目標計算: 体重58kgで胸11.6kg・腕5.8kg', () => {
+    expect(targetE1Rm(GOAL_COEF.chest.light, 58)).toBe(11.6)
+    expect(targetE1Rm(GOAL_COEF.arms.light, 58)).toBe(5.8)
+  })
+
+  it('ひかえめは全体重域(40-120kg)でcappedにならない', () => {
+    const cap = equipmentE1RmCap(STEPS)
+    for (const muscle of ['chest', 'back', 'shoulders', 'arms', 'legs'] as const) {
+      expect(isCapped(targetE1Rm(GOAL_COEF[muscle].light, 120), cap)).toBe(false)
+    }
+  })
+})
+
+describe('腕ノッチ4個のX座標境界(DEC-016 §2-2)', () => {
+  // 5b正規化: maxV = max(がっつり目標, cap) × 1.14 / トラック実効幅326px(390px画面)
+  const TRACK_PX = 326
+  function armsGapPx(w: number): number {
+    const cap = equipmentE1RmCap(STEPS)
+    const maxV = Math.max(GOAL_COEF.arms.big * w, cap) * 1.14
+    const light = (GOAL_COEF.arms.light * w) / maxV
+    const toned = (GOAL_COEF.arms.toned * w) / maxV
+    return (toned - light) * TRACK_PX
+  }
+
+  it('第1(ひかえめ)↔第2(引き締め)の中心間隔は42.3kgでちょうど18px(境界)', () => {
+    expect(armsGapPx(42.3)).toBeCloseTo(18, 1)
+  })
+
+  it('42.3kg未満のみ18px円が接触・Owner域(58kg)は24px超で問題なし', () => {
+    expect(armsGapPx(40)).toBeLessThan(18)
+    expect(armsGapPx(58)).toBeGreaterThan(24)
+    expect(armsGapPx(70)).toBeGreaterThan(28)
   })
 })
