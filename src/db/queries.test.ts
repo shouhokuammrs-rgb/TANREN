@@ -9,6 +9,7 @@ import {
   loadEngineContext,
   recordReachedGoals,
   resumeMuscleGoal,
+  saveMuscleGoal,
   weeklyVolumeHistory,
 } from './queries'
 import { GOAL_COEF } from '../constants/goals'
@@ -289,5 +290,43 @@ describe('ゴール到達検知と鏡チェックの判定記録(Phase 7-5b)', (
     expect(goal?.mode).toBe('growth')
     expect(goal?.level).toBe('solid')
     expect(goal?.coef).toBe(GOAL_COEF.chest.solid)
+  })
+
+  // ===== ISS-019(QA-1): 保存時のreachedAt再評価(PM裁定) =====
+
+  it('ISS-019: 現在e1RM≥新目標のまま保存 → reachedAtを引き継ぐ(状態4維持・イベントなし)', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await createCompletedSession(BENCH, 1, 14.5) // e1RM≒18.4 ≥ 目標18
+    await saveMuscleGoal({ muscle: 'chest', level: 'toned', coef: 18 / 58, mode: 'growth' })
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeDefined()
+    expect(await db.goal_events.count()).toBe(0)
+  })
+
+  it('ISS-019: 新目標が現在e1RMを上回る保存 → reachedAtをクリア(goal_events記録なし)', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await createCompletedSession(BENCH, 1, 14.5) // e1RM≒18.4 < 新目標25
+    await saveMuscleGoal({ muscle: 'chest', level: 'solid', coef: 25 / 58, mode: 'growth' })
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.reachedAt).toBeUndefined()
+    expect(goal?.coef).toBeCloseTo(25 / 58, 5)
+    expect(await db.goal_events.count()).toBe(0)
+  })
+
+  it('ISS-019: 現在e1RMが導出できない部位(実ログなし)はクリア側に倒す', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    await saveMuscleGoal({ muscle: 'chest', level: 'toned', coef: 18 / 58, mode: 'growth' })
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
+  })
+
+  it('ISS-019: クリア後の再到達は新目標への正規reachedとして記録される', async () => {
+    await seedChestGoal({ reachedAt: new Date() })
+    const sessionId = await createCompletedSession(BENCH, 1, 14.5)
+    // 目標引き上げ保存でクリア → 目標を戻して保存してもreachedAtは復活しない(検知はセッション保存経由のみ)
+    await saveMuscleGoal({ muscle: 'chest', level: 'solid', coef: 25 / 58, mode: 'growth' })
+    await saveMuscleGoal({ muscle: 'chest', level: 'toned', coef: 18 / 58, mode: 'growth' })
+    expect((await db.muscle_goals.get('chest'))?.reachedAt).toBeUndefined()
+    // 次のセッション記録保存で正規の到達検知が走る
+    expect(await recordReachedGoals(sessionId)).toEqual(['chest'])
+    expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['reached'])
   })
 })

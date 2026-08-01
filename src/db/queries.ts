@@ -34,6 +34,7 @@ import {
   goalTrendByMuscle,
   nextGoalLevel,
   patternBase1RmFrom,
+  targetE1Rm,
   prAttemptWeightKg,
   summarizeExercise,
   type CompletedSetInput,
@@ -745,11 +746,25 @@ export async function listMuscleGoals(): Promise<MuscleGoal[]> {
   return db.muscle_goals.toArray()
 }
 
-/** 部位別ゴールの保存(部位PKでupsert)。係数保存の原則(DEC-013)は呼び出し側で担保 */
+/**
+ * 部位別ゴールの保存(部位PKでupsert)。係数保存の原則(DEC-013)は呼び出し側で担保。
+ * reachedAt(状態4)はISS-019裁定に従い、保存時に「現在e1RM ≥ 新目標」を再評価して
+ * 真なら引き継ぎ・偽ならクリアする(クリアは鏡チェックループ外の自発編集のためイベント記録なし。
+ * クリア後の再到達はrecordReachedGoalsが新目標への正規reachedとして記録する)
+ */
 export async function saveMuscleGoal(
-  goal: Omit<MuscleGoal, 'updatedAt'>,
+  goal: Omit<MuscleGoal, 'updatedAt' | 'reachedAt'>,
 ): Promise<void> {
-  await db.muscle_goals.put({ ...goal, updatedAt: new Date() })
+  const prev = await db.muscle_goals.get(goal.muscle)
+  let reachedAt = prev?.reachedAt
+  if (reachedAt !== undefined) {
+    const profile = await db.profiles.orderBy('id').first()
+    const current = goalTrendByMuscle(await loadGrowthSessions(), new Date())[goal.muscle]
+      ?.currentE1Rm
+    const target = targetE1Rm(goal.coef, profile?.weightKg ?? 58)
+    if (current === undefined || current < target) reachedAt = undefined
+  }
+  await db.muscle_goals.put({ ...goal, reachedAt, updatedAt: new Date() })
 }
 
 /** アプリ設定(ISS-012)。UI設定のうちバックアップに含めたいものはlocalStorageではなくここへ */

@@ -113,12 +113,14 @@ export default function GoalGaugeSection() {
   }
 
   const onSave = async () => {
+    // 体重を先に保存する: saveMuscleGoalの到達再評価(ISS-019)が
+    // 画面表示と同じ最新体重の「新目標」で行われるように
+    if (weightDraft !== null && weightDraft !== profile?.weightKg) {
+      await addBodyWeight(weightDraft)
+    }
     for (const muscle of GOAL_TARGET_MUSCLES) {
       const draft = drafts[muscle]
       if (draft) await saveMuscleGoal({ muscle, ...draft })
-    }
-    if (weightDraft !== null && weightDraft !== profile?.weightKg) {
-      await addBodyWeight(weightDraft)
     }
     setDirty(false)
     showToast(MUSCLE_GOAL_COPY.saved, 'success')
