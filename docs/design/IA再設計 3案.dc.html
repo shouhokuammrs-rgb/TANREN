@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #050403; font-family: 'Noto Sans JP', sans-serif; }
+  a { color: #FF7A33; text-decoration: none; }
+  a:hover { color: #FFA05C; }
+</style>
+</helmet>
+
+<section style="padding: 48px 56px 96px; display: flex; flex-direction: column; gap: 36px; background: #050403;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 1100px;">
+    <div style="font: 500 12px 'IBM Plex Mono', monospace; letter-spacing: .3em; color: #FF5C1A;">TANREN — 全体IA再設計 / PHASE 8 / DEC-015候補 / ワイヤー級</div>
+    <div style="font: 900 28px 'Noto Sans JP', sans-serif; color: #F5EFE8;">IA再設計 構造案 3案</div>
+    <div style="font: 400 14px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;"><a href="#6a">6a 二軸</a>=鍛える/振り返るで動線を割る / <a href="#6b">6b 昇格</a>=成長をタブ5個目に上げる最小変更 / <a href="#6c">6c 一枚</a>=ホームを振り返りダッシュボードに集約。設定の3群分割は3案共通。ピクセルではなく構造の提案です。</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; max-width: 1100px; border: 1px solid #241812; border-radius: 14px; padding: 20px 24px;">
+    <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">3案共通の前提</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px;">
+      <sc-for list="{{ commons }}" as="c" hint-placeholder-count="6">
+        <div style="display: flex; gap: 10px; align-items: baseline;">
+          <span style="font: 700 10px 'IBM Plex Mono', monospace; color: #B06A3E; flex-shrink: 0;">{{ c.tag }}</span>
+          <span style="font: 400 12px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">{{ c.text }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 44px; align-items: flex-start; flex-wrap: wrap;">
+    <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+      <div id="{{ p.id }}" style="display: flex; flex-direction: column; gap: 16px; width: 430px;">
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="background: #FF5C1A; color: #0B0907; font: 700 12px 'IBM Plex Mono', monospace; padding: 3px 8px; border-radius: 3px;">{{ p.id }}</span>
+            <span style="font: 900 17px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ p.name }}</span>
+          </div>
+          <div style="font: 400 13px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">{{ p.concept }}</div>
+        </div>
+
+        <div style="border: 1px solid #241812; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #8A5A3C;">ナビ構造 — タブ {{ p.tabCount }}</div>
+          <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+            <sc-for list="{{ p.tabs }}" as="t" hint-placeholder-count="4">
+              <span style="font: 700 11px 'Noto Sans JP', sans-serif; color: {{ t.fg }}; border: 1px solid {{ t.border }}; background: {{ t.bg }}; border-radius: 999px; padding: 6px 13px;">{{ t.name }}</span>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px; border-left: 2px solid #241812; padding-left: 14px;">
+            <sc-for list="{{ p.tree }}" as="n" hint-placeholder-count="5">
+              <div style="display: flex; gap: 8px; align-items: baseline; padding-left: {{ n.indent }};">
+                <span style="font: 700 11px 'IBM Plex Mono', monospace; color: {{ n.fg }}; min-width: 76px;">{{ n.key }}</span>
+                <span style="font: 400 11px/1.6 'Noto Sans JP', sans-serif; color: #8A5A3C;">{{ n.val }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+          <sc-for list="{{ p.screens }}" as="s" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 7px;">
+              <div style="font: 500 9px 'IBM Plex Mono', monospace; letter-spacing: .24em; color: #6B5A4C;">{{ s.caption }}</div>
+              <div style="width: 195px; min-height: 422px; background: #0B0907; border: 1px solid #241812; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;">
+                <div style="padding: 13px 12px 0; display: flex; flex-direction: column; gap: 2px;">
+                  <div style="font: 500 8px 'IBM Plex Mono', monospace; letter-spacing: .22em; color: #6B5A4C;">{{ s.kicker }}</div>
+                  <div style="font: 900 13px 'Noto Sans JP', sans-serif; color: #F5EFE8;">{{ s.title }}</div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 11px 12px 12px;">
+                  <sc-for list="{{ s.blocks }}" as="b" hint-placeholder-count="4">
+                    <div style="border: 1px {{ b.style }} {{ b.border }}; background: {{ b.bg }}; border-radius: 8px; padding: 8px 9px; display: flex; flex-direction: column; gap: 4px;">
+                      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 6px;">
+                        <span style="font: 700 10px 'Noto Sans JP', sans-serif; color: {{ b.fg }};">{{ b.label }}</span>
+                        <span style="font: 500 7px 'IBM Plex Mono', monospace; letter-spacing: .1em; color: {{ b.tagFg }}; flex-shrink: 0;">{{ b.tag }}</span>
+                      </div>
+                      <sc-if value="{{ b.hasNote }}" hint-placeholder-val="{{ true }}">
+                        <div style="font: 400 8px/1.5 'Noto Sans JP', sans-serif; color: #6B5A4C;">{{ b.note }}</div>
+                      </sc-if>
+                      <sc-if value="{{ b.hasItems }}" hint-placeholder-val="{{ false }}">
+                        <div style="display: flex; flex-direction: column; gap: 3px; padding-top: 2px;">
+                          <sc-for list="{{ b.items }}" as="i" hint-placeholder-count="3">
+                            <div style="border: 1px dashed #241812; border-radius: 4px; padding: 4px 6px; font: 400 8px 'Noto Sans JP', sans-serif; color: #8A5A3C;">{{ i.text }}</div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: flex; border-top: 1px solid #241812; padding: 7px 4px 10px;">
+                  <sc-for list="{{ s.tabs }}" as="t" hint-placeholder-count="4">
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <span style="width: 3px; height: 3px; border-radius: 50%; background: {{ t.dot }};"></span>
+                      <span style="font: 700 7px 'Noto Sans JP', sans-serif; color: {{ t.fg }};">{{ t.name }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="border: 1px solid #3A2213; background: rgba(255,92,26,.04); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">解決したこと</div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <sc-for list="{{ p.solves }}" as="s" hint-placeholder-count="4">
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="font: 700 9px 'IBM Plex Mono', monospace; color: #B06A3E; flex-shrink: 0; min-width: 26px;">{{ s.tag }}</span>
+                <span style="font: 400 11px/1.6 'Noto Sans JP', sans-serif; color: #9B928A;">{{ s.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border: 1px solid #57503F; background: rgba(201,183,156,.04); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #C9B79C;">何を犠牲にしたか</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ p.costs }}" as="c" hint-placeholder-count="3">
+              <div style="font: 400 11px/1.7 'Noto Sans JP', sans-serif; color: #9B928A;">— {{ c.text }}</div>
+            </sc-for>
+          </div>
+          <div style="border-top: 1px solid #241812; padding-top: 8px; font: 400 11px/1.7 'Noto Sans JP', sans-serif; color: #8A5A3C;"><b style="color: #C9B79C;">向く条件:</b> {{ p.fit }}</div>
+        </div>
+
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="max-width: 1100px; border: 1px solid #241812; border-radius: 14px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .28em; color: #FF7A33;">比較 — 問題仮説との対応</div>
+    <div style="display: grid; grid-template-columns: 132px 1fr 1fr 1fr; gap: 0;">
+      <sc-for list="{{ matrix }}" as="m" hint-placeholder-count="7">
+        <div style="border-bottom: 1px solid #1A110B; padding: 9px 10px; font: {{ m.font }}; color: {{ m.fg }}; background: {{ m.bg }};">{{ m.text }}</div>
+      </sc-for>
+    </div>
+  </div>
+
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  tab(name, active) {
+    return { name, fg: active ? '#0B0907' : '#8A5A3C', border: active ? '#FF5C1A' : '#3A2213', bg: active ? '#FF5C1A' : 'transparent' };
+  }
+  bar(names, activeIdx) {
+    return names.map((n, i) => ({ name: n, dot: i === activeIdx ? '#FF5C1A' : 'transparent', fg: i === activeIdx ? '#FFE3CC' : '#4A3A2C' }));
+  }
+  blk(label, tag, note, opts) {
+    const o = opts || {};
+    return {
+      label, tag: tag || '', note: note || '', hasNote: !!note,
+      items: (o.items || []).map(t => ({ text: t })), hasItems: !!(o.items && o.items.length),
+      border: o.emph ? '#FF5C1A' : (o.steel ? '#57503F' : '#3A2213'),
+      style: o.dashed ? 'dashed' : 'solid',
+      bg: o.emph ? 'rgba(255,92,26,.07)' : (o.steel ? 'rgba(201,183,156,.04)' : 'transparent'),
+      fg: o.emph ? '#FFE3CC' : '#D9CFC6',
+      tagFg: o.emph ? '#FF7A33' : '#6B5A4C',
+    };
+  }
+  node(key, val, indent, hot) {
+    return { key, val, indent: (indent || 0) + 'px', fg: hot ? '#FF7A33' : '#D9CFC6' };
+  }
+
+  // 設定の3群(3案共通)
+  settingsBlocks() {
+    return [
+      this.blk('1. 日常', '毎週〜隔週', '触る頻度が高い操作だけを最上段に', {
+        emph: true, items: ['部位別ゴールゲージ(5b)', '体重を更新する'] }),
+      this.blk('2. からだと器具', '初回・変更時', '一度決めたら滅多に触らない', {
+        items: ['器具', '筋力キャリブレーション', '怪我・制限', 'タイマー', 'エンジン調整(上級者)'] }),
+      this.blk('3. データ', '保全・危険', '別画面に隔離。全削除は2段確認', {
+        steel: true, items: ['クラウドバックアップ', 'エクスポート / インポート', '⚠ 全データ削除 →別画面'] }),
+      this.blk('撤去: 旧ゴール(want/avoid)', 'P-1', '死にUI。5bゴールゲージに置換済み', { dashed: true }),
+    ];
+  }
+
+  plans() {
+    const setBlocks = this.settingsBlocks();
+    return [
+      {
+        id: '6a', name: '二軸 — 「鍛える」と「振り返る」で割る',
+        concept: '動線の性格でタブを定義し直す案。継ぎ足しで4箇所に散った振り返り(回復・成長・写真・ログ)を1タブに集約し、ホームは「今日やること」だけの一枚に絞る。',
+        tabCount: '4',
+        tabs: [this.tab('ホーム', true), this.tab('鍛える'), this.tab('振り返る'), this.tab('設定')],
+        tree: [
+          this.node('ホーム', '回復 + 今日のメニュー + 開始CTA(今日のことだけ)', 0),
+          this.node('鍛える', 'ヒヤリング → 実行 → サマリー(現状維持)', 0),
+          this.node('振り返る', 'セグメント: 成長 / ログ / 写真', 0, true),
+          this.node('└ 成長', '熱の人体図 → 部位グラフ + ゴール進捗(既定タブ)', 14, true),
+          this.node('└ ログ', '一覧 → 詳細 / 過去サマリー再訪', 14),
+          this.node('└ 写真', '比較ビュー', 14),
+          this.node('設定', '3群(日常 / からだと器具 / データ)', 0),
+        ],
+        screens: [
+          { caption: 'HOME', kicker: 'TANREN', title: '今日', tabs: this.bar(['ホーム', '鍛える', '振り返る', '設定'], 0), blocks: [
+            this.blk('回復ステータス', '統合', 'フレッシュネス人体図と回復予測を1コンポーネントに統合(ISS-016解消)', { emph: true }),
+            this.blk('今日のメニュー', '要約', '種目3件+所要時間'),
+            this.blk('今日のトレを始める', 'CTA', '', { emph: true }),
+            this.blk('ゴール到達バナー', '条件表示', '未判定の鏡チェックがある時だけ出る', { dashed: true }),
+          ] },
+          { caption: 'REVIEW', kicker: '振り返る', title: '成長', tabs: this.bar(['ホーム', '鍛える', '振り返る', '設定'], 2), blocks: [
+            this.blk('セグメント', 'ナビ', '', { items: ['成長(既定)', 'ログ', '写真'] }),
+            this.blk('体重チップ', 'P-3', 'ヘッダー右。タップでその場更新', { emph: true }),
+            this.blk('熱の人体図', '30/90日', '部位タップでグラフへ'),
+            this.blk('部位カード + ゴール進捗', '5b連動', '「62% ・ あと12kg」'),
+          ] },
+          { caption: 'SETTINGS', kicker: '設定', title: '3群', tabs: this.bar(['ホーム', '鍛える', '振り返る', '設定'], 3), blocks: setBlocks },
+        ],
+        solves: [
+          { tag: 'P-2', text: '成長がタブ1発(2階層→1階層)。振り返りが1箇所に集まり探索先が1つになる' },
+          { tag: 'P-3', text: '体重を振り返るタブのヘッダーチップに常設。設定を開かずに更新できる' },
+          { tag: 'P-4', text: 'ホームの回復表示を1コンポーネントに統合' },
+          { tag: 'P-6', text: '過去サマリーを振り返るタブのログから再訪できる' },
+        ],
+        costs: [
+          { text: 'ログがタブ1発でなくなる(振り返る→セグメント→詳細で3階層)。ログ編集(ISS-020)の頻度が上がると痛む' },
+          { text: 'ホームから成長カードが消える。「ついで見」の機会損失をタブ常設で埋める賭け' },
+          { text: '「鍛える」「振り返る」というラベルの学習が一度必要(現行の名詞ラベルより抽象的)' },
+        ],
+        fit: '振り返りを1つの行為として捉え、将来もここに機能を足していく前提なら最も伸びる',
+      },
+      {
+        id: '6b', name: '昇格 — 成長をタブ5個目に上げる',
+        concept: '現行構造を保ったまま、最も深すぎた成長ビューだけをタブに引き上げる最小変更案。既存の学習を壊さず、P-2/P-3/P-4/P-5 を最短で解消する。',
+        tabCount: '5(上限)',
+        tabs: [this.tab('ホーム', true), this.tab('今日のトレ'), this.tab('成長'), this.tab('ログ'), this.tab('設定')],
+        tree: [
+          this.node('ホーム', '回復(統合)+ 今日のメニュー + 開始CTA', 0),
+          this.node('今日のトレ', 'ヒヤリング → 実行 → サマリー(現状維持)', 0),
+          this.node('成長', '熱の人体図 / 部位グラフ + ゴール進捗 / 写真', 0, true),
+          this.node('└ 写真', '成長タブ内のセグメント(2階層のまま)', 14),
+          this.node('ログ', '一覧 → 詳細(現状維持)', 0),
+          this.node('設定', '3群(日常 / からだと器具 / データ)', 0),
+        ],
+        screens: [
+          { caption: 'HOME', kicker: 'TANREN', title: 'ホーム', tabs: this.bar(['ホーム', '今日', '成長', 'ログ', '設定'], 0), blocks: [
+            this.blk('回復ステータス', '統合', '人体図+次に動ける時刻を1つに(ISS-016解消)', { emph: true }),
+            this.blk('今日のメニュー', '要約', '種目3件+所要時間'),
+            this.blk('今日のトレを始める', 'CTA', '', { emph: true }),
+            this.blk('成長サマリー(1行)', '縮小', '「今週 胸+2.1kg」だけ。詳細は成長タブへ', { dashed: true }),
+          ] },
+          { caption: 'GROWTH', kicker: '成長', title: '部位別の伸び', tabs: this.bar(['ホーム', '今日', '成長', 'ログ', '設定'], 2), blocks: [
+            this.blk('体重チップ', 'P-3', 'ヘッダー右に常設', { emph: true }),
+            this.blk('熱の人体図', '30/90日', ''),
+            this.blk('部位カード + ゴール進捗', '5b連動', 'タップでフルスクリーングラフ'),
+            this.blk('セグメント', 'ナビ', '', { items: ['成長(既定)', '写真比較'] }),
+          ] },
+          { caption: 'SETTINGS', kicker: '設定', title: '3群', tabs: this.bar(['ホーム', '今日', '成長', 'ログ', '設定'], 4), blocks: setBlocks },
+        ],
+        solves: [
+          { tag: 'P-2', text: '成長がタブ1発。既存の画面をほぼそのまま移設でき、実装コストが最小' },
+          { tag: 'P-3', text: '体重を成長タブのヘッダーに常設(設定の日常群にも残す)' },
+          { tag: 'P-4', text: 'ホームの回復表示を統合し、成長は1行サマリーに縮小' },
+          { tag: 'P-5', text: '設定の3群分割は共通で適用' },
+        ],
+        costs: [
+          { text: 'タブ5枠を使い切る。今後どんな機能が来ても、もうタブには出せない(将来の拡張余地ゼロ)' },
+          { text: '写真比較は成長タブ内のセグメントで、2階層のまま据え置き(月次なので許容と判断)' },
+          { text: '「ホーム/今日のトレ/成長/ログ」の性格差が曖昧なまま。分散の根本原因は解消せず、深さだけを直す対症療法' },
+          { text: 'タブ5個は390px幅でラベルが窮屈(1タブ約72px)。文字数の短縮が必要' },
+        ],
+        fit: '変更コストとリスクを最小に抑えたい / 現行の使い方が既に身についていて壊したくない場合',
+      },
+      {
+        id: '6c', name: '一枚 — ホームを振り返りダッシュボードにする',
+        concept: 'タブを3つまで削り、「見る」はすべてホームの縦スクロール1枚に集約する案。タブ切替という探索行為そのものをなくし、上から下へ流し読むだけで全部わかる状態を作る。',
+        tabCount: '3',
+        tabs: [this.tab('ホーム', true), this.tab('鍛える'), this.tab('設定')],
+        tree: [
+          this.node('ホーム', '縦スクロール1枚(今日 → 成長 → ログ → 写真)', 0, true),
+          this.node('└ 詳細へ', '成長グラフ / ログ詳細 / 写真比較は押した時だけ開く', 14),
+          this.node('鍛える', 'ヒヤリング → 実行 → サマリー(現状維持)', 0),
+          this.node('設定', '3群(日常 / からだと器具 / データ)', 0),
+        ],
+        screens: [
+          { caption: 'HOME (上部)', kicker: 'TANREN', title: '8月1日(土)', tabs: this.bar(['ホーム', '鍛える', '設定'], 0), blocks: [
+            this.blk('回復ステータス', '統合', '人体図+次に動ける時刻(ISS-016解消)', { emph: true }),
+            this.blk('今日のメニュー + 開始CTA', 'CTA', 'ファーストビューに収める', { emph: true }),
+            this.blk('体重 インライン更新', 'P-3', '「前回から7日」でそっと促す', { emph: true }),
+          ] },
+          { caption: 'HOME (下部)', kicker: 'スクロール', title: '振り返り', tabs: this.bar(['ホーム', '鍛える', '設定'], 0), blocks: [
+            this.blk('成長ブロック', '週次', '熱の人体図 + 上位3部位 + ゴール進捗', { emph: true }),
+            this.blk('直近のログ 3件', '→もっと見る', '一覧・詳細は押した時だけ'),
+            this.blk('写真比較', '月次', '最新2枚のサムネイル'),
+            this.blk('未判定の鏡チェック', '条件表示', '到達カードをここに残す(P-6)', { dashed: true }),
+          ] },
+          { caption: 'SETTINGS', kicker: '設定', title: '3群', tabs: this.bar(['ホーム', '鍛える', '設定'], 2), blocks: setBlocks },
+        ],
+        solves: [
+          { tag: 'P-2', text: '成長がホームの2ブロック目。タブ切替すら不要で最短' },
+          { tag: 'P-3', text: '体重をファーストビューにインライン常設。週次操作として最も近い' },
+          { tag: 'P-4', text: '回復表示を統合。ホームの情報密度を見直す必然が生まれる' },
+          { tag: 'P-6', text: '未判定の到達カードがホームに残り続け、発見性が最も高い' },
+        ],
+        costs: [
+          { text: 'ホームが長い。毎日見る回復が、週次・月次の情報と同じスクロール上に並ぶため相対的に埋もれる' },
+          { text: 'ログ一覧・写真比較がホーム経由になり、直行できない(ログ編集ISS-020の動線が最も遠い)' },
+          { text: 'ホームが将来の機能追加の受け皿になり続け、「継ぎ足し」の再発リスクが3案で最も高い' },
+          { text: '3タブは余白が大きく、タブバーの存在意義が薄れる(ナビとしての情報量が少ない)' },
+        ],
+        fit: 'ユーザーが1人で、上から下へ読む習慣が確実に作れるなら最速。複数ユーザーに広げる予定があるなら不利',
+      },
+    ];
+  }
+
+  matrixRows() {
+    return [
+      ['', '6a 二軸', '6b 昇格', '6c 一枚'],
+      ['タブ数', '4', '5(上限)', '3'],
+      ['P-2 成長の深さ', 'タブ1発', 'タブ1発', 'ホーム内(最短)'],
+      ['P-3 体重', '振り返るヘッダー', '成長ヘッダー', 'ホーム最上部'],
+      ['P-4 回復重複', '統合', '統合', '統合'],
+      ['P-5 設定3群', '共通適用', '共通適用', '共通適用'],
+      ['P-6 サマリー再訪', 'ログから', 'ログから', 'ホームに残留'],
+      ['ログへの距離', '3階層(悪化)', 'タブ1発(維持)', 'ホーム経由(悪化)'],
+      ['実装コスト', '中', '小', '中〜大'],
+      ['将来の拡張余地', '振り返るに足せる', 'なし(タブ満杯)', 'ホームが肥大'],
+    ];
+  }
+
+  renderVals() {
+    const rows = this.matrixRows();
+    const matrix = [];
+    rows.forEach((r, ri) => r.forEach((cell, ci) => {
+      const head = ri === 0, label = ci === 0;
+      matrix.push({
+        text: cell,
+        font: head || label ? "700 10px 'IBM Plex Mono', monospace" : "400 11px 'Noto Sans JP', sans-serif",
+        fg: head ? '#FFE3CC' : (label ? '#8A5A3C' : '#9B928A'),
+        bg: head ? 'rgba(255,92,26,.06)' : 'transparent',
+      });
+    }));
+    return {
+      plans: this.plans(),
+      matrix,
+      commons: [
+        { tag: 'P-1', text: '旧ゴール(want/avoid)は撤去。5bゴールゲージに完全置換' },
+        { tag: 'P-4', text: 'フレッシュネス人体図と回復予測を1コンポーネントに統合(ISS-016)' },
+        { tag: 'P-5', text: '設定を3群に分割: ①日常(ゴール・体重)②からだと器具(初回)③データ(危険操作は別画面)' },
+        { tag: '不変', text: '鍛える動線(ヒヤリング→実行→サマリー)は触らない。ISS-021のメニュー一覧シートは実行画面内に前提として載る' },
+        { tag: '不変', text: '鍛冶場の世界観・既存トークン(溶鉄/鈍色/鋼色)を維持' },
+        { tag: '独立', text: 'ISS-020(ログ編集)・ISS-021は別実装。IA案はその置き場だけを規定' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
