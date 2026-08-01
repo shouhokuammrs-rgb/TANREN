@@ -1,6 +1,6 @@
 # TANREN Project State(Single Source of Truth)
 
-最終更新: 2026-08-01 / 更新者: PM(DEC-015確定・6b採用。Designerハンドオフ仕様待ち)
+最終更新: 2026-08-01 / 更新者: PM(6bハンドオフ仕様格納・裁定3点・実装INS前後半発行)
 
 ---
 
@@ -90,7 +90,8 @@
 - [x] 8-2 Eiichi観察(早期クローズ・観察ログは棚卸し§7。UI変更凍結解除)
 - [ ] 8-3 Designer IA監査依頼→ ブリーフ発行済み `docs/design/design_brief_ia_redesign.md`
 - [x] 8-4 再設計決定→ **DEC-015: 6b「昇格」採用**
-- [ ] 8-5 実装
+- [ ] 8-5a 前半実装: 設定3群+全削除隔離+旧ゴール撤去+サマリー編集導線 → `ins_ia_part1_settings.md`
+- [ ] 8-5b 後半実装: 5タブ化+成長タブ+ホーム再構成 → `ins_ia_part2_tabs.md`
 
 ※採番注記: 旧「DEC-013候補」は本フェーズとして確定済み
 
