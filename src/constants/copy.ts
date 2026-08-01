@@ -289,6 +289,20 @@ export const LOG_COPY = {
 
 export const SETTINGS_COPY = {
   title: '設定',
+  // IA再設計(DEC-015 §4): 3群構成
+  groupDaily: '① 日常',
+  groupDailyNote: 'よく触る操作',
+  groupBody: '② からだと器具',
+  groupBodyNote: '一度決めたら滅多に触りません',
+  groupData: '③ データ',
+  groupDataNote: '保全と削除',
+  summaryNone: '未設定',
+  summaryCount: (n: number) => `${n}件`,
+  summaryInjuriesNone: 'なし',
+  summaryTimerOn: '自動スタート ON',
+  summaryTimerOff: '自動スタート OFF',
+  summaryTuningDefault: 'デフォルト',
+  summaryTuningCustom: (n: number) => `${n}項目変更`,
   equipmentSection: '器具',
   equipmentEmpty: '器具が登録されていません。',
   equipmentCount: (n: number) => `×${n}`,
@@ -424,6 +438,8 @@ export const SUMMARY_COPY = {
   firstTime: '初挑戦',
   weeklySection: '今週の部位別セット数',
   toLog: 'ログを見る',
+  // ISS-020追記: トレ直後の記録ミスをその場で直す直行導線
+  editRecords: '記録を修正する',
   toHome: 'ホームへ',
 }
 
@@ -506,6 +522,24 @@ export const DATA_COPY = {
   wipeConfirm1: '全データ(ログ・写真・設定)を削除します。よろしいですか?',
   wipeConfirm2: '本当に削除しますか?この操作は元に戻せません',
   wipeDone: '全データを削除しました',
+}
+
+// 全削除の隔離画面(DEC-015 §4-4)。#D8321Aはこの画面限定
+export const DANGER_COPY = {
+  row: '全データ削除',
+  back: '← 設定へ戻る',
+  title: '全データを削除',
+  bullets: [
+    'セッション記録・ログ',
+    '部位別ゴールと判定履歴',
+    '写真・体重履歴',
+    '器具・筋力キャリブレーション設定',
+  ],
+  irreversible: 'この操作は取り消せません',
+  exportFirst: '先にエクスポートする',
+  inputLabel: '確認のため「削除」と入力してください',
+  keyword: '削除',
+  execute: '全データを削除する',
 }
 
 export const STORAGE_COPY = {
@@ -619,14 +653,6 @@ export const MUSCLE_GOAL_COPY = {
       big: '既製のパンツが太ももで選べなくなる',
     },
   } as const,
-}
-
-export const GOAL_SETTINGS_COPY = {
-  section: '目標とヒヤリング',
-  notSet: '未設定(セットアップで設定できます)',
-  edit: '目標を変更',
-  viewAnalysis: '分析を見る',
-  save: '保存して再分析',
 }
 
 /** 日付の共通フォーマット */

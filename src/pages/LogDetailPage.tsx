@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   FINISH_COPY,
   HEARING_COPY,
@@ -29,8 +29,9 @@ export default function LogDetailPage() {
   // undefined=読込中 / null=存在しない を区別する
   const workout = useLiveQuery(async () => (await loadWorkout(sessionId)) ?? null, [sessionId])
   const [editing, setEditing] = useState(false)
-  // ログの事後編集(ISS-020): セット編集モード
-  const [editingSets, setEditingSets] = useState(false)
+  // ログの事後編集(ISS-020): セット編集モード。?edit=1で編集状態で開く(サマリー直行導線)
+  const [searchParams] = useSearchParams()
+  const [editingSets, setEditingSets] = useState(searchParams.get('edit') === '1')
 
   if (workout === undefined) {
     return <p className="pt-10 text-center text-sm text-ink-dim">…</p>

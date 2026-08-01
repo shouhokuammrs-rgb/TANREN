@@ -140,6 +140,14 @@ export default function SummaryPage() {
         </div>
       )}
 
+      {/* ISS-020追記: トレ直後の記録ミスをその場で直す直行導線(編集モードで開く) */}
+      <Link
+        to={`/log/${view.session.id}?edit=1`}
+        className="block py-1 text-center text-xs text-ink-dim underline underline-offset-2 active:text-ink-mid"
+      >
+        ✎ {SUMMARY_COPY.editRecords}
+      </Link>
+
       <div className="flex gap-2">
         <Link
           to={`/log/${view.session.id}`}

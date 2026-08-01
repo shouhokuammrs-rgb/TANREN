@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+// 設定(IA再設計 DEC-015 §4): ①日常(常時展開)②からだと器具(アコーディオン)③データ。
+// 全削除は /settings/danger に隔離(この画面では削除しない)。旧ゴール(want/avoid)セクションは撤去済み
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import CloudBackupSection from '../components/CloudBackupSection'
@@ -8,16 +10,14 @@ import { db } from '../db/db'
 import {
   addStrengthMark,
   deleteStrengthMark,
-  loadGoal,
   resolveInjury,
   updateEquipment,
 } from '../db/queries'
-import type { Equipment } from '../db/types'
+import type { Equipment, Injury, StrengthMark } from '../db/types'
 import {
+  DANGER_COPY,
   DATA_COPY,
   EQUIPMENT_TYPE_LABELS,
-  GOAL_SETTINGS_COPY,
-  GOAL_TYPE_LABELS,
   MUSCLE_GROUP_LABELS,
   SETTINGS_COPY,
   STORAGE_COPY,
@@ -28,13 +28,8 @@ import {
 import { ENGINE_TUNING_RANGES } from '../constants/engine'
 import type { EngineTuning } from '../engine/types'
 import { ENGINE_TUNING_SETTING_KEY, sanitizeEngineTuning } from '../utils/engineTuning'
-import {
-  exportBackup,
-  importBackup,
-  lastExportAt,
-  recordExportDone,
-  wipeAllData,
-} from '../utils/backup'
+import { importBackup, lastExportAt } from '../utils/backup'
+import { exportBackupToFile } from '../utils/exportFile'
 import { persistedState, requestPersistentStorage, type PersistState } from '../utils/storage'
 import { REF_LIFTS } from '../constants/strength'
 import { epley1Rm } from '../engine'
@@ -51,113 +46,166 @@ function equipmentDetail(eq: Equipment): string | null {
   return null
 }
 
+/** 群見出し(§4-2): Mono 10px .28em + 補足1行 */
+function GroupHeader({ title, note, color }: { title: string; note: string; color: string }) {
+  return (
+    <div className="mt-7">
+      <h2 className="label-mono text-[10px]" style={{ color }}>
+        {title}
+      </h2>
+      <p className="mt-0.5 text-[10px] text-[#6B5A4C]">{note}</p>
+    </div>
+  )
+}
+
+/** 群②アコーディオン(§4-3): 閉52px+要約、一度に1項目、開閉状態は保存しない */
+function AccordionItem({
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  summary: string
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}) {
+  return (
+    <div
+      className="rounded-card border border-[#3A2213]"
+      style={open ? { background: 'rgba(255,255,255,.015)' } : undefined}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex h-[52px] w-full items-center justify-between px-4 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-[13px] font-bold text-[#D9CFC6]">{title}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="label-mono truncate text-[11px] tracking-normal text-[#8A5A3C]">
+            {summary}
+          </span>
+          <span
+            className={`text-[#6B5A4C] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          >
+            ⌄
+          </span>
+        </span>
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const equipment = useLiveQuery(() => db.equipment.toArray())
   const injuries = useLiveQuery(() => db.injuries.where('isActive').equals(1).toArray())
+  const marks = useLiveQuery(() => db.strength_marks.orderBy('recordedAt').reverse().toArray())
   const [autoTimer, setAutoTimer] = useLocalSetting('autoStartTimer', true)
+  const [tuning, setTuning] = useLocalSetting<EngineTuning>(ENGINE_TUNING_SETTING_KEY, {})
   const [editing, setEditing] = useState<Equipment | null>(null)
+  // アコーディオンは一度に1項目・再訪時は全閉(状態を保存しない)
+  const [openItem, setOpenItem] = useState<string | null>(null)
+  const toggle = (id: string) => setOpenItem((prev) => (prev === id ? null : id))
+
+  // 閉時の現在値要約(§4-3)
+  const dumbbell = equipment?.find((e) => e.type === 'dumbbell')
+  const equipmentSummary =
+    dumbbell?.weightStepsKg && dumbbell.weightStepsKg.length > 0
+      ? `${dumbbell.weightStepsKg[dumbbell.weightStepsKg.length - 1]}kgダンベル ×${dumbbell.quantity}`
+      : SETTINGS_COPY.summaryNone
+  const strengthSummary =
+    marks && marks.length > 0 ? SETTINGS_COPY.summaryCount(marks.length) : SETTINGS_COPY.summaryNone
+  const injuriesSummary =
+    injuries && injuries.length > 0
+      ? SETTINGS_COPY.summaryCount(injuries.length)
+      : SETTINGS_COPY.summaryInjuriesNone
+  const timerSummary = autoTimer ? SETTINGS_COPY.summaryTimerOn : SETTINGS_COPY.summaryTimerOff
+  const tuningCount = Object.keys(tuning).length
+  const tuningSummary =
+    tuningCount > 0
+      ? SETTINGS_COPY.summaryTuningCustom(tuningCount)
+      : SETTINGS_COPY.summaryTuningDefault
 
   return (
     <section>
       <h1 className="text-2xl font-bold">{SETTINGS_COPY.title}</h1>
 
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">
-        {SETTINGS_COPY.equipmentSection}
-      </h2>
-      <ul className="mt-2 space-y-2">
-        {equipment?.length === 0 && (
-          <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
-            {SETTINGS_COPY.equipmentEmpty}
-          </li>
-        )}
-        {equipment?.map((eq) => {
-          const detail = equipmentDetail(eq)
-          const editable = eq.type === 'dumbbell' || eq.type === 'bench'
-          return (
-            <li key={eq.id} className="rounded-card bg-ember-tint border border-line-ember p-4">
-              <div className="flex items-baseline justify-between">
-                <span className="font-medium">
-                  {eq.name}
-                  {eq.quantity > 1 && (
-                    <span className="ml-1 text-sm text-ink-mid">
-                      {SETTINGS_COPY.equipmentCount(eq.quantity)}
-                    </span>
-                  )}
-                </span>
-                <span className="text-xs text-ink-dim">
-                  {EQUIPMENT_TYPE_LABELS[eq.type]}
-                </span>
-              </div>
-              {detail && <p className="mt-1 text-sm text-ink-mid">{detail}</p>}
-              {editable && (
-                <button
-                  type="button"
-                  className="mt-2 h-11 w-full rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
-                  onClick={() => setEditing(eq)}
-                >
-                  {SETTINGS_COPY.edit}
-                </button>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-
+      {/* ① 日常: ゴールゲージ+体重(GoalGaugeSection内のステッパー) */}
+      <GroupHeader
+        title={SETTINGS_COPY.groupDaily}
+        note={SETTINGS_COPY.groupDailyNote}
+        color="#FF7A33"
+      />
       <GoalGaugeSection />
 
-      <GoalSection />
+      {/* ② からだと器具: アコーディオン既定閉 */}
+      <GroupHeader
+        title={SETTINGS_COPY.groupBody}
+        note={SETTINGS_COPY.groupBodyNote}
+        color="#8A5A3C"
+      />
+      <div className="mt-2.5 space-y-2.5">
+        <AccordionItem
+          title={SETTINGS_COPY.equipmentSection}
+          summary={equipmentSummary}
+          open={openItem === 'equipment'}
+          onToggle={() => toggle('equipment')}
+        >
+          <EquipmentContent equipment={equipment} onEdit={setEditing} />
+        </AccordionItem>
+        <AccordionItem
+          title={STRENGTH_COPY.section}
+          summary={strengthSummary}
+          open={openItem === 'strength'}
+          onToggle={() => toggle('strength')}
+        >
+          <StrengthContent marks={marks} />
+        </AccordionItem>
+        <AccordionItem
+          title={SETTINGS_COPY.injuriesSection}
+          summary={injuriesSummary}
+          open={openItem === 'injuries'}
+          onToggle={() => toggle('injuries')}
+        >
+          <InjuriesContent injuries={injuries} />
+        </AccordionItem>
+        <AccordionItem
+          title={SETTINGS_COPY.timerSection}
+          summary={timerSummary}
+          open={openItem === 'timer'}
+          onToggle={() => toggle('timer')}
+        >
+          <label className="mt-2 flex h-14 items-center justify-between rounded-card bg-ember-tint px-4">
+            <span className="text-sm">{SETTINGS_COPY.timerAutoStart}</span>
+            <input
+              type="checkbox"
+              checked={autoTimer}
+              onChange={(e) => setAutoTimer(e.target.checked)}
+              className="h-6 w-6 accent-molten"
+            />
+          </label>
+        </AccordionItem>
+        <AccordionItem
+          title={TUNING_COPY.section}
+          summary={tuningSummary}
+          open={openItem === 'tuning'}
+          onToggle={() => toggle('tuning')}
+        >
+          <EngineTuningContent tuning={tuning} setTuning={setTuning} />
+        </AccordionItem>
+      </div>
 
-      <StrengthSection />
-
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{SETTINGS_COPY.timerSection}</h2>
-      <label className="mt-2 flex h-14 items-center justify-between rounded-card bg-ember-tint border border-line-ember px-4">
-        <span className="text-sm">{SETTINGS_COPY.timerAutoStart}</span>
-        <input
-          type="checkbox"
-          checked={autoTimer}
-          onChange={(e) => setAutoTimer(e.target.checked)}
-          className="h-6 w-6 accent-molten"
-        />
-      </label>
-
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">
-        {SETTINGS_COPY.injuriesSection}
-      </h2>
-      <ul className="mt-2 space-y-2">
-        {(injuries === undefined || injuries.length === 0) && (
-          <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
-            {SETTINGS_COPY.injuriesEmpty}
-          </li>
-        )}
-        {injuries?.map((injury) => (
-          <li
-            key={injury.id}
-            className="flex items-center justify-between rounded-card bg-ember-tint border border-line-ember p-4"
-          >
-            <div>
-              <p className="text-sm font-semibold text-destructive">
-                {MUSCLE_GROUP_LABELS[injury.bodyPart]}
-              </p>
-              <p className="text-xs text-ink-dim">
-                {SETTINGS_COPY.injuryReportedAt(formatDate(injury.reportedAt))}
-                {injury.note ? `・${injury.note}` : ''}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="h-11 rounded-chip bg-line-ember/40 px-4 text-xs text-ink-mid active:bg-line-ember"
-              onClick={() => void resolveInjury(injury.id!)}
-            >
-              {SETTINGS_COPY.injuryResolve}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <EngineTuningSection />
-
+      {/* ③ データ: 常時展開。全削除は隔離画面へ */}
+      <GroupHeader
+        title={SETTINGS_COPY.groupData}
+        note={SETTINGS_COPY.groupDataNote}
+        color="#C9B79C"
+      />
       <CloudBackupSection />
-
       <DataSection />
 
       {editing?.type === 'dumbbell' && (
@@ -170,52 +218,100 @@ export default function SettingsPage() {
   )
 }
 
-/** 目標とヒヤリング(2-1/2-2): 現在の目標表示+ウィザード再実行・分析への導線 */
-function GoalSection() {
-  const goal = useLiveQuery(async () => (await loadGoal()) ?? null)
-
+/** 器具一覧(群②の中身。旧セクションの内容を再利用) */
+function EquipmentContent({
+  equipment,
+  onEdit,
+}: {
+  equipment: Equipment[] | undefined
+  onEdit: (eq: Equipment) => void
+}) {
   return (
-    <>
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{GOAL_SETTINGS_COPY.section}</h2>
-      <div className="mt-2 rounded-card bg-ember-tint border border-line-ember p-4">
-        <p className="text-sm font-semibold">
-          {goal ? GOAL_TYPE_LABELS[goal.goalType] : GOAL_SETTINGS_COPY.notSet}
-        </p>
-        {goal && goal.wantParts.length > 0 && (
-          <p className="mt-0.5 text-xs text-ink-mid">
-            {goal.wantParts.map((m) => MUSCLE_GROUP_LABELS[m]).join('・')}
-          </p>
-        )}
-        <div className="mt-2 flex gap-2">
-          <Link
-            to="/setup"
-            className="flex h-11 flex-1 items-center justify-center rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
+    <ul className="space-y-2">
+      {equipment?.length === 0 && (
+        <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
+          {SETTINGS_COPY.equipmentEmpty}
+        </li>
+      )}
+      {equipment?.map((eq) => {
+        const detail = equipmentDetail(eq)
+        const editable = eq.type === 'dumbbell' || eq.type === 'bench'
+        return (
+          <li key={eq.id} className="rounded-card bg-ember-tint border border-line-ember p-4">
+            <div className="flex items-baseline justify-between">
+              <span className="font-medium">
+                {eq.name}
+                {eq.quantity > 1 && (
+                  <span className="ml-1 text-sm text-ink-mid">
+                    {SETTINGS_COPY.equipmentCount(eq.quantity)}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-ink-dim">{EQUIPMENT_TYPE_LABELS[eq.type]}</span>
+            </div>
+            {detail && <p className="mt-1 text-sm text-ink-mid">{detail}</p>}
+            {editable && (
+              <button
+                type="button"
+                className="mt-2 h-11 w-full rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
+                onClick={() => onEdit(eq)}
+              >
+                {SETTINGS_COPY.edit}
+              </button>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/** 怪我・制限(群②の中身) */
+function InjuriesContent({ injuries }: { injuries: Injury[] | undefined }) {
+  return (
+    <ul className="space-y-2">
+      {(injuries === undefined || injuries.length === 0) && (
+        <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">
+          {SETTINGS_COPY.injuriesEmpty}
+        </li>
+      )}
+      {injuries?.map((injury) => (
+        <li
+          key={injury.id}
+          className="flex items-center justify-between rounded-card bg-ember-tint border border-line-ember p-4"
+        >
+          <div>
+            <p className="text-sm font-semibold text-destructive">
+              {MUSCLE_GROUP_LABELS[injury.bodyPart]}
+            </p>
+            <p className="text-xs text-ink-dim">
+              {SETTINGS_COPY.injuryReportedAt(formatDate(injury.reportedAt))}
+              {injury.note ? `・${injury.note}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="h-11 rounded-chip bg-line-ember/40 px-4 text-xs text-ink-mid active:bg-line-ember"
+            onClick={() => void resolveInjury(injury.id!)}
           >
-            {GOAL_SETTINGS_COPY.edit}
-          </Link>
-          {goal && (
-            <Link
-              to="/setup?analysis=1"
-              className="flex h-11 flex-1 items-center justify-center rounded-chip bg-line-ember/40 text-xs text-ink-mid active:bg-line-ember"
-            >
-              {GOAL_SETTINGS_COPY.viewAnalysis}
-            </Link>
-          )}
-        </div>
-      </div>
-    </>
+            {SETTINGS_COPY.injuryResolve}
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
 const TUNING_KEYS = Object.keys(ENGINE_TUNING_RANGES) as (keyof EngineTuning)[]
 
-/**
- * エンジン上級者設定(DEC-010)。折りたたみデフォルト閉で誤操作を防ぐ。
- * 保存はlocalStorage1キー(engineTuning)。範囲外はclampして保存する
- */
-function EngineTuningSection() {
-  const [open, setOpen] = useState(false)
-  const [tuning, setTuning] = useLocalSetting<EngineTuning>(ENGINE_TUNING_SETTING_KEY, {})
+/** エンジン上級者設定(DEC-010)。アコーディオン化に伴い内側の折りたたみは廃止 */
+function EngineTuningContent({
+  tuning,
+  setTuning,
+}: {
+  tuning: EngineTuning
+  setTuning: (t: EngineTuning) => void
+}) {
   // 入力途中のテキストを保持し、blur時にclamp+保存する
   const [drafts, setDrafts] = useState<Record<string, string>>({})
 
@@ -237,68 +333,53 @@ function EngineTuningSection() {
   }
 
   return (
-    <>
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">🔧 {TUNING_COPY.section}</h2>
-      <div className="mt-2 rounded-card bg-ember-tint border border-line-ember">
-        <button
-          type="button"
-          className="flex h-12 w-full items-center justify-between px-4 text-sm text-ink-mid"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? TUNING_COPY.toggleClose : TUNING_COPY.toggleOpen}
-          <span>{open ? '▲' : '▼'}</span>
-        </button>
-        {open && (
-          <div className="space-y-4 px-4 pb-4">
-            <p className="text-xs text-ink-dim">{TUNING_COPY.hint}</p>
-            {TUNING_KEYS.map((key) => {
-              const range = ENGINE_TUNING_RANGES[key]
-              const item = TUNING_COPY.items[key]
-              return (
-                <label key={key} className="block text-xs text-ink-mid">
-                  <span className="flex items-baseline justify-between">
-                    <span className="font-semibold">{item.label}</span>
-                    <span className="text-[10px] text-ink-dim">
-                      {TUNING_COPY.rangeLabel(range.min, range.max, item.unit)}・
-                      {TUNING_COPY.defaultLabel(range.default, item.unit)}
-                    </span>
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={range.min}
-                    max={range.max}
-                    value={drafts[key] ?? String(tuning[key] ?? range.default)}
-                    onChange={(e) => setDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                    onBlur={(e) => commit(key, e.target.value)}
-                    className={`mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base ${
-                      tuning[key] !== undefined ? 'text-molten-bright font-bold' : 'text-ink'
-                    }`}
-                  />
-                  <span className="mt-0.5 block text-[10px] leading-relaxed text-ink-dim">
-                    {item.description}
-                  </span>
-                </label>
-              )
-            })}
-            <button
-              type="button"
-              onClick={() => {
-                setTuning({})
-                setDrafts({})
-              }}
-              className="h-12 w-full rounded-card border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
-            >
-              ↺ {TUNING_COPY.reset}
-            </button>
-          </div>
-        )}
-      </div>
-    </>
+    <div className="space-y-4">
+      <p className="text-xs text-ink-dim">{TUNING_COPY.hint}</p>
+      {TUNING_KEYS.map((key) => {
+        const range = ENGINE_TUNING_RANGES[key]
+        const item = TUNING_COPY.items[key]
+        return (
+          <label key={key} className="block text-xs text-ink-mid">
+            <span className="flex items-baseline justify-between">
+              <span className="font-semibold">{item.label}</span>
+              <span className="text-[10px] text-ink-dim">
+                {TUNING_COPY.rangeLabel(range.min, range.max, item.unit)}・
+                {TUNING_COPY.defaultLabel(range.default, item.unit)}
+              </span>
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={range.min}
+              max={range.max}
+              value={drafts[key] ?? String(tuning[key] ?? range.default)}
+              onChange={(e) => setDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+              onBlur={(e) => commit(key, e.target.value)}
+              className={`mt-1 h-12 w-full rounded-chip bg-line-ember/40 px-3 text-base ${
+                tuning[key] !== undefined ? 'text-molten-bright font-bold' : 'text-ink'
+              }`}
+            />
+            <span className="mt-0.5 block text-[10px] leading-relaxed text-ink-dim">
+              {item.description}
+            </span>
+          </label>
+        )
+      })}
+      <button
+        type="button"
+        onClick={() => {
+          setTuning({})
+          setDrafts({})
+        }}
+        className="h-12 w-full rounded-card border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
+      >
+        ↺ {TUNING_COPY.reset}
+      </button>
+    </div>
   )
 }
 
-/** データ管理(F-08): エクスポート/インポート(全置換)/全削除+データ保護(ISS-009) */
+/** データ管理(F-08+ISS-009)。全削除は /settings/danger へ隔離(§4-4) */
 function DataSection() {
   const [busy, setBusy] = useState(false)
   const [persist, setPersist] = useState<PersistState | null>(null)
@@ -321,22 +402,7 @@ function DataSection() {
   const onExport = async () => {
     setBusy(true)
     try {
-      const backup = await exportBackup()
-      const json = JSON.stringify(backup)
-      const date = new Date().toISOString().slice(0, 10)
-      const file = new File([json], `tanren-backup-${date}.json`, { type: 'application/json' })
-      // iOSは共有シート、非対応環境はダウンロードにフォールバック
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] }).catch(() => {})
-      } else {
-        const url = URL.createObjectURL(file)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = file.name
-        a.click()
-        URL.revokeObjectURL(url)
-      }
-      recordExportDone()
+      await exportBackupToFile()
       setLastExport(lastExportAt())
     } finally {
       setBusy(false)
@@ -354,93 +420,82 @@ function DataSection() {
     }
   }
 
-  const onWipe = async () => {
-    if (!window.confirm(DATA_COPY.wipeConfirm1)) return
-    if (!window.confirm(DATA_COPY.wipeConfirm2)) return
-    await wipeAllData()
-    window.alert(DATA_COPY.wipeDone)
-  }
-
   return (
-    <>
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{DATA_COPY.section}</h2>
-      <div className="mt-2 space-y-2">
-        {/* データ保護(ISS-009-1): 未許可ならタップで再要求 */}
-        <button
-          type="button"
-          disabled={persist !== 'denied'}
-          onClick={async () => {
-            setPersist(await requestPersistentStorage())
-          }}
-          className="flex h-14 w-full items-center justify-between rounded-card bg-ember-tint border border-line-ember px-4 text-left"
+    <div className="mt-2 space-y-2">
+      {/* データ保護(ISS-009-1): 未許可ならタップで再要求 */}
+      <button
+        type="button"
+        disabled={persist !== 'denied'}
+        onClick={async () => {
+          setPersist(await requestPersistentStorage())
+        }}
+        className="flex h-14 w-full items-center justify-between rounded-card bg-ember-tint border border-line-ember px-4 text-left"
+      >
+        <span>
+          <span className="block text-sm">{STORAGE_COPY.protectionLabel}</span>
+          <span className="block text-[10px] text-ink-dim">{STORAGE_COPY.protectionHint}</span>
+        </span>
+        <span
+          className={`text-xs font-bold ${
+            persist === 'granted'
+              ? 'text-achieved'
+              : persist === 'denied'
+                ? 'text-adjusting'
+                : 'text-ink-dim'
+          }`}
         >
-          <span>
-            <span className="block text-sm">{STORAGE_COPY.protectionLabel}</span>
-            <span className="block text-[10px] text-ink-dim">{STORAGE_COPY.protectionHint}</span>
-          </span>
-          <span
-            className={`text-xs font-bold ${
-              persist === 'granted'
-                ? 'text-achieved'
-                : persist === 'denied'
-                  ? 'text-adjusting'
-                  : 'text-ink-dim'
-            }`}
-          >
-            {persistLabel}
-          </span>
-        </button>
-        <p className="text-xs text-ink-dim">
-          {lastExport ? STORAGE_COPY.lastExport(formatDate(lastExport)) : STORAGE_COPY.neverExported}
-        </p>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void onExport()}
-          className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60 disabled:opacity-40"
-        >
-          📤 {busy ? DATA_COPY.exporting : DATA_COPY.exportBtn}
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
-        >
-          📥 {DATA_COPY.importBtn}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void onImportFile(file)
-            e.target.value = ''
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => void onWipe()}
-          className="h-12 w-full rounded-card border border-destructive/40 text-sm font-semibold text-destructive active:bg-destructive/10"
-        >
-          {DATA_COPY.wipeBtn}
-        </button>
-      </div>
-    </>
+          {persistLabel}
+        </span>
+      </button>
+      <p className="text-xs text-ink-dim">
+        {lastExport ? STORAGE_COPY.lastExport(formatDate(lastExport)) : STORAGE_COPY.neverExported}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void onExport()}
+        className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60 disabled:opacity-40"
+      >
+        📤 {busy ? DATA_COPY.exporting : DATA_COPY.exportBtn}
+      </button>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        className="h-12 w-full rounded-card bg-ember-tint border border-line-ember text-sm font-semibold text-ink-mid active:bg-line-ember/60"
+      >
+        📥 {DATA_COPY.importBtn}
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void onImportFile(file)
+          e.target.value = ''
+        }}
+      />
+      {/* 全削除行: この画面では削除しない(§4-4) */}
+      <Link
+        to="/settings/danger"
+        className="flex h-12 w-full items-center justify-between rounded-card border border-[#3A2213] px-4 text-sm font-semibold text-[#B06A3E]"
+      >
+        {DANGER_COPY.row}
+        <span className="text-[#6B5A4C]">→</span>
+      </Link>
+    </div>
   )
 }
 
-/** 筋力の目安(ISS-002)。基準種目の実績から初期重量提案をキャリブレーションする */
-function StrengthSection() {
-  const marks = useLiveQuery(() => db.strength_marks.orderBy('recordedAt').reverse().toArray())
+/** 筋力の目安(ISS-002・群②の中身) */
+function StrengthContent({ marks }: { marks: StrengthMark[] | undefined }) {
   const [adding, setAdding] = useState(false)
   const refById = new Map(REF_LIFTS.map((r) => [r.id, r]))
 
   return (
     <>
-      <h2 className="mt-6 text-sm font-semibold text-ink-mid">{STRENGTH_COPY.section}</h2>
-      <p className="mt-1 text-xs text-ink-dim">{STRENGTH_COPY.hint}</p>
+      <p className="text-xs text-ink-dim">{STRENGTH_COPY.hint}</p>
       <ul className="mt-2 space-y-2">
         {marks?.length === 0 && (
           <li className="rounded-card border border-dashed border-line-ember p-4 text-sm text-ink-mid">

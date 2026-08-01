@@ -13,6 +13,7 @@ import GrowthPage from './pages/GrowthPage'
 import LogPage from './pages/LogPage'
 import LogDetailPage from './pages/LogDetailPage'
 import SettingsPage from './pages/SettingsPage'
+import DangerZonePage from './pages/DangerZonePage'
 import SetupPage from './pages/SetupPage'
 import SummaryPage from './pages/SummaryPage'
 import PhotosPage from './pages/PhotosPage'
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/photos" element={<PhotosPage />} />
           <Route path="/growth" element={<GrowthPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/danger" element={<DangerZonePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
