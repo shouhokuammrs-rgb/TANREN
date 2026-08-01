@@ -272,4 +272,22 @@ describe('ゴール到達検知と鏡チェックの判定記録(Phase 7-5b)', (
     expect(goal?.level).toBe('solid')
     expect((await db.goal_events.toArray()).map((e) => e.type)).toEqual(['resume'])
   })
+
+  // ===== QA追加(Phase 7-5b): 異常系・省略引数の防御 =====
+
+  it('judgeGoal: ゴール未設定部位ではno-op(イベントを記録しない)', async () => {
+    await judgeGoal('shoulders', 'maintain')
+    await judgeGoal('shoulders', 'raise')
+    expect(await db.goal_events.count()).toBe(0)
+    expect(await db.muscle_goals.count()).toBe(0)
+  })
+
+  it('resumeMuscleGoal: patch省略時はレベル・係数を維持したままgrowthへ戻る', async () => {
+    await seedChestGoal({ mode: 'maintain', level: 'solid', coef: GOAL_COEF.chest.solid })
+    await resumeMuscleGoal('chest')
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.mode).toBe('growth')
+    expect(goal?.level).toBe('solid')
+    expect(goal?.coef).toBe(GOAL_COEF.chest.solid)
+  })
 })

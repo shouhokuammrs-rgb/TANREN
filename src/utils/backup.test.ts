@@ -118,4 +118,69 @@ describe('バックアップの完全復元(F-08)', () => {
     await expect(importBackup('not json object')).rejects.toThrow()
     expect(await db.sessions.count()).toBe(before)
   })
+
+  // ===== QA追加(Phase 7-5b): ゴール系テーブルのバックアップ網羅 =====
+
+  it('muscle_goals(reachedAt含む)とgoal_eventsがDate復元込みで往復する', async () => {
+    await db.muscle_goals.clear()
+    await db.goal_events.clear()
+    await db.muscle_goals.put({
+      muscle: 'chest',
+      level: 'solid',
+      coef: 0.5,
+      mode: 'growth',
+      updatedAt: new Date('2026-08-01T09:00:00'),
+      reachedAt: new Date('2026-08-01T10:00:00'),
+    })
+    await db.goal_events.add({
+      muscle: 'chest',
+      type: 'raise',
+      at: new Date('2026-08-01T10:05:00'),
+      note: '32kg(直接編集)',
+    })
+
+    const backup = JSON.parse(JSON.stringify(await exportBackup()))
+    await wipeAllData()
+    expect(await db.muscle_goals.count()).toBe(0)
+    expect(await db.goal_events.count()).toBe(0)
+    await importBackup(backup)
+
+    const goal = await db.muscle_goals.get('chest')
+    expect(goal?.coef).toBe(0.5)
+    expect(goal?.updatedAt).toBeInstanceOf(Date)
+    expect(goal?.reachedAt).toBeInstanceOf(Date)
+    expect(goal?.reachedAt?.getTime()).toBe(new Date('2026-08-01T10:00:00').getTime())
+
+    const event = (await db.goal_events.toArray())[0]
+    expect(event.type).toBe('raise')
+    expect(event.at).toBeInstanceOf(Date)
+    expect(event.note).toBe('32kg(直接編集)')
+  })
+
+  it('reachedAt未設定のゴールはインポート後もundefinedのまま(状態4に誤遷移しない)', async () => {
+    await db.muscle_goals.clear()
+    await db.muscle_goals.put({
+      muscle: 'back',
+      level: 'toned',
+      coef: 0.35,
+      mode: 'growth',
+      updatedAt: new Date('2026-08-01T09:00:00'),
+    })
+    const backup = JSON.parse(JSON.stringify(await exportBackup()))
+    await wipeAllData()
+    await importBackup(backup)
+    expect((await db.muscle_goals.get('back'))?.reachedAt).toBeUndefined()
+  })
+
+  it('旧形式バックアップ(ゴール系テーブルのキーなし)も後方互換で取り込める', async () => {
+    const backup = JSON.parse(JSON.stringify(await exportBackup()))
+    delete backup.tables.muscle_goals
+    delete backup.tables.goal_events
+
+    await importBackup(backup)
+    expect(await db.muscle_goals.count()).toBe(0)
+    expect(await db.goal_events.count()).toBe(0)
+    // 他テーブルは通常どおり復元される
+    expect(await db.sessions.count()).toBe(1)
+  })
 })
