@@ -7,10 +7,32 @@ import { useSearchParams } from 'react-router-dom'
 import BodySvg from '../components/BodySvg'
 import PhotoCompare from '../components/PhotoCompare'
 import { growthPaint } from '../components/growthPaint'
-import { GROWTH_COLD, GROWTH_HEAT_SCALE, GROWTH_MIN_SESSIONS, GROWTH_PERIODS } from '../constants/charts'
-import { GROWTH_COPY, MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
+import {
+  GROWTH_COLD,
+  GROWTH_HEAT_SCALE,
+  GROWTH_MIN_SESSIONS,
+  GROWTH_PERIODS,
+  MUSCLE_CHART_ORDER,
+} from '../constants/charts'
+import {
+  DASHBOARD_COPY,
+  GROWTH_COPY,
+  HOME_COPY,
+  MUSCLE_GOAL_COPY,
+  MUSCLE_GROUP_LABELS,
+  formatDate,
+} from '../constants/copy'
 import { db } from '../db/db'
-import { addBodyWeight, loadGrowthSessions } from '../db/queries'
+import {
+  addBodyWeight,
+  dailyVolumeHistory,
+  getSetting,
+  homeStats,
+  listBodyStats,
+  loadGrowthSessions,
+  setSetting,
+  weeklyVolumeHistory,
+} from '../db/queries'
 import type { MuscleGroup } from '../db/types'
 import { showToast } from '../utils/toast'
 import {
@@ -23,6 +45,13 @@ import {
 
 const GrowthChart = lazy(() =>
   import('../components/DashboardCharts').then((m) => ({ default: m.GrowthChart })),
+)
+// ISS-022: 「トレーニング量」ブロック(旧ホームから移設)。Rechartsは遅延チャンクのまま
+const VolumeChart = lazy(() =>
+  import('../components/DashboardCharts').then((m) => ({ default: m.VolumeChart })),
+)
+const WeightChart = lazy(() =>
+  import('../components/DashboardCharts').then((m) => ({ default: m.WeightChart })),
 )
 
 const chartFallback = <p className="py-6 text-center text-sm text-ink-dim">…</p>
@@ -288,6 +317,9 @@ export default function GrowthPage() {
         )}
       </button>
 
+      {/* トレーニング量(ISS-022): 旧ホームから移設。順序=セット数グラフ→統計カード→体重推移(PM裁定) */}
+      <TrainingVolumeBlock />
+
       {/* フルスクリーン推移(4a): 拡大グラフ+セッション履歴 */}
       {fullscreen && growth.hasEnoughData && latest && (
         <div className="anim-rise fixed inset-0 z-50 overflow-y-auto bg-forge-black px-4 pb-8 pt-6">
@@ -365,6 +397,99 @@ export default function GrowthPage() {
         </>
       )}
     </section>
+  )
+}
+
+/**
+ * トレーニング量ブロック(ISS-022)。IA再設計(DEC-015)で旧ホームから撤去された記録系3点を
+ * 移設のみで復帰: ①部位別セット数グラフ(ISS-012の週/日切替そのまま) ②統計カード ③体重推移。
+ * 期間セグメント(30日/90日)とは連動しない(各グラフは従来の期間仕様のまま)。
+ * 体重の入力はヘッダーの体重チップに集約済みのため、旧「+体重を記録」ボタンは持たない
+ */
+function TrainingVolumeBlock() {
+  const stats = useLiveQuery(() => homeStats())
+  // ISS-012: 週/日切り替え。選択はDexieのsettingsに保存(バックアップにも含まれる)
+  const chartMode = useLiveQuery(() => getSetting<'day' | 'week'>('volumeChartMode', 'day'), [], 'day')
+  const volumeHistory = useLiveQuery(
+    () => (chartMode === 'week' ? weeklyVolumeHistory() : dailyVolumeHistory()),
+    [chartMode],
+  )
+  const bodyStats = useLiveQuery(listBodyStats)
+
+  const volumeData = volumeHistory?.map((p) => {
+    const row: Record<string, number | string> = { label: p.weekLabel }
+    for (const m of MUSCLE_CHART_ORDER) row[m] = p.sets[m] ?? 0
+    return row
+  })
+  const hasVolume = volumeHistory?.some((p) => Object.keys(p.sets).length > 0) ?? false
+
+  const weightData = bodyStats?.map((s) => ({
+    date: formatDate(s.measuredAt).split(' ')[0],
+    weightKg: s.weightKg,
+  }))
+
+  return (
+    <div className="space-y-4">
+      <h2 className="label-mono text-[10px] text-accent-dim">{GROWTH_COPY.volumeBlock}</h2>
+
+      {/* ① 部位別セット数グラフ(ISS-012の週/日切替) */}
+      <div className="card-ember p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="label-mono text-[10px] text-accent-dim">{DASHBOARD_COPY.weeklyVolume}</h3>
+          <div className="flex gap-1">
+            {(['day', 'week'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => void setSetting('volumeChartMode', mode)}
+                className={`h-11 rounded-chip px-4 text-xs font-bold ${
+                  chartMode === mode ? 'bg-molten text-white' : 'bg-line-ember/40 text-ink-mid'
+                }`}
+              >
+                {mode === 'day' ? DASHBOARD_COPY.chartModeDay : DASHBOARD_COPY.chartModeWeek}
+              </button>
+            ))}
+          </div>
+        </div>
+        {hasVolume && volumeData ? (
+          <Suspense fallback={chartFallback}>
+            <VolumeChart data={volumeData} />
+          </Suspense>
+        ) : (
+          <p className="py-6 text-center text-sm text-ink-dim">{DASHBOARD_COPY.empty}</p>
+        )}
+      </div>
+
+      {/* ② 統計カード×2(連続記録・今週ボリューム) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card-ember px-4 py-3">
+          <p className="label-mono text-[10px] text-accent-dim">{HOME_COPY.statStreak}</p>
+          <p className="num-hero glow-text mt-1 text-[40px] leading-none">
+            {stats?.streakDays ?? 0}
+            <span className="ml-1 text-sm text-accent-dim">{HOME_COPY.statStreakUnit}</span>
+          </p>
+        </div>
+        <div className="card-ember px-4 py-3">
+          <p className="label-mono text-[10px] text-accent-dim">{HOME_COPY.statWeeklyVolume}</p>
+          <p className="num-hero glow-text mt-1 text-[40px] leading-none">
+            {(stats?.weeklyVolumeKg ?? 0).toLocaleString()}
+            <span className="ml-1 text-sm text-accent-dim">{HOME_COPY.statWeeklyVolumeUnit}</span>
+          </p>
+        </div>
+      </div>
+
+      {/* ③ 体重推移グラフ(入力はヘッダーの体重チップ) */}
+      <div className="card-ember p-4">
+        <h3 className="label-mono mb-2 text-[10px] text-accent-dim">{DASHBOARD_COPY.weight}</h3>
+        {weightData && weightData.length > 0 ? (
+          <Suspense fallback={chartFallback}>
+            <WeightChart data={weightData} />
+          </Suspense>
+        ) : (
+          <p className="py-6 text-center text-sm text-ink-dim">{DASHBOARD_COPY.empty}</p>
+        )}
+      </div>
+    </div>
   )
 }
 

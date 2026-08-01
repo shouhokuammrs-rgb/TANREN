@@ -481,6 +481,8 @@ export const GROWTH_COPY = {
   // 成長タブ化(DEC-015 §2): セグメント+体重チップ
   segGrowth: '成長',
   segPhoto: '写真',
+  // ISS-022: IA再設計で撤去された記録系3点の移設先ブロック
+  volumeBlock: 'トレーニング量',
   weightChip: (kg: string) => `体重 ${kg}kg ✎`,
   weightChipStale: (days: number) => `· ${days}日前`,
   weightSave: '保存',
