@@ -324,7 +324,8 @@ export default function GrowthPage() {
 
       {/* フルスクリーン推移(4a): 拡大グラフ+セッション履歴 */}
       {fullscreen && growth.hasEnoughData && latest && (
-        <div className="anim-rise fixed inset-0 z-50 overflow-y-auto bg-forge-black px-4 pb-8 pt-6">
+        // fixedはシェルのpaddingが効かないため個別にセーフエリア対応(ISS-027)
+        <div className="anim-rise fixed inset-0 z-50 overflow-y-auto bg-forge-black px-4 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))]">
           <div className="mx-auto max-w-md">
             <div className="flex items-start justify-between">
               <div>

@@ -31,7 +31,15 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-dvh text-ink">
+    // 上端セーフエリア(ISS-027): アプリシェル1箇所で全タブ画面をカバー。
+    // ブラウザ表示(非スタンドアロン)ではinset=0で無害
+    <div className="min-h-dvh pt-[env(safe-area-inset-top)] text-ink">
+      {/* スクロール時にコンテンツがステータスバー領域へ透けないよう背景カバー(INS §3裁量) */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 bg-forge-black"
+        style={{ height: 'env(safe-area-inset-top)' }}
+      />
       {/* プレビューURL警告(ISS-009-2): 一時URLでの記録を防ぐ */}
       {onPreviewHost && prodUrl && (
         <div className="bg-adjusting/15 px-4 py-2 text-center text-xs text-adjusting">
