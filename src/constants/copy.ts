@@ -274,7 +274,11 @@ export const LOG_COPY = {
   title: 'ログ',
   empty: 'まだ記録がありません',
   completion: (rate: number) => `完遂率${rate}%`,
-  duration: (min: number) => `${min}分`,
+  // 月カレンダー(ISS-026)
+  calendarMonth: (year: number, month: number) => `${year}年${month}月`,
+  calendarPrev: '前の月',
+  calendarNext: '次の月',
+  calendarWeekdays: ['月', '火', '水', '木', '金', '土', '日'] as const,
   detailTitle: 'トレ詳細',
   planned: (weight: string, reps: string) => `目標 ${weight}×${reps}`,
   actual: (weight: string, reps: string) => `実績 ${weight}×${reps}`,
@@ -467,6 +471,10 @@ export const GROWTH_COPY = {
   segPhoto: '写真',
   // ISS-022: IA再設計で撤去された記録系3点の移設先ブロック
   volumeBlock: 'トレーニング量',
+  // ISS-026: 最近の自己ベスト(PR履歴の導出表示)
+  recentPrs: '最近の自己ベスト',
+  prWeightReps: (kg: number, reps: number) => `${kg}kg × ${reps}回`,
+  prRepsOnly: (reps: number) => `${reps}回`,
   weightChip: (kg: string) => `体重 ${kg}kg ✎`,
   weightChipStale: (days: number) => `· ${days}日前`,
   weightSave: '保存',

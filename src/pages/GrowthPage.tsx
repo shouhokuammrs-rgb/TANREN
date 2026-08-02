@@ -40,7 +40,9 @@ import {
   goalProgress,
   goalTrendByMuscle,
   muscleGrowthMap,
+  recentPrHistory,
   targetE1Rm,
+  type GrowthSessionInput,
 } from '../engine'
 
 const GrowthChart = lazy(() =>
@@ -318,7 +320,7 @@ export default function GrowthPage() {
       </button>
 
       {/* トレーニング量(ISS-022): 旧ホームから移設。順序=セット数グラフ→統計カード→体重推移(PM裁定) */}
-      <TrainingVolumeBlock />
+      <TrainingVolumeBlock sessions={sessions ?? []} />
 
       {/* フルスクリーン推移(4a): 拡大グラフ+セッション履歴 */}
       {fullscreen && growth.hasEnoughData && latest && (
@@ -404,9 +406,11 @@ export default function GrowthPage() {
  * トレーニング量ブロック(ISS-022)。IA再設計(DEC-015)で旧ホームから撤去された記録系3点を
  * 移設のみで復帰: ①部位別セット数グラフ(ISS-012の週/日切替そのまま) ②統計カード ③体重推移。
  * 期間セグメント(30日/90日)とは連動しない(各グラフは従来の期間仕様のまま)。
- * 体重の入力はヘッダーの体重チップに集約済みのため、旧「+体重を記録」ボタンは持たない
+ * 体重の入力はヘッダーの体重チップに集約済みのため、旧「+体重を記録」ボタンは持たない。
+ * ISS-026: 末尾に「最近の自己ベスト」(既存PR判定の導出表示・最大5件・ゼロ件は非表示)
  */
-function TrainingVolumeBlock() {
+function TrainingVolumeBlock({ sessions }: { sessions: GrowthSessionInput[] }) {
+  const recentPrs = useMemo(() => recentPrHistory(sessions, 5), [sessions])
   const stats = useLiveQuery(() => homeStats())
   // ISS-012: 週/日切り替え。選択はDexieのsettingsに保存(バックアップにも含まれる)
   const chartMode = useLiveQuery(() => getSetting<'day' | 'week'>('volumeChartMode', 'day'), [], 'day')
@@ -489,6 +493,33 @@ function TrainingVolumeBlock() {
           <p className="py-6 text-center text-sm text-ink-dim">{DASHBOARD_COPY.empty}</p>
         )}
       </div>
+
+      {/* 最近の自己ベスト(ISS-026): PRゼロは項目ごと非表示 */}
+      {recentPrs.length > 0 && (
+        <div className="card-ember p-4">
+          <h3 className="label-mono mb-1 text-[10px] text-accent-dim">{GROWTH_COPY.recentPrs}</h3>
+          <ul className="divide-y divide-line-soft">
+            {recentPrs.map((pr) => (
+              <li
+                key={`${pr.exerciseName}-${pr.date.getTime()}`}
+                className="flex items-baseline justify-between py-2.5"
+              >
+                <span className="min-w-0 truncate text-sm font-bold text-ink">
+                  {pr.exerciseName}
+                </span>
+                <span className="label-mono ml-2 shrink-0 text-xs font-bold tracking-normal text-molten-bright">
+                  {pr.weightKg !== undefined
+                    ? GROWTH_COPY.prWeightReps(pr.weightKg, pr.reps)
+                    : GROWTH_COPY.prRepsOnly(pr.reps)}
+                  <span className="ml-2 font-normal text-ink-dim">
+                    {pr.date.getMonth() + 1}/{pr.date.getDate()}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

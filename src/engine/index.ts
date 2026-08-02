@@ -1,8 +1,8 @@
 // メニュー生成エンジン(UI非依存の純関数群)
 export { calibratedWeightKg, epley1Rm, patternBase1RmFrom } from './calibration'
 export { ALL_MUSCLES } from './priority'
-export { detectPrSetNumbers, setScore, summarizeExercise } from './summary'
-export type { CompletedSetInput, ExerciseSummary, PastSetInput } from './summary'
+export { detectPrSetNumbers, recentPrHistory, setScore, summarizeExercise } from './summary'
+export type { CompletedSetInput, ExerciseSummary, PastSetInput, PrHistoryEntry } from './summary'
 export { calcFreshness, effectiveRecoveryHours, hoursUntilRecovered, muscleFreshnessMap } from './freshness'
 export { growthE1Rm, muscleGrowthMap, sessionE1Rm, sessionMaxReps, weeklyTopGain } from './growth'
 export type { WeeklyGain } from './growth'

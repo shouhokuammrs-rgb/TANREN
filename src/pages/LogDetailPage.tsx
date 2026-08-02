@@ -21,6 +21,7 @@ import {
 } from '../db/queries'
 import type { SetRecord } from '../db/types'
 import { autoCloudBackup } from '../utils/cloudBackup'
+import { formatDurationJa } from '../utils/time'
 
 export default function LogDetailPage() {
   const { id } = useParams()
@@ -61,6 +62,17 @@ export default function LogDetailPage() {
             {/* 編集済みの控えめな表示(ISS-020・updatedAtで判定) */}
             {session.updatedAt && (
               <span className="mr-2 text-[10px] text-ink-dim/70">{LOG_COPY.editedMark}</span>
+            )}
+            {/* 所要時間(ISS-026)。計測前データ(endedAtなし)は非表示 */}
+            {session.endedAt !== undefined && (
+              <span className="mr-2">
+                {formatDurationJa(
+                  Math.max(
+                    1,
+                    Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60000),
+                  ),
+                )}
+              </span>
             )}
             {SESSION_STATUS_LABELS[session.status]}
           </span>

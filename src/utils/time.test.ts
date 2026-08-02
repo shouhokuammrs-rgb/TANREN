@@ -20,3 +20,17 @@ describe('calcSleepHours(睡眠時間の自動計算)', () => {
     expect(calcSleepHours('23:30', 'abc')).toBeNull()
   })
 })
+
+// ===== 所要時間の表記(ISS-026) =====
+import { formatDurationJa } from './time'
+
+describe('formatDurationJa(所要時間の表記境界)', () => {
+  it('59分以下は「N分」・60分以上は「N時間M分」', () => {
+    expect(formatDurationJa(1)).toBe('1分')
+    expect(formatDurationJa(32)).toBe('32分')
+    expect(formatDurationJa(59)).toBe('59分')
+    expect(formatDurationJa(60)).toBe('1時間0分')
+    expect(formatDurationJa(72)).toBe('1時間12分')
+    expect(formatDurationJa(135)).toBe('2時間15分')
+  })
+})

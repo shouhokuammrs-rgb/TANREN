@@ -1,36 +1,24 @@
 import { useEffect } from 'react'
+import { createWakeLockController } from '../utils/wakeLock'
 
 /**
  * トレ中の画面消灯を防ぐ(Screen Wake Lock API)。
- * バックグラウンド復帰でロックが解除されるため、visibilitychangeで再取得する
+ * 取得・再取得・解放の制御はutils/wakeLock.tsのコントローラ(ユニットテスト対象・ISS-026)
  */
 export function useWakeLock(active: boolean): void {
   useEffect(() => {
-    if (!active || !('wakeLock' in navigator)) return
+    if (!active) return
+    const controller = createWakeLockController(
+      'wakeLock' in navigator ? navigator.wakeLock : undefined,
+    )
+    const onVisibilityChange = () =>
+      controller.handleVisibility(document.visibilityState === 'visible')
 
-    let lock: WakeLockSentinel | null = null
-    let released = false
-
-    const request = async () => {
-      try {
-        lock = await navigator.wakeLock.request('screen')
-      } catch {
-        // 省電力モード等で失敗することがある。致命的ではないので握りつぶす
-      }
-    }
-
-    const onVisibilityChange = () => {
-      if (!released && document.visibilityState === 'visible') {
-        void request()
-      }
-    }
-
-    void request()
+    void controller.acquire()
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
-      released = true
       document.removeEventListener('visibilitychange', onVisibilityChange)
-      void lock?.release().catch(() => {})
+      void controller.release()
     }
   }, [active])
 }

@@ -65,3 +65,64 @@ describe('summarizeExercise(前回比)', () => {
     expect(summary.todayVolume).toBe(15)
   })
 })
+
+// ===== 最近の自己ベスト一覧(ISS-026) =====
+import { recentPrHistory } from './summary'
+import type { GrowthSessionInput } from './growth'
+
+function prSession(
+  exerciseId: number,
+  name: string,
+  daysAgo: number,
+  sets: { weightKg?: number; reps: number }[],
+): GrowthSessionInput {
+  return {
+    performedAt: new Date(Date.now() - daysAgo * 24 * 3_600_000),
+    exerciseId,
+    exerciseName: name,
+    muscle: 'chest',
+    sets,
+  }
+}
+
+describe('recentPrHistory(ISS-026): ログからのPR導出', () => {
+  it('初回セッションはPR扱いしない(既存判定と同じ規則)', () => {
+    expect(recentPrHistory([prSession(1, 'ベンチ', 1, [{ weightKg: 13, reps: 8 }])])).toEqual([])
+  })
+
+  it('過去ベスト超えのセッションから最良スコアのPRセット1件を採用・日付降順', () => {
+    const result = recentPrHistory([
+      prSession(1, 'ベンチ', 20, [{ weightKg: 13, reps: 8 }]),
+      prSession(1, 'ベンチ', 10, [{ weightKg: 14.5, reps: 8 }, { weightKg: 14.5, reps: 10 }]), // 両方PR→10回側
+      prSession(2, 'ロウ', 5, [{ weightKg: 16, reps: 8 }]), // 初回=PRなし
+      prSession(2, 'ロウ', 1, [{ weightKg: 17.5, reps: 8 }]),
+    ])
+    expect(result).toHaveLength(2)
+    expect(result[0].exerciseName).toBe('ロウ')
+    expect(result[0].weightKg).toBe(17.5)
+    expect(result[1].exerciseName).toBe('ベンチ')
+    expect(result[1].reps).toBe(10)
+  })
+
+  it('自重種目(重量なし)はレップでPR判定される', () => {
+    const result = recentPrHistory([
+      prSession(9, 'プランク', 10, [{ reps: 30 }]),
+      prSession(9, 'プランク', 1, [{ reps: 40 }]),
+    ])
+    expect(result).toHaveLength(1)
+    expect(result[0].weightKg).toBeUndefined()
+    expect(result[0].reps).toBe(40)
+  })
+
+  it('更新のないセッション・limit超過分は含まれない', () => {
+    const sessions: GrowthSessionInput[] = [prSession(1, 'ベンチ', 30, [{ weightKg: 13, reps: 8 }])]
+    for (let i = 0; i < 8; i++) {
+      sessions.push(prSession(1, 'ベンチ', 25 - i * 3, [{ weightKg: 14.5 + i * 1.5, reps: 8 }]))
+    }
+    sessions.push(prSession(1, 'ベンチ', 0.5, [{ weightKg: 10, reps: 5 }])) // 更新なし
+    const result = recentPrHistory(sessions, 5)
+    expect(result).toHaveLength(5)
+    // 更新なしセッションは含まれない(最新エントリはPR時のもの)
+    expect(result[0].weightKg).toBeGreaterThan(20)
+  })
+})
