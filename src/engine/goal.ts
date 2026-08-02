@@ -112,6 +112,11 @@ export function goalPriorityScores(
 
 // ===== 到達判定と鏡チェック(Phase 7-5b) =====
 
+/** タブ通知バッジの発火条件(ISS-028 §4)。未判定の鏡チェック=reachedAtあり×成長モード */
+export function hasPendingMirrorGoal(goals: Pick<MuscleGoal, 'reachedAt' | 'mode'>[]): boolean {
+  return goals.some((g) => g.reachedAt !== undefined && g.mode === 'growth')
+}
+
 /**
  * セッション保存時の到達検知(純関数)。
  * - mode==='growth' かつ 記録した部位のみ判定

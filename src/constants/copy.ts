@@ -2,7 +2,7 @@
 
 export const APP_NAME = 'TANREN'
 
-// 5タブ化(DEC-015 §1): 390px向けにラベル短縮。アイコンなし
+// 5タブ化(DEC-015 §1): 390px向けにラベル短縮。アイコンはTabIcons.tsx(ISS-028)
 export const TAB_LABELS = {
   home: 'ホーム',
   workout: '今日',
