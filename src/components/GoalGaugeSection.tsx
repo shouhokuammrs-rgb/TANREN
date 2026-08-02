@@ -6,12 +6,20 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import {
   GOAL_COEF,
   GOAL_TARGET_MUSCLES,
+  isGoalTargetMuscle,
   type GoalTargetMuscle,
 } from '../constants/goals'
 import { MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import { db } from '../db/db'
-import { addBodyWeight, loadGrowthSessions, resumeMuscleGoal, saveMuscleGoal } from '../db/queries'
+import {
+  addBodyWeight,
+  loadGrowthSessions,
+  resumeMuscleGoal,
+  saveAbsGoal,
+  saveMuscleGoal,
+} from '../db/queries'
 import type { GoalLevel, GoalMode, MuscleGoal } from '../db/types'
+import AbsGoalRow, { type AbsGoalDraft } from './AbsGoalRow'
 import {
   coefForDirectEdit,
   equipmentE1RmCap,
@@ -49,31 +57,56 @@ export default function GoalGaugeSection() {
   )
 
   const [drafts, setDrafts] = useState<Partial<Record<GoalTargetMuscle, GoalDraft>>>({})
-  const [focused, setFocused] = useState<GoalTargetMuscle>('chest')
+  // 腹(DEC-018改)は係数を持たない段位ドラフト。5部位とは別経路で保存する
+  const [absDraft, setAbsDraft] = useState<AbsGoalDraft | undefined>(undefined)
+  const [focused, setFocused] = useState<GoalTargetMuscle | 'abs'>('chest')
   const [weightDraft, setWeightDraft] = useState<number | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [dirty, setDirty] = useState(false)
-  const [mirrorMuscle, setMirrorMuscle] = useState<GoalTargetMuscle | null>(null)
+  const [mirrorMuscle, setMirrorMuscle] = useState<GoalTargetMuscle | 'abs' | null>(null)
 
   // DB値でドラフト同期(未編集の間はDB変化=鏡チェック判定などを追従)
   useEffect(() => {
     if (storedGoals === undefined || dirty) return
     const init: Partial<Record<GoalTargetMuscle, GoalDraft>> = {}
+    let abs: AbsGoalDraft | undefined
     for (const g of storedGoals) {
-      init[g.muscle as GoalTargetMuscle] = { level: g.level, coef: g.coef, mode: g.mode }
+      if (g.muscle === 'abs') {
+        abs = { level: g.level, mode: g.mode }
+      } else if (isGoalTargetMuscle(g.muscle)) {
+        init[g.muscle] = { level: g.level, coef: g.coef, mode: g.mode }
+      }
     }
     setDrafts(init)
+    setAbsDraft(abs)
   }, [storedGoals, dirty])
 
   const storedByMuscle = useMemo(() => {
-    const map: Partial<Record<GoalTargetMuscle, MuscleGoal>> = {}
-    for (const g of storedGoals ?? []) map[g.muscle as GoalTargetMuscle] = g
+    const map: Partial<Record<GoalTargetMuscle | 'abs', MuscleGoal>> = {}
+    for (const g of storedGoals ?? []) {
+      if (g.muscle === 'abs' || isGoalTargetMuscle(g.muscle)) {
+        map[g.muscle as GoalTargetMuscle | 'abs'] = g
+      }
+    }
     return map
   }, [storedGoals])
 
   const weightKg = weightDraft ?? profile?.weightKg ?? 58
   const capKg = equipmentE1RmCap(dumbbell?.weightStepsKg ?? [])
+
+  // 腹の段位選択(DEC-018改)。維持からの再開・dirty管理は5部位と同じ規則
+  const pickAbsLevel = (level: GoalLevel) => {
+    setFocused('abs')
+    if (absDraft?.mode === 'maintain') {
+      if (!window.confirm(MUSCLE_GOAL_COPY.resumeConfirm)) return
+      setAbsDraft({ level, mode: 'growth' })
+      void resumeMuscleGoal('abs', { level, coef: 0 })
+      return
+    }
+    setAbsDraft({ level, mode: absDraft?.mode ?? 'growth' })
+    setDirty(true)
+  }
 
   const pickLevel = (muscle: GoalTargetMuscle, level: GoalLevel) => {
     setFocused(muscle)
@@ -102,6 +135,7 @@ export default function GoalGaugeSection() {
     const kg = Math.round(Number(editValue) * 2) / 2 // 0.5kg刻み丸め
     setEditOpen(false)
     if (!Number.isFinite(kg) || kg <= 0) return
+    if (focused === 'abs') return // 腹は係数軸なし(直接編集対象外)
     const current = drafts[focused]
     if (!current) return
     // DEC-013: 固定kg保存禁止。編集kg÷編集時点体重を係数化して保持
@@ -122,11 +156,13 @@ export default function GoalGaugeSection() {
       const draft = drafts[muscle]
       if (draft) await saveMuscleGoal({ muscle, ...draft })
     }
+    // 腹(DEC-018改): 条件充足からの到達再評価はsaveAbsGoal側で行う
+    if (absDraft) await saveAbsGoal(absDraft.level, absDraft.mode)
     setDirty(false)
     showToast(MUSCLE_GOAL_COPY.saved, 'success')
   }
 
-  const focusedDraft = drafts[focused]
+  const focusedDraft = focused === 'abs' ? undefined : drafts[focused]
   const focusedTarget = focusedDraft ? targetE1Rm(focusedDraft.coef, weightKg) : undefined
 
   return (
@@ -250,6 +286,23 @@ export default function GoalGaugeSection() {
             />
           )
         })}
+        {/* 腹の段位行(DEC-018改・spec §2-2): 5部位ゲージの直後 */}
+        {(() => {
+          const absStored = storedByMuscle.abs
+          const absReached = absStored?.reachedAt !== undefined && absStored.mode === 'growth'
+          return (
+            <AbsGoalRow
+              draft={absDraft}
+              reached={absReached}
+              focused={focused === 'abs'}
+              onFocus={() => {
+                setFocused('abs')
+                if (absReached) setMirrorMuscle('abs')
+              }}
+              onPickLevel={pickAbsLevel}
+            />
+          )
+        })()}
       </div>
 
       <p className="mt-3 text-[10px] text-ink-dim">{MUSCLE_GOAL_COPY.footerNote}</p>
