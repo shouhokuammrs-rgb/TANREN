@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { MUSCLE_CHART_COLORS, MUSCLE_CHART_ORDER } from '../constants/charts'
+import { BODY_FAT_CHART, MUSCLE_CHART_COLORS, MUSCLE_CHART_ORDER } from '../constants/charts'
 import { MUSCLE_GROUP_LABELS } from '../constants/copy'
 
 const AXIS_TICK = { fill: '#8a5a3c', fontSize: 11 }
@@ -128,6 +128,135 @@ export function GrowthChart({
           stroke="#FF5C1A"
           strokeWidth={2.5}
           dot={{ r: 4, fill: '#FFE3CC', stroke: '#0b0907', strokeWidth: 1.5 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+/**
+ * 腹詳細のクランチ系列(DEC-017改 §1-5)。回(自重)とkg(加重)を別系列・別Y軸で描き、
+ * 切替セッション位置に縦の破線を置く(同一線で繋ぐと誤読を生むため)
+ */
+export function AbsTrendChart({
+  data,
+  switchLabel,
+  height = 150,
+}: {
+  data: { label: string; reps?: number; kg?: number }[]
+  /** 加重初回セッションのX位置(切替の縦破線)。加重データなしならundefined */
+  switchLabel?: string
+  height?: number
+}) {
+  const hasKg = data.some((d) => d.kg !== undefined)
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={{ top: 8, right: hasKg ? 0 : 8, left: -14, bottom: 0 }}>
+        <CartesianGrid stroke="#241812" vertical={false} />
+        <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="reps" tick={AXIS_TICK} axisLine={false} tickLine={false} allowDecimals={false} />
+        {hasKg && (
+          <YAxis
+            yAxisId="kg"
+            orientation="right"
+            tick={AXIS_TICK}
+            axisLine={false}
+            tickLine={false}
+            width={32}
+          />
+        )}
+        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#d9cfc6' }} />
+        {switchLabel !== undefined && (
+          <ReferenceLine
+            x={switchLabel}
+            yAxisId="reps"
+            stroke="#3A2213"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+          />
+        )}
+        {/* 回の系列: 過去の参考として残すが主役から降ろす(ドットなし) */}
+        <Line
+          yAxisId="reps"
+          type="monotone"
+          dataKey="reps"
+          name="回"
+          stroke="#8A5A3C"
+          strokeWidth={2}
+          dot={false}
+          connectNulls={false}
+        />
+        {hasKg && (
+          <Line
+            yAxisId="kg"
+            type="monotone"
+            dataKey="kg"
+            name="kg"
+            stroke="#FF5C1A"
+            strokeWidth={2.5}
+            dot={{ r: 4, fill: '#FFE3CC', stroke: '#0b0907', strokeWidth: 1.5 }}
+            style={{ filter: 'drop-shadow(0 0 6px rgb(255 92 26/.5))' }}
+            connectNulls={false}
+          />
+        )}
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+/**
+ * 体脂肪率トレンド(DEC-018 §4-2/4-3)。溶鉄を使わない(成長の熱スケールに載せない)。
+ * 目安ラインは破線のみ描き、ラベルはSVG外のHTMLで重ねる(呼び出し側で絶対配置)
+ */
+export function BodyFatChart({
+  data,
+  guides,
+  domain,
+}: {
+  data: { label: string; pct: number }[]
+  guides: number[]
+  /** 明示ドメイン(HTMLラベルのY座標計算と一致させるため固定値で渡す) */
+  domain: [number, number]
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={BODY_FAT_CHART.height}>
+      <LineChart
+        data={data}
+        margin={{ top: BODY_FAT_CHART.marginTop, right: 8, left: -14, bottom: 0 }}
+      >
+        <CartesianGrid stroke="#241812" vertical={false} />
+        <XAxis
+          dataKey="label"
+          tick={AXIS_TICK}
+          axisLine={false}
+          tickLine={false}
+          height={BODY_FAT_CHART.xAxisHeight}
+        />
+        <YAxis
+          tick={AXIS_TICK}
+          axisLine={false}
+          tickLine={false}
+          domain={domain}
+          tickFormatter={(v: number) => `${Math.round(v)}`}
+        />
+        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: '#d9cfc6' }} />
+        {guides.map((pct) => (
+          <ReferenceLine
+            key={pct}
+            y={pct}
+            stroke="#8A5A3C"
+            strokeWidth={1}
+            strokeDasharray="3 5"
+            opacity={0.7}
+          />
+        ))}
+        <Line
+          type="monotone"
+          dataKey="pct"
+          name="体脂肪率(%)"
+          stroke="#D9CFC6"
+          strokeWidth={2}
+          dot={{ r: 3.5, fill: '#D9CFC6', stroke: '#0b0907', strokeWidth: 1.5 }}
         />
       </LineChart>
     </ResponsiveContainer>

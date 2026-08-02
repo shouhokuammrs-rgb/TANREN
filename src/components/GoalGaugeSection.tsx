@@ -9,7 +9,7 @@ import {
   isGoalTargetMuscle,
   type GoalTargetMuscle,
 } from '../constants/goals'
-import { MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
+import { ABS_GOAL_COPY, MUSCLE_GOAL_COPY, MUSCLE_GROUP_LABELS } from '../constants/copy'
 import { db } from '../db/db'
 import {
   addBodyWeight,
@@ -50,6 +50,11 @@ export default function GoalGaugeSection() {
     db.equipment.where('type').equals('dumbbell').first(),
   )
   const profile = useLiveQuery(() => db.profiles.orderBy('id').first())
+  // 体脂肪率(DEC-018 §3・任意): トレンドはbody_stats側が正。プロフィール値はセットアップ初期値
+  const lastFatPct = useLiveQuery(async () => {
+    const stats = await db.body_stats.orderBy('measuredAt').reverse().toArray()
+    return stats.find((s) => s.bodyFatPct !== undefined)?.bodyFatPct ?? null
+  })
   const growthSessions = useLiveQuery(() => loadGrowthSessions())
   const trend = useMemo(
     () => goalTrendByMuscle(growthSessions ?? [], new Date()),
@@ -61,6 +66,8 @@ export default function GoalGaugeSection() {
   const [absDraft, setAbsDraft] = useState<AbsGoalDraft | undefined>(undefined)
   const [focused, setFocused] = useState<GoalTargetMuscle | 'abs'>('chest')
   const [weightDraft, setWeightDraft] = useState<number | null>(null)
+  const [fatDraft, setFatDraft] = useState<number | null>(null)
+  const [fatOpen, setFatOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -131,6 +138,14 @@ export default function GoalGaugeSection() {
     setDirty(true)
   }
 
+  // 体脂肪率(DEC-018 §3): 0.1%刻み・範囲3.0〜60.0。未計測時は仮の初期値17.0から
+  const fatPct = fatDraft ?? lastFatPct ?? profile?.bodyFatPct ?? null
+  const stepFat = (direction: 1 | -1) => {
+    const base = fatPct ?? 17
+    setFatDraft(Math.round(Math.min(60, Math.max(3, base + direction * 0.1)) * 10) / 10)
+    setDirty(true)
+  }
+
   const commitDirectEdit = () => {
     const kg = Math.round(Number(editValue) * 2) / 2 // 0.5kg刻み丸め
     setEditOpen(false)
@@ -148,9 +163,15 @@ export default function GoalGaugeSection() {
 
   const onSave = async () => {
     // 体重を先に保存する: saveMuscleGoalの到達再評価(ISS-019)が
-    // 画面表示と同じ最新体重の「新目標」で行われるように
-    if (weightDraft !== null && weightDraft !== profile?.weightKg) {
-      await addBodyWeight(weightDraft)
+    // 画面表示と同じ最新体重の「新目標」で行われるように。
+    // 体脂肪率(DEC-018 §3)は体重と同じ1レコードにまとめて書く(片方だけの変更でも1レコード)
+    const weightChanged = weightDraft !== null && weightDraft !== profile?.weightKg
+    const fatChanged = fatDraft !== null && fatDraft !== lastFatPct
+    if (weightChanged || fatChanged) {
+      await addBodyWeight(
+        weightDraft ?? profile?.weightKg ?? 58,
+        fatChanged ? (fatDraft ?? undefined) : undefined,
+      )
     }
     for (const muscle of GOAL_TARGET_MUSCLES) {
       const draft = drafts[muscle]
@@ -259,6 +280,56 @@ export default function GoalGaugeSection() {
         <p className="label-mono mt-1 text-center text-[9px] tracking-normal text-[#4A3A2C]">
           {MUSCLE_GOAL_COPY.weightStepperNote}
         </p>
+
+        {/* 体脂肪率(DEC-018 §3・任意)。体重と同カード内・下段=階層で参考値の差を示す */}
+        <div className="mt-2 border-t border-[#1A110B] pt-1">
+          {!fatOpen ? (
+            <button
+              type="button"
+              onClick={() => setFatOpen(true)}
+              className="flex min-h-11 w-full items-center justify-between"
+            >
+              <span className="text-[11px] text-tab-idle">{ABS_GOAL_COPY.fatLabel}</span>
+              <span className="label-mono text-xs tracking-normal text-accent-dim">
+                {fatPct !== null ? `${fatPct.toFixed(1)}%` : ABS_GOAL_COPY.fatUnset} ✎
+              </span>
+            </button>
+          ) : (
+            <div className="py-1">
+              <p className="text-[11px] text-tab-idle">{ABS_GOAL_COPY.fatLabel}</p>
+              <div className="flex items-center justify-between">
+                {(
+                  [
+                    ['−', -1],
+                    ['+', 1],
+                  ] as const
+                ).map(([sign, dir], i) => (
+                  <span key={sign} className={i === 0 ? 'order-1' : 'order-3'}>
+                    <button
+                      type="button"
+                      onClick={() => stepFat(dir)}
+                      className="flex h-11 w-11 items-center justify-center"
+                      aria-label={`体脂肪率${sign}0.1%`}
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-pill border border-line-ember text-ink-mid">
+                        {sign}
+                      </span>
+                    </button>
+                  </span>
+                ))}
+                <span className="num-hero order-2 text-[26px] leading-none text-text-hot">
+                  {(fatPct ?? 17).toFixed(1)}
+                  <span className="label-mono ml-1 text-[11px] tracking-normal text-accent-dim">
+                    %
+                  </span>
+                </span>
+              </div>
+              <p className="label-mono mt-1 text-center text-[9px] tracking-normal text-[#4A3A2C]">
+                {ABS_GOAL_COPY.fatHint}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ゲージ行×5(仕様§3・§4) */}

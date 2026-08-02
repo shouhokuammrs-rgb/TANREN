@@ -81,3 +81,6 @@ export const RECOVERY_SLOT_COLORS = {
   bar: '#8A5A3C',
   recovered: '#6B5A4C',
 } as const
+
+/** 体脂肪率チャートの余白定数(DEC-018 §4-3)。目安ラインHTMLラベルのY座標計算と共有する */
+export const BODY_FAT_CHART = { height: 160, marginTop: 8, xAxisHeight: 30 } as const

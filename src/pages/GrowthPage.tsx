@@ -4,6 +4,7 @@
 import { Suspense, lazy, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useSearchParams } from 'react-router-dom'
+import AbsDetail from '../components/AbsDetail'
 import BodySvg from '../components/BodySvg'
 import PhotoCompare from '../components/PhotoCompare'
 import { growthPaint } from '../components/growthPaint'
@@ -254,7 +255,11 @@ export default function GrowthPage() {
         })}
       </div>
 
+      {/* 腹は2軸表示(DEC-018改 §4): 厚み(段位)×薄さ(体脂肪率)。汎用カードと差し替え */}
+      {current === 'abs' && <AbsDetail sessions={sessions ?? []} />}
+
       {/* 推移グラフカード(タップでフルスクリーン。データ不足はタップ無効) */}
+      {current !== 'abs' && (
       <button
         type="button"
         disabled={!growth.hasEnoughData}
@@ -318,6 +323,7 @@ export default function GrowthPage() {
           </p>
         )}
       </button>
+      )}
 
       {/* トレーニング量(ISS-022): 旧ホームから移設。順序=セット数グラフ→統計カード→体重推移(PM裁定) */}
       <TrainingVolumeBlock sessions={sessions ?? []} />
