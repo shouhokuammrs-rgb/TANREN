@@ -2,6 +2,7 @@
 
 import { db } from './db'
 import type {
+  AbsCondition,
   BodyStat,
   Condition,
   Exercise,
@@ -18,7 +19,13 @@ import type {
 } from './types'
 import { CLOUD_PENDING_KEY } from '../constants/cloud'
 import { EMPHASIS_HISTORY_SESSIONS } from '../constants/engine'
-import { GOAL_COEF, isGoalTargetMuscle } from '../constants/goals'
+import {
+  ABS_CONDITIONS,
+  GOAL_COEF,
+  PROMOTION_FROM_NAME,
+  PROMOTION_TO_NAME,
+  isGoalTargetMuscle,
+} from '../constants/goals'
 import type {
   EngineContext,
   ExerciseHistoryEntry,
@@ -27,16 +34,19 @@ import type {
   MuscleStimulus,
 } from '../engine/types'
 import {
+  absLevelSatisfied,
   coefForDirectEdit,
   detectPrSetNumbers,
   detectReachedGoals,
   goalPriorityScores,
   goalTrendByMuscle,
+  isCapReached,
   nextGoalLevel,
   patternBase1RmFrom,
   targetE1Rm,
   prAttemptWeightKg,
   summarizeExercise,
+  type CapCheckSet,
   type CompletedSetInput,
   type ExerciseSummary,
   type PastSetInput,
@@ -457,6 +467,172 @@ export async function finishSession(sessionId: number, input: FinishInput): Prom
   await markPrSets(sessionId)
   // ゴール到達検知(Phase 7-5b): 記録部位のgrowthゴールを判定し、reached未消化として記録
   await recordReachedGoals(sessionId)
+  // 腹の条件クリア永続保存+段位到達検知(DEC-018改)
+  await recordAbsProgress(sessionId)
+}
+
+// ===== 腹の段位型ゴール+加重昇格(DEC-017改/018改) =====
+
+/** クリア済みの腹条件(goal_eventsの'abs_condition'から。永続保存=導出再判定にしない) */
+export async function listClearedAbsConditions(): Promise<Set<AbsCondition>> {
+  const events = await db.goal_events.where('muscle').equals('abs').toArray()
+  return new Set(
+    events
+      .filter((e) => e.type === 'abs_condition' && e.condition !== undefined)
+      .map((e) => e.condition!),
+  )
+}
+
+/** セッション内の条件対象種目の完了セット(共通述語isCapReachedの入力) */
+async function absConditionSetsFor(
+  sessionId: number,
+): Promise<{ condition: AbsCondition; exercise: Exercise; sets: CapCheckSet[] }[]> {
+  const exercises = await db.exercises.toArray()
+  const byName = new Map(exercises.map((e) => [e.name, e]))
+  const ses = await db.session_exercises.where('sessionId').equals(sessionId).toArray()
+  const result: { condition: AbsCondition; exercise: Exercise; sets: CapCheckSet[] }[] = []
+  for (const def of ABS_CONDITIONS) {
+    const exercise = byName.get(def.exerciseName)
+    if (!exercise) continue
+    const matched = ses.filter((se) => se.exerciseId === exercise.id)
+    const sets: CapCheckSet[] = []
+    for (const se of matched) {
+      const rows = await db.sets.where('sessionExerciseId').equals(se.id!).toArray()
+      for (const s of rows) {
+        if (s.completedAt !== undefined) {
+          sets.push({ reps: s.actualReps, achieved: s.achieved, atFailure: s.atFailure })
+        }
+      }
+    }
+    if (sets.length > 0) result.push({ condition: def.condition, exercise, sets })
+  }
+  return result
+}
+
+/**
+ * 腹の条件クリア記録+段位到達検知(DEC-018改)。セッション保存時に呼ぶ。
+ * - 上限完遂した条件(C1/C2/C3)を goal_events に永続保存(既クリアは重複記録しない。
+ *   一度クリアした条件は落ちない=PM裁定§6-4)
+ * - 腹ゴール(growth・未消化なし)があれば、クリア済み条件の積み上げから到達を判定し
+ *   reachedAt を立てる(他部位と同じ鏡チェックループに合流)
+ */
+export async function recordAbsProgress(
+  sessionId: number,
+  now = new Date(),
+): Promise<AbsCondition[]> {
+  const entries = await absConditionSetsFor(sessionId)
+  if (entries.length === 0) return []
+  const cleared = await listClearedAbsConditions()
+  const newly: AbsCondition[] = []
+  for (const entry of entries) {
+    if (cleared.has(entry.condition)) continue
+    if (isCapReached(entry.exercise, entry.sets)) {
+      newly.push(entry.condition)
+      cleared.add(entry.condition)
+      await db.goal_events.add({
+        muscle: 'abs',
+        type: 'abs_condition',
+        at: now,
+        condition: entry.condition,
+      })
+    }
+  }
+
+  const goal = await db.muscle_goals.get('abs')
+  if (
+    goal &&
+    goal.mode === 'growth' &&
+    goal.reachedAt === undefined &&
+    absLevelSatisfied(cleared, goal.level)
+  ) {
+    await db.muscle_goals.update('abs', { reachedAt: now })
+    await db.goal_events.add({ muscle: 'abs', type: 'reached', at: now })
+  }
+  return newly
+}
+
+/**
+ * 腹ゴールの保存(DEC-018改)。係数軸を持たないため coef は0固定。
+ * reachedAtはsaveMuscleGoal(ISS-019/DEC-016)と同じ規則で条件充足から再評価する:
+ * 到達済み段位を選び直したら保存時に即到達(→鏡チェック→維持=抑制運転)
+ */
+export async function saveAbsGoal(level: GoalLevel, mode: MuscleGoal['mode']): Promise<void> {
+  const prev = await db.muscle_goals.get('abs')
+  const now = new Date()
+  const satisfied = absLevelSatisfied(await listClearedAbsConditions(), level)
+
+  let reachedAt = prev?.reachedAt
+  if (reachedAt !== undefined && !satisfied) reachedAt = undefined
+  const instantReach = mode === 'growth' && reachedAt === undefined && satisfied
+  if (instantReach) reachedAt = now
+
+  await db.muscle_goals.put({ muscle: 'abs', level, coef: 0, mode, reachedAt, updatedAt: now })
+  if (instantReach) await db.goal_events.add({ muscle: 'abs', type: 'reached', at: now })
+}
+
+/** 昇格カード(DEC-017改)の表示データ */
+export interface PromotionProposal {
+  fromName: string
+  toName: string
+  /** いま: 自重上限レップ×セット数 */
+  fromReps: number
+  fromSets: number
+  /** 次: 開始重量(最小刻み)・開始レップ(repRangeMin) */
+  toWeightKg: number
+  toReps: number
+}
+
+/**
+ * 昇格提案の発火判定(DEC-017改)。クランチのみ・このセッションで自重上限完遂したときに提案。
+ * 受諾済み(クランチ無効化済み)や昇格先未登録なら出さない。見送りは保存せず、
+ * 次に同条件を満たした回に再提案(spec §1-4)
+ */
+export async function loadPromotionProposal(
+  sessionId: number,
+): Promise<PromotionProposal | null> {
+  const exercises = await db.exercises.toArray()
+  const from = exercises.find((e) => e.name === PROMOTION_FROM_NAME)
+  const to = exercises.find((e) => e.name === PROMOTION_TO_NAME)
+  if (!from || from.isActive !== 1 || !to || to.isActive === 1) return null
+
+  const ses = await db.session_exercises
+    .where('sessionId')
+    .equals(sessionId)
+    .and((se) => se.exerciseId === from.id)
+    .toArray()
+  const sets: CapCheckSet[] = []
+  for (const se of ses) {
+    const rows = await db.sets.where('sessionExerciseId').equals(se.id!).toArray()
+    for (const s of rows) {
+      if (s.completedAt !== undefined) {
+        sets.push({ reps: s.actualReps, achieved: s.achieved, atFailure: s.atFailure })
+      }
+    }
+  }
+  if (!isCapReached(from, sets)) return null
+
+  const dumbbell = await db.equipment.where('type').equals('dumbbell').first()
+  const steps = dumbbell?.weightStepsKg ?? []
+  return {
+    fromName: from.name,
+    toName: to.name,
+    fromReps: from.repRangeMax,
+    fromSets: sets.length,
+    toWeightKg: steps.length > 0 ? Math.min(...steps) : 2.5,
+    toReps: to.repRangeMin,
+  }
+}
+
+/**
+ * 昇格の受諾(DEC-017改): 次回メニュー生成からクランチをダンベルクランチへ差し替える。
+ * ログはexerciseId参照のため履歴は壊れない。レッグレイズは並行種目のため触らない
+ */
+export async function acceptPromotion(): Promise<void> {
+  const exercises = await db.exercises.toArray()
+  const from = exercises.find((e) => e.name === PROMOTION_FROM_NAME)
+  const to = exercises.find((e) => e.name === PROMOTION_TO_NAME)
+  if (from) await db.exercises.update(from.id!, { isActive: 0 })
+  if (to) await db.exercises.update(to.id!, { isActive: 1 })
 }
 
 /**
@@ -515,6 +691,19 @@ export async function judgeGoal(
     return
   }
   const next = nextGoalLevel(goal.level)
+  // 腹(DEC-018改)の引き上げ: 段位を1段上げる(係数軸なし・coef 0固定)。bigは上げ先なし
+  if (muscle === 'abs') {
+    if (next) {
+      await db.muscle_goals.update(muscle, {
+        level: next,
+        coef: 0,
+        reachedAt: undefined,
+        updatedAt: now,
+      })
+      await db.goal_events.add({ muscle, type: 'raise', at: now })
+    }
+    return
+  }
   if (next && isGoalTargetMuscle(muscle)) {
     await db.muscle_goals.update(muscle, {
       level: next,

@@ -19,6 +19,8 @@ interface MirrorCheckActionsProps {
 export function MirrorCheckActions({ goal, bodyWeightKg, onDone }: MirrorCheckActionsProps) {
   const label = MUSCLE_GROUP_LABELS[goal.muscle]
   const isBig = nextGoalLevel(goal.level) === null
+  // 腹(DEC-018改)は段位軸のためkg直接編集を持たない。がっつり到達時は引き上げ選択肢なし
+  const isAbs = goal.muscle === 'abs'
   const [editOpen, setEditOpen] = useState(false)
   const [editValue, setEditValue] = useState('')
 
@@ -29,7 +31,7 @@ export function MirrorCheckActions({ goal, bodyWeightKg, onDone }: MirrorCheckAc
   }
 
   const onMore = async () => {
-    if (isBig) {
+    if (isBig && !isAbs) {
       // big到達: +10%の直接編集を初期値として提案(Elite係数は採用しない・DEC-013)
       setEditValue(String(raiseSuggestionKg(targetE1Rm(goal.coef, bodyWeightKg))))
       setEditOpen(true)
@@ -81,13 +83,15 @@ export function MirrorCheckActions({ goal, bodyWeightKg, onDone }: MirrorCheckAc
           >
             {MUSCLE_GOAL_COPY.judgeSatisfied}
           </button>
-          <button
-            type="button"
-            onClick={() => void onMore()}
-            className="pill-molten h-12 w-full text-sm"
-          >
-            {isBig ? MUSCLE_GOAL_COPY.judgeMoreBig : MUSCLE_GOAL_COPY.judgeMore}
-          </button>
+          {!(isAbs && isBig) && (
+            <button
+              type="button"
+              onClick={() => void onMore()}
+              className="pill-molten h-12 w-full text-sm"
+            >
+              {isBig ? MUSCLE_GOAL_COPY.judgeMoreBig : MUSCLE_GOAL_COPY.judgeMore}
+            </button>
+          )}
           <button
             type="button"
             onClick={onDone}

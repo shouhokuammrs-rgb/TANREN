@@ -680,6 +680,69 @@ export const MUSCLE_GOAL_COPY = {
   } as const,
 }
 
+/** 昇格提案カード(DEC-017改・spec §1)。鍛錬メタファー不使用・「昇格」はUIに出さない */
+export const PROMOTION_COPY = {
+  kicker: '腹 — 重りを足す',
+  kickerRight: '自重 → 加重',
+  title: (fromName: string) => `${fromName}が3セットとも上限に届きました`,
+  nowLabel: 'いま',
+  nextLabel: '次',
+  nowDetail: (reps: number, sets: number) => `自重 ${reps}回 × ${sets}`,
+  nextDetail: (weightKg: number, reps: number) => `${weightKg}kg・${reps}回から`,
+  body: '回数を増やし続けるより、重りを持つ方が伸びます。時間は変わりません。レッグレイズはそのまま続きます。',
+  accept: 'ダンベルクランチに進む',
+  decline: 'まだ自重で続ける',
+  acceptedTitle: 'ダンベルクランチに切り替えました',
+  acceptedBody: (weightKg: number, reps: number) =>
+    `次回のメニューから入ります。${weightKg}kg・${reps}回で再開し、以降は通常の増量に乗ります。`,
+  declinedTitle: '自重のままにしました',
+  declinedBody: '次にまた上限を達成したときに、もう一度おすすめします。',
+}
+
+/** 腹の段位型ゴール(DEC-018改・spec §2/§4)。進捗率(%)・「n/3」表記は使わない */
+export const ABS_GOAL_COPY = {
+  levelLabels: {
+    toned: '引き締め',
+    solid: 'しっかり',
+    big: 'がっつり',
+  } as Record<string, string>,
+  levelConditionCaptions: {
+    toned: '自重どちらか',
+    solid: '自重2種目とも',
+    big: '加重で上限',
+  } as Record<string, string>,
+  captions: {
+    toned: '腹に力を入れると硬さがわかる',
+    solid: '力を抜いても腹の中央に縦線が出る',
+    big: '普段の姿勢でも段の区切りが見える',
+  } as Record<string, string>,
+  conditionDetail: (weighted: boolean, reps: number) =>
+    weighted ? `加重 ${reps}回 × 3` : `自重 ${reps}回 × 3`,
+  orderNote: '条件は順不同。どの種目からでも積み上がります',
+  countBodyweight: (n: number) => `自重 ${n}/2 種目`,
+  countWeighted: (n: number) => `加重 ${n}/1 種目`,
+  attained: (label: string) => `${label} 到達`,
+  notAttained: '未到達',
+  // 腹詳細(成長タブ・spec §4)
+  thicknessTitle: '厚み — 段位',
+  legRaiseCapped: (name: string, reps: number) => ({ left: name, right: `${reps}回で上限 — このまま継続` }),
+  seriesSwitchNote: '加重に移ったため指標が「回」から「kg」に変わりました。前後の数値は直接つながりません。',
+  axisLeft: '回(クランチ)',
+  axisRight: '↑ ここからkg(ダンベルクランチ)',
+  leannessTitle: '薄さ — 体脂肪率トレンド',
+  guideLabels: [
+    { pct: 15, label: 'うっすら ≈15% 目安' },
+    { pct: 12, label: '割れ目 ≈12% 目安' },
+    { pct: 10, label: 'くっきり ≈10% 目安' },
+  ],
+  guideNote:
+    '破線は一般的な見え方の目安で、達成すべき数値ではありません。体組成計の絶対値は誤差が大きいため、同じ計器で測った変化の向きだけを見てください。',
+  // 体脂肪率入力(spec §3)
+  fatLabel: '体脂肪率(任意)',
+  fatUnset: '—',
+  fatHint: '体組成計の値でOK。同じ計器で続けて測るとトレンドが見えます',
+}
+
 /** 日付の共通フォーマット */
 export function formatDate(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()} ${date

@@ -573,6 +573,22 @@ export const INITIAL_EXERCISES: Omit<Exercise, 'id'>[] = [
     commonMistake: '腰が反って床から浮く(手を尻の下に敷くと楽)',
   },
   {
+    // DEC-017改: クランチ上限到達時の昇格先。昇格受諾までメニュー選択対象外(isActive: 0)
+    name: 'ダンベルクランチ',
+    primaryMuscle: 'abs',
+    muscleGroups: ['abs'],
+    movementType: 'isolation',
+    movementPattern: 'core',
+    requiredEquipment: ['dumbbell'],
+    repRangeMin: 8,
+    repRangeMax: 15,
+    initialWeightFactor: 0.04,
+    isActive: 0,
+    note: 'ダンベル1個を胸の上で抱えるか頭上に保持',
+    formCues: ['ダンベルを胸に抱え、みぞおちを支点に丸める', '肩甲骨が浮けば十分(反動を使わない)', '下ろすときも力を抜かずゆっくり'],
+    commonMistake: '重さに負けて首だけ振る(効かない上に首を痛める)',
+  },
+  {
     name: 'ロシアンツイスト',
     primaryMuscle: 'abs',
     muscleGroups: ['abs'],

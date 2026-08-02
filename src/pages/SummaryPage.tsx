@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useParams } from 'react-router-dom'
 import { MirrorCheckActions } from '../components/MirrorCheck'
@@ -5,12 +6,18 @@ import {
   LOG_COPY,
   MUSCLE_GOAL_COPY,
   MUSCLE_GROUP_LABELS,
+  PROMOTION_COPY,
   SUMMARY_COPY,
   WORKOUT_COPY,
   formatDate,
 } from '../constants/copy'
 import { db } from '../db/db'
-import { loadSessionSummaryView } from '../db/queries'
+import {
+  acceptPromotion,
+  loadPromotionProposal,
+  loadSessionSummaryView,
+  type PromotionProposal,
+} from '../db/queries'
 import type { MuscleGoal } from '../db/types'
 import type { PastSetInput } from '../engine'
 
@@ -24,6 +31,14 @@ function setLabel(set: PastSetInput): string {
 export default function SummaryPage() {
   const { id } = useParams()
   const view = useLiveQuery(async () => (await loadSessionSummaryView(Number(id))) ?? null, [id])
+  // 昇格提案(DEC-017改): このセッションでクランチ自重上限完遂→ダンベルクランチ提案。
+  // 受諾すると種目マスタが変わり提案の再導出はnullになるため、押下後の確認ブロックは
+  // 決定時のスナップショットで表示し続ける(同一サマリー内での取り消しはしない: spec §1-4)
+  const promotion = useLiveQuery(() => loadPromotionProposal(Number(id)), [id])
+  const [promoDecision, setPromoDecision] = useState<{
+    verdict: 'accepted' | 'declined'
+    proposal: PromotionProposal
+  } | null>(null)
   // Phase 7-5b: 判定未消化の到達ゴール(状態4)。判定するまでサマリーに出す
   const reachedGoals = useLiveQuery(() =>
     db.muscle_goals.filter((g) => g.reachedAt !== undefined && g.mode === 'growth').toArray(),
@@ -72,6 +87,23 @@ export default function SummaryPage() {
           <span className="ml-2 text-lg text-accent-dim">{SUMMARY_COPY.volumeUnit}</span>
         </p>
       </div>
+
+      {/* 昇格カード(DEC-017改): クランチ自重上限完遂→ダンベルクランチ提案。PR・到達カードより上 */}
+      {(promoDecision || promotion) && (
+        <PromotionCard
+          proposal={promoDecision?.proposal ?? promotion!}
+          verdict={promoDecision?.verdict ?? null}
+          onAccept={() => {
+            if (!promotion) return
+            void acceptPromotion()
+            setPromoDecision({ verdict: 'accepted', proposal: promotion })
+          }}
+          onDecline={() => {
+            if (!promotion) return
+            setPromoDecision({ verdict: 'declined', proposal: promotion })
+          }}
+        />
+      )}
 
       {/* PR演出(§5・自己ベスト更新時のみ) */}
       {view.exercises
@@ -163,6 +195,91 @@ export default function SummaryPage() {
         </Link>
       </div>
     </section>
+  )
+}
+
+/**
+ * 昇格カード(DEC-017改・spec §1-3/1-4)。対比ブロック(いま自重→次加重)+受諾/見送り。
+ * 押下後はボタンを確認ブロックに置換(受諾=molten / 見送り=steel)
+ */
+function PromotionCard({
+  proposal,
+  verdict,
+  onAccept,
+  onDecline,
+}: {
+  proposal: PromotionProposal
+  verdict: 'accepted' | 'declined' | null
+  onAccept: () => void
+  onDecline: () => void
+}) {
+  return (
+    <div className="anim-rise rounded-card border border-molten bg-[rgb(255_92_26/.07)] p-4">
+      <div className="flex items-baseline justify-between">
+        <span className="label-mono text-[10px] text-molten-bright">{PROMOTION_COPY.kicker}</span>
+        <span className="label-mono text-[10px] tracking-normal text-ink-dim">
+          {PROMOTION_COPY.kickerRight}
+        </span>
+      </div>
+      <p className="mt-1 text-[17px] font-black leading-snug text-ink">
+        {PROMOTION_COPY.title(proposal.fromName)}
+      </p>
+
+      {/* 対比ブロック: いま(line-ember枠)→ 次(molten枠) */}
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex-1 rounded-chip border border-line-ember px-3 py-2">
+          <p className="label-mono text-[9px] text-ink-dim">{PROMOTION_COPY.nowLabel}</p>
+          <p className="text-xs font-bold text-ink">{proposal.fromName}</p>
+          <p className="label-mono mt-0.5 text-[10px] tracking-normal text-ink-mid">
+            {PROMOTION_COPY.nowDetail(proposal.fromReps, proposal.fromSets)}
+          </p>
+        </div>
+        <span className="text-ink-dim">→</span>
+        <div className="flex-1 rounded-chip border border-molten px-3 py-2">
+          <p className="label-mono text-[9px] text-molten-bright">{PROMOTION_COPY.nextLabel}</p>
+          <p className="text-xs font-bold text-ink">{proposal.toName}</p>
+          <p className="label-mono mt-0.5 text-[10px] tracking-normal text-ink-mid">
+            {PROMOTION_COPY.nextDetail(proposal.toWeightKg, proposal.toReps)}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-2.5 text-xs leading-relaxed text-ink-mid">{PROMOTION_COPY.body}</p>
+
+      {verdict === null && (
+        <div className="mt-3 space-y-2">
+          <button type="button" onClick={onAccept} className="pill-molten h-12 w-full text-sm">
+            {PROMOTION_COPY.accept}
+          </button>
+          <button
+            type="button"
+            onClick={onDecline}
+            className="pill-ghost flex h-12 w-full items-center justify-center text-sm"
+          >
+            {PROMOTION_COPY.decline}
+          </button>
+        </div>
+      )}
+      {verdict === 'accepted' && (
+        <div className="mt-3 rounded-chip border border-molten px-3 py-2.5">
+          <p className="text-xs font-bold text-molten-bright">{PROMOTION_COPY.acceptedTitle}</p>
+          <p className="mt-0.5 text-[11px] text-ink-mid">
+            {PROMOTION_COPY.acceptedBody(proposal.toWeightKg, proposal.toReps)}
+          </p>
+        </div>
+      )}
+      {verdict === 'declined' && (
+        <div
+          className="mt-3 rounded-chip px-3 py-2.5"
+          style={{ border: '1px solid var(--color-steel-line)' }}
+        >
+          <p className="text-xs font-bold" style={{ color: 'var(--color-steel)' }}>
+            {PROMOTION_COPY.declinedTitle}
+          </p>
+          <p className="mt-0.5 text-[11px] text-ink-mid">{PROMOTION_COPY.declinedBody}</p>
+        </div>
+      )}
+    </div>
   )
 }
 

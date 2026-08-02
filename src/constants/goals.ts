@@ -1,4 +1,4 @@
-import type { GoalLevel, MuscleGroup } from '../db/types'
+import type { AbsCondition, GoalLevel, MuscleGroup } from '../db/types'
 
 // 旧ギャップ分析(F-03)の定数群はISS-023で撤去(優先度はDEC-013の動的優先度が担う)
 
@@ -29,6 +29,30 @@ export const GOAL_COEF: Record<GoalTargetMuscle, Record<GoalLevel, number>> = {
 
 /** 年齢係数(v1は1.0固定。将来の調整用に定数として保持) */
 export const GOAL_AGE_FACTOR = 1.0
+
+// ===== 腹の段位型ゴール(DEC-017改/018改) =====
+
+/**
+ * 腹の段位条件と対応種目(spec §2-1)。順序は表示順のみで、クリアは順不同に積み上がる。
+ * 種目はマスタ同期(seed.ts)と同じく名前で突合する(DB idは環境ごとに変わるため定数にできない)
+ */
+export const ABS_CONDITIONS: {
+  condition: AbsCondition
+  exerciseName: string
+  /** 加重条件(C3)。表示キャプションの「自重/加重」区分に使う */
+  weighted: boolean
+}[] = [
+  { condition: 'C1', exerciseName: 'クランチ', weighted: false },
+  { condition: 'C2', exerciseName: 'レッグレイズ', weighted: false },
+  { condition: 'C3', exerciseName: 'ダンベルクランチ', weighted: true },
+]
+
+/** 腹の段位(3段・ひかえめは作らない: spec §2-1)。表示順 */
+export const ABS_LEVELS: GoalLevel[] = ['toned', 'solid', 'big']
+
+/** 昇格提案(DEC-017改)の対象種目名。クランチ→ダンベルクランチの1パターンのみ */
+export const PROMOTION_FROM_NAME = 'クランチ'
+export const PROMOTION_TO_NAME = 'ダンベルクランチ'
 
 // 動的優先度(F-03置き換え): 優先度 = clamp(BASE + SLOPE × gapRatio, MIN, MAX)
 export const GOAL_PRIORITY_BASE = 0.4

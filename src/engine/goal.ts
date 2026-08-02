@@ -132,6 +132,8 @@ export function detectReachedGoals(
   const recorded = new Set(recordedMuscles)
   const reached: MuscleGroup[] = []
   for (const goal of goals) {
+    // 腹(DEC-018改)は係数軸を持たないため、e1RM比較の到達検知には載せない(条件充足で別判定)
+    if (!isGoalTargetMuscle(goal.muscle)) continue
     if (goal.mode !== 'growth') continue
     if (goal.reachedAt !== undefined) continue
     if (!recorded.has(goal.muscle)) continue

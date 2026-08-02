@@ -29,6 +29,8 @@ export type {
   GrowthSetInput,
   MuscleGrowth,
 } from './growth'
+export { absAttained, absLevelRank, absLevelSatisfied, isCapReached } from './absGoal'
+export type { CapCheckSet } from './absGoal'
 export { intervalSecFor, purposeForReps } from './interval'
 export { initialWeightKg, snapToSteps, suggestWeightReps } from './progression'
 export { candidatesByMuscle, isExerciseAvailable, muscleCountForTime, selectMuscles } from './selection'

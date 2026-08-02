@@ -145,14 +145,22 @@ export interface MuscleGoal {
   reachedAt?: Date
 }
 
-/** ゴールの節目イベント(Phase 7-5b・構想§2-5のSSOT的追跡) */
-export type GoalEventType = 'reached' | 'maintain' | 'raise' | 'resume'
+/**
+ * 腹の段位条件(DEC-018改)。順不同で積み上がる3条件。
+ * クリアはgoal_eventsに'abs_condition'として永続保存する(導出再判定にしない・PM裁定§6-4)
+ */
+export type AbsCondition = 'C1' | 'C2' | 'C3'
+
+/** ゴールの節目イベント(Phase 7-5b・構想§2-5のSSOT的追跡)。abs_condition=腹条件クリア(DEC-018改) */
+export type GoalEventType = 'reached' | 'maintain' | 'raise' | 'resume' | 'abs_condition'
 
 export interface GoalEvent {
   id?: number
   muscle: MuscleGroup
   type: GoalEventType
   at: Date
+  /** type==='abs_condition' のクリア条件(DEC-018改) */
+  condition?: AbsCondition
   note?: string
 }
 
